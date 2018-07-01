@@ -1,0 +1,11 @@
+<SearchPlugin xmlns="http://www.mozilla.org/2006/browser/search/">
+<ShortName>Youtube local</ShortName>
+<Description>no CIA shit in the background</Description>
+<InputEncoding>UTF-8</InputEncoding>
+<Image width="16" height="16">data:image/x-icon;base64,R0lGODlhEAAQAJECAP8AAAAAAP///wAAACH5BAEAAAIALAAAAAAQABAAAAIplI+py+0NogQuyBDEnEd2kHkfFWUamEzmpZSfmaIHPHrRguUm/fT+UwAAOw==</Image>
+
+<Url type="text/html" method="GET" template="http://localhost/youtube.com/search">
+  <Param name="query" value="{searchTerms}"/>
+</Url>
+<SearchForm>http://localhost/youtube.com/search</SearchForm>
+</SearchPlugin>
