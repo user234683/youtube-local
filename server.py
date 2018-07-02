@@ -13,7 +13,7 @@ import re
 ROUTE_TOR = True
 TOR_PATH = ***REMOVED***
 PORT_NUMBER=80
-ALLOW_FOREIGN_ADDRESSES=True
+ALLOW_FOREIGN_ADDRESSES=False
 
 BAN_FILE = "banned_addresses.txt"
 with open(BAN_FILE, 'r') as f:
