@@ -371,7 +371,11 @@ def get_text(node):
     try:
         return node['simpleText']
     except KeyError:
+            pass
+    try:
         return node['runs'][0]['text']
+    except IndexError: # empty text runs
+        return ''
 
 def get_formatted_text(node):
     try:
