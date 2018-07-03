@@ -230,66 +230,6 @@ def seconds_to_timestamp(seconds):
 
     timestamp += ":" + str(seconds).zfill(2)
     return timestamp
-    
-# playlists:
-
-# id
-# title
-# url
-# author
-# author_url
-# thumbnail
-# description
-# updated
-# size
-# first_video_id
-def medium_playlist_item_info(playlist_renderer):
-    renderer = playlist_renderer
-    try:
-        author_url = URL_ORIGIN + renderer['longBylineText']['runs'][0]['navigationEndpoint']['commandMetadata']['webCommandMetadata']['url']
-    except KeyError:    # radioRenderer
-        author_url = ''
-    try:
-        thumbnail = renderer['thumbnails'][0]['thumbnails'][0]['url']
-    except KeyError:
-        thumbnail = renderer['thumbnail']['thumbnails'][0]['url']
-    return {
-        "title": renderer["title"]["simpleText"],
-        'id': renderer["playlistId"],
-        'size': renderer.get('videoCount', '50+'),
-        "author": default_multi_get(renderer,'longBylineText','runs',0,'text', default='Youtube'),
-        "author_url":  author_url,
-        'thumbnail': thumbnail,
-    }
-
-def medium_video_item_info(video_renderer):
-    renderer = video_renderer
-    try:
-        return {
-            "title": renderer["title"]["simpleText"],
-            "id": renderer["videoId"],
-            "description": renderer.get("descriptionSnippet",dict()).get('runs',[]),   # a list of text runs (formmated), rather than plain text
-            "thumbnail": get_thumbnail_url(renderer["videoId"]),
-            "views": renderer['viewCountText'].get('simpleText', None) or renderer['viewCountText']['runs'][0]['text'],
-            "duration": default_multi_get(renderer, 'lengthText', 'simpleText', default=''), # livestreams dont have a length
-            "author": renderer['longBylineText']['runs'][0]['text'],
-            "author_url": URL_ORIGIN + renderer['longBylineText']['runs'][0]['navigationEndpoint']['commandMetadata']['webCommandMetadata']['url'],
-            "published": default_multi_get(renderer, 'publishedTimeText', 'simpleText', default=''),
-        }
-    except KeyError:
-        print(renderer)
-        raise
-
-def small_video_item_info(compact_video_renderer):
-    renderer = compact_video_renderer
-    return {
-        "title": renderer['title']['simpleText'],
-        "id": renderer['videoId'],
-        "views": renderer['viewCountText'].get('simpleText', None) or renderer['viewCountText']['runs'][0]['text'],
-        "duration": default_multi_get(renderer, 'lengthText', 'simpleText', default=''), # livestreams dont have a length
-        "author": renderer['longBylineText']['runs'][0]['text'],
-        "author_url": renderer['longBylineText']['runs'][0]['navigationEndpoint']['commandMetadata']['webCommandMetadata']['url'],
-    }
 
 
 # -----
@@ -342,17 +282,6 @@ def medium_video_item_html(medium_video_info):
             thumbnail=info['thumbnail'],
             datetime='', # TODO
         )
-
-html_functions = {
-    'compactVideoRenderer': lambda x: small_video_item_html(small_video_item_info(x)),
-    'videoRenderer': lambda x: medium_video_item_html(medium_video_item_info(x)),
-    'compactPlaylistRenderer': lambda x: small_playlist_item_html(small_playlist_item_info(x)),
-    'playlistRenderer': lambda x: medium_playlist_item_html(medium_playlist_item_info(x)),
-    'channelRenderer': lambda x: '',
-    'radioRenderer': lambda x: medium_playlist_item_html(medium_playlist_item_info(x)),
-    'compactRadioRenderer': lambda x: small_playlist_item_html(small_playlist_item_info(x)),
-    'didYouMeanRenderer': lambda x: '',
-}
 
 
 
@@ -630,14 +559,3 @@ def renderer_html(renderer, additional_info={}, current_query_string=''):
         return ''
     print(renderer)
     raise NotImplementedError('Unknown renderer type: ' + type)
-    
-
-'videoRenderer'
-'playlistRenderer'
-'channelRenderer'
-'radioRenderer'
-'gridVideoRenderer'
-'gridPlaylistRenderer'
-
-'didYouMeanRenderer'
-'showingResultsForRenderer'
