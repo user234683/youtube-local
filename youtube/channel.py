@@ -164,7 +164,8 @@ def channel_videos_html(polymer_json, current_page=1, number_of_videos = 1000, c
         avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
         page_title          = microformat['title'] + ' - Channel',
         items               = items_html,
-        page_buttons        = common.page_buttons_html(current_page, math.ceil(number_of_videos/30), URL_ORIGIN + "/channel/" + channel_id + "/videos", current_query_string)
+        page_buttons        = common.page_buttons_html(current_page, math.ceil(number_of_videos/30), URL_ORIGIN + "/channel/" + channel_id + "/videos", current_query_string),
+        number_of_results   = '{:,}'.format(number_of_videos) + " videos",
     )
 
 channel_link_template = Template('''
