@@ -113,14 +113,15 @@ def site_dispatch(env, start_response):
             yield error_code('404 Not Found', start_response)
             return
 
-
-    except (socket.error, ConnectionAbortedError) as e:
-        start_response('500 Internal Server Error', ())
+    
+    except socket.error as e:
+        start_response('502 Bad Gateway', ())
         print(str(e))
-        yield b'500 Internal Server Error'
+        yield b'502 Bad Gateway'
         
     except Exception:
         start_response('500 Internal Server Error', ())
+        yield b'500 Internal Server Error'
         raise
     return
 
