@@ -80,6 +80,8 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1):
     content = common.fetch_url(url, headers_1)
     print("Finished recieving channel tab response")
 
+    '''with open('debug/channel_debug', 'wb') as f:
+        f.write(content)'''
     info = json.loads(content)
     return info
 
@@ -131,8 +133,8 @@ def get_number_of_videos(channel_id):
     url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&ajax=1&disable_polymer=true'
     print("Getting number of videos")
     response = common.fetch_url(url, common.mobile_ua + headers_1)
-    with open('playlist_debug_metadata', 'wb') as f:
-        f.write(response)
+    '''with open('debug/playlist_debug_metadata', 'wb') as f:
+        f.write(response)'''
     response = response.decode('utf-8')
     print("Got response for number of videos")
     return int(re.search(r'"num_videos_text":\s*{(?:"item_type":\s*"formatted_string",)?\s*"runs":\s*\[{"text":\s*"([\d,]*) videos"', response).group(1).replace(',',''))
@@ -153,7 +155,13 @@ def channel_videos_html(polymer_json, current_page=1, number_of_videos = 1000, c
     try:
         items = polymer_json[1]['response']['continuationContents']['gridContinuation']['items']
     except KeyError:
-        items = polymer_json[1]['response']['contents']['twoColumnBrowseResultsRenderer']['tabs'][1]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['gridRenderer']['items']
+        response = polymer_json[1]['response']
+        try:
+            contents = response['contents']
+        except KeyError:
+            items = []
+        else:
+            items = contents['twoColumnBrowseResultsRenderer']['tabs'][1]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['gridRenderer']['items']
     items_html = ''
     for video in items:
         items_html += grid_video_item_html(grid_video_item_info(video['gridVideoRenderer'], microformat['title']))

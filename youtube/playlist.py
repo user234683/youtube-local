@@ -132,8 +132,8 @@ def get_videos_ajax(playlist_id, page):
     }
     print("Sending playlist ajax request")
     content = common.fetch_url(url, headers)
-    with open('playlist_debug', 'wb') as f:
-        f.write(content)
+    '''with open('debug/playlist_debug', 'wb') as f:
+        f.write(content)'''
     content = content[4:]
     print("Finished recieving playlist response")
 
