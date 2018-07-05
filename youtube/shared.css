@@ -166,18 +166,21 @@ address{
     display: grid;
     grid-template-columns: 168px 1fr;
     grid-column-gap: 5px;
-    grid-template-rows: 0fr 0fr 0fr 1fr;
+    grid-template-rows: auto auto auto 1fr;
 }
     .small-item .title{
         grid-column:2;
         grid-row:1;
         margin:0;
-        
+
         color: #333;
         font-size: 16px;
         font-weight: 500;
         text-decoration:initial;
         min-width: 0;
+
+        overflow:hidden;
+        max-height: 3.6em;
     }
     .small-item address{
         grid-column: 2;
