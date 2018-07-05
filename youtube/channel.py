@@ -137,7 +137,11 @@ def get_number_of_videos(channel_id):
         f.write(response)'''
     response = response.decode('utf-8')
     print("Got response for number of videos")
-    return int(re.search(r'"num_videos_text":\s*{(?:"item_type":\s*"formatted_string",)?\s*"runs":\s*\[{"text":\s*"([\d,]*) videos"', response).group(1).replace(',',''))
+    match = re.search(r'"num_videos_text":\s*{(?:"item_type":\s*"formatted_string",)?\s*"runs":\s*\[{"text":\s*"([\d,]*) videos"', response)
+    if match:
+        return int(match.group(1).replace(',',''))
+    else:
+        return 0
 
 @functools.lru_cache(maxsize=128)
 def get_channel_id(username):
