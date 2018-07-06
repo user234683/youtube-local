@@ -151,6 +151,12 @@ def get_channel_id(username):
     response = common.fetch_url(url, common.mobile_ua + headers_1).decode('utf-8')
     return re.search(r'"channel_id":\s*"([a-zA-Z0-9_-]*)"', response).group(1)
 
+def grid_items_html(items, additional_info={}):
+    result = '''            <nav class="item-grid">\n'''
+    for item in items:
+        result += common.renderer_html(item, additional_info)
+    result += '''\n</nav>'''
+    return result
 
 def channel_videos_html(polymer_json, current_page=1, number_of_videos = 1000, current_query_string=''):
     microformat = polymer_json[1]['response']['microformat']['microformatDataRenderer']
@@ -166,9 +172,7 @@ def channel_videos_html(polymer_json, current_page=1, number_of_videos = 1000, c
             items = []
         else:
             items = contents['twoColumnBrowseResultsRenderer']['tabs'][1]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['gridRenderer']['items']
-    items_html = ''
-    for video in items:
-        items_html += grid_video_item_html(grid_video_item_info(video['gridVideoRenderer'], microformat['title']))
+    items_html = grid_items_html(items, {'author': microformat['title']})
     
     return yt_channel_items_template.substitute(
         channel_title       = microformat['title'],

@@ -434,7 +434,7 @@ def get_html_ready(item):
 
 
 author_template_url = Template('''<address>By <a href="$author_url">$author</a></address>''')
-author_template = Template('''<address>By $author</address>''')
+author_template = Template('''<address><b>$author</b></address>''')
 stat_templates = (
     Template('''<span class="views">$views</span>'''),
     Template('''<time datetime="$datetime">$published</time>'''),
@@ -453,7 +453,7 @@ def get_video_stats(html_ready):
             pass
     return ' | '.join(stats)
 
-def video_item_html(item, template):
+def video_item_html(item, template, html_exclude=set()):
     html_ready = get_html_ready(item)
     video_info = {}
     for key in ('id', 'title', 'author'):
@@ -470,12 +470,14 @@ def video_item_html(item, template):
     html_ready['url'] = URL_ORIGIN + "/watch?v=" + html_ready['id']
     html_ready['datetime'] = '' #TODO
     
+    for key in html_exclude:
+        del html_ready[key]
     html_ready['stats'] = get_video_stats(html_ready)
 
     return template.substitute(html_ready)
 
 
-def playlist_item_html(item, template):
+def playlist_item_html(item, template, html_exlude=set()):
     html_ready = get_html_ready(item)
 
     html_ready['url'] = URL_ORIGIN + "/playlist?list=" + html_ready['id']
@@ -540,14 +542,15 @@ def renderer_html(renderer, additional_info={}, current_query_string=''):
     if type in ('videoRenderer', 'playlistRenderer', 'radioRenderer', 'compactVideoRenderer', 'compactPlaylistRenderer', 'compactRadioRenderer', 'gridVideoRenderer', 'gridPlaylistRenderer', 'gridRadioRenderer'):
         info = renderer_info(renderer)
         info.update(additional_info)
+        html_exclude = set(additional_info.keys())
         if type == 'compactVideoRenderer':
-            return video_item_html(info, small_video_item_template)
+            return video_item_html(info, small_video_item_template, html_exclude=html_exclude)
         if type in ('compactPlaylistRenderer', 'compactRadioRenderer'):
-            return playlist_item_html(info, small_playlist_item_template)
+            return playlist_item_html(info, small_playlist_item_template, html_exclude=html_exclude)
         if type in ('videoRenderer', 'gridVideoRenderer'):
-            return video_item_html(info, medium_video_item_template)
+            return video_item_html(info, medium_video_item_template, html_exclude=html_exclude)
         if type in ('playlistRenderer', 'gridPlaylistRenderer', 'radioRenderer', 'gridRadioRenderer'):
-            return playlist_item_html(info, medium_playlist_item_template)
+            return playlist_item_html(info, medium_playlist_item_template, html_exclude=html_exclude)
 
     if type == 'channelRenderer':
         info = renderer_info(renderer)
