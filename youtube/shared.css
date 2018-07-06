@@ -105,15 +105,26 @@ address{
 
 .medium-item{
     background-color:#bcbcbc;
+    text-decoration:none;
+    font-size: 12px;
+    color: #767676;
+
     display: grid;
     align-content: start;
-    grid-template-columns: 246px 1fr 0fr;
-    grid-template-rows: 0fr 0fr 0fr 0fr 0fr 1fr;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto auto auto auto 1fr;
 }
     .medium-item .title{
         grid-column:2 / span 2;
         grid-row:1;
         min-width: 0;
+        max-height:3.6em;
+        overflow:hidden;
+
+        color: #333;
+        font-size: 16px;
+        font-weight: 500;
+        text-decoration:initial;
     }
     .medium-item address{
         display:inline;
@@ -131,6 +142,8 @@ address{
     .medium-item .stats{
         grid-column: 2 / span 2;
         grid-row: 2;
+        max-height:2.4em;
+        overflow:hidden;
     }
     
     .medium-item .description{
