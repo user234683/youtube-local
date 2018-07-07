@@ -360,7 +360,18 @@ def renderer_info(renderer):
             info['views'] = get_text(renderer['viewCountText'])
         elif 'shortViewCountText' in renderer:
             info['views'] = get_text(renderer['shortViewCountText'])
-            
+        try:
+            overlays = renderer['thumbnailOverlays']
+        except KeyError:
+            pass
+        else:
+            for overlay in overlays:
+                try:
+                    info['duration'] = get_text(overlay['thumbnailOverlayTimeStatusRenderer']['text'])
+                except KeyError:
+                    pass
+                else:
+                    break
         for key, node in renderer.items():
             if key in ('longBylineText', 'shortBylineText'):
                 info['author'] = get_text(node)

@@ -80,8 +80,8 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1):
     content = common.fetch_url(url, headers_1)
     print("Finished recieving channel tab response")
 
-    '''with open('debug/channel_debug', 'wb') as f:
-        f.write(content)'''
+    with open('debug/channel_debug', 'wb') as f:
+        f.write(content)
     info = json.loads(content)
     return info
 
