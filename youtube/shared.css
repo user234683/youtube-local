@@ -57,6 +57,35 @@ address{
         border-width:1px;
     }
     
+.item-list{
+    display: grid;
+    grid-auto-rows: 138px;
+    grid-row-gap: 10px;
+    
+}
+    .item-list .video-thumbnail-box{
+        width:246px;
+    }
+    .item-list .playlist-thumbnail-box{
+        width:246px;
+    }
+
+
+.item-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, 400px);
+    grid-auto-rows: 94px;
+    grid-row-gap: 10px;
+}
+    .item-grid .video-thumbnail-box{
+        width:168px;
+    }
+    .item-grid .playlist-thumbnail-box{
+        width:168px;
+    }
+
+
+
 
 .full-item{
     display: grid;

@@ -52,22 +52,9 @@
                 grid-row: 1;
 
             }
-            #results{
-                
+            .item-list{
                 grid-row: 2;
                 grid-column: 2;
-                
-                
-                display: grid;
-                grid-auto-rows: 138px;
-                grid-row-gap: 10px;
-                
-            }
-            #results .video-thumbnail-box{
-                width:246px;
-            }
-            #results .playlist-thumbnail-box{
-                width:246px;
             }
             .badge{
                 background-color:#cccccc;
@@ -90,7 +77,7 @@
                     <div id="number-of-results">Approximately $number_of_results results ($number_of_pages pages)</div>
 $corrections
                 </div>
-                <div id="results">          
+                <div class="item-list">          
 $results
                 </div>
                 <nav class="page-button-row">
