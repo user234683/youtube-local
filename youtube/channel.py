@@ -80,52 +80,13 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1):
     content = common.fetch_url(url, headers_1)
     print("Finished recieving channel tab response")
 
-    with open('debug/channel_debug', 'wb') as f:
-        f.write(content)
+    '''with open('debug/channel_debug', 'wb') as f:
+        f.write(content)'''
     info = json.loads(content)
     return info
 
 
-grid_video_item_template = Template('''
-                <div class="small-item-box">
-                    <div class="small-item">
-                        <a class="video-thumbnail-box" href="$url" title="$title">
-                            <img class="video-thumbnail-img" src="$thumbnail">
-                            <span class="video-duration">$duration</span>
-                        </a>
-                        <a class="title" href="$url" title="$title">$title</a>
-                        
-                        <span class="views">$views</span>
-                        <time datetime="$datetime">Uploaded $published</time>
-                        
-                    </div>
-                    <input class="item-checkbox" type="checkbox" name="video_info_list" value="$video_info" form="playlist-add">
-                </div>
-''')
 
-def grid_video_item_info(grid_video_renderer, author):
-    renderer = grid_video_renderer
-    return {
-        "title": renderer['title']['simpleText'],
-        "id": renderer['videoId'],
-        "views": renderer['viewCountText'].get('simpleText', None) or renderer['viewCountText']['runs'][0]['text'],
-        "author": author,
-        "duration": default_multi_get(renderer, 'lengthText', 'simpleText', default=''), # livestreams dont have a length
-        "published": default_multi_get(renderer, 'publishedTimeText', 'simpleText', default=''),
-    }
-
-def grid_video_item_html(item):
-    video_info = json.dumps({key: item[key] for key in ('id', 'title', 'author', 'duration')})
-    return grid_video_item_template.substitute(
-        title       = html.escape(item["title"]),
-        views       = item["views"],
-        duration    = item["duration"],
-        url         = URL_ORIGIN + "/watch?v=" + item["id"],
-        thumbnail   = get_thumbnail_url(item['id']),
-        video_info  = html.escape(json.dumps(video_info)),
-        published   = item["published"],
-        datetime    = '', # TODO
-    )
 
 def get_number_of_videos(channel_id):
     # Uploads playlist
