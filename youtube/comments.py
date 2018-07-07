@@ -114,8 +114,8 @@ def parse_comments(content, replies=False):
             replies_url = ''
             if not replies:
                 if comment_raw['replies'] is not None:
-                    ctoken = comment_raw['replies']['continuations'][0]['continuation']
-                    comment_id, video_id = get_ids(ctoken)
+                    reply_ctoken = comment_raw['replies']['continuations'][0]['continuation']
+                    comment_id, video_id = get_ids(reply_ctoken)
                     replies_url = URL_ORIGIN + '/comments?parent_id=' + comment_id + "&video_id=" + video_id
                 comment_raw = comment_raw['comment']
             comment = {
@@ -165,6 +165,7 @@ more_comments_template = Template('''<a class="page-button more-comments" href="
 def get_comments_page(query_string):
     parameters = urllib.parse.parse_qs(query_string)
     ctoken = default_multi_get(parameters, 'ctoken', 0, default='')
+    replies = False
     if not ctoken:
         video_id = parameters['video_id'][0]
         parent_id = parameters['parent_id'][0]
