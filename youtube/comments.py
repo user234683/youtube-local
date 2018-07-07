@@ -59,6 +59,21 @@ def make_comment_ctoken(video_id, sort=0, offset=0, secret_key=''):
     result = proto.nested(2, proto.string(2, video_id)) + proto.uint(3,6) + proto.nested(6, offset_information)
     return base64.urlsafe_b64encode(result).decode('ascii')
 
+def comment_replies_ctoken(video_id, comment_id, max_results=500):  
+
+    params = proto.string(2, comment_id) + proto.uint(9, max_results)
+    params = proto.nested(3, params)
+    
+    result = proto.nested(2, proto.string(2, video_id)) + proto.uint(3,6) + proto.nested(6, params)
+    return base64.urlsafe_b64encode(result).decode('ascii')
+
+def get_ids(ctoken):
+    params = proto.parse(proto.b64_to_bytes(ctoken))
+    video_id = proto.parse(params[2])[2]
+    params = proto.parse(params[6])
+    params = proto.parse(params[3])
+    return params[2].decode('ascii'), video_id.decode('ascii')
+
 mobile_headers = {
     'Host': 'm.youtube.com',
     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
@@ -83,7 +98,7 @@ def request_comments(ctoken, replies=False):
             print("got <!DOCTYPE>, retrying")
             continue
         break
-    '''with open('comments_debug', 'wb') as f:
+    '''with open('debug/comments_debug', 'wb') as f:
         f.write(content)'''
     return content
 
@@ -100,7 +115,8 @@ def parse_comments(content, replies=False):
             if not replies:
                 if comment_raw['replies'] is not None:
                     ctoken = comment_raw['replies']['continuations'][0]['continuation']
-                    replies_url = URL_ORIGIN + '/comments?ctoken=' + ctoken + "&replies=1"
+                    comment_id, video_id = get_ids(ctoken)
+                    replies_url = URL_ORIGIN + '/comments?parent_id=' + comment_id + "&video_id=" + video_id
                 comment_raw = comment_raw['comment']
             comment = {
             'author': comment_raw['author']['runs'][0]['text'],
@@ -148,8 +164,13 @@ more_comments_template = Template('''<a class="page-button more-comments" href="
 
 def get_comments_page(query_string):
     parameters = urllib.parse.parse_qs(query_string)
-    ctoken = parameters['ctoken'][0]
-    replies = default_multi_get(parameters, 'replies', 0, default="0") == "1"
+    ctoken = default_multi_get(parameters, 'ctoken', 0, default='')
+    if not ctoken:
+        video_id = parameters['video_id'][0]
+        parent_id = parameters['parent_id'][0]
+
+        ctoken = comment_replies_ctoken(video_id, parent_id)
+        replies = True
     
     result = parse_comments(request_comments(ctoken, replies), replies)
     comments_html, ctoken = get_comments_html(result)
