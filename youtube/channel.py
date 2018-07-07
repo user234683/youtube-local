@@ -158,6 +158,26 @@ def grid_items_html(items, additional_info={}):
     result += '''\n</nav>'''
     return result
 
+channel_tab_template = Template('''\n<a class="tab page-button"$href_attribute>$tab_name</a>''')
+tabs = ('Videos', 'Playlists', 'About')
+def channel_tabs_html(channel_id, current_tab):
+    result = ''
+    for tab_name in tabs:
+        if tab_name == current_tab:
+            result += channel_tab_template.substitute(
+                href_attribute = '',
+                tab_name = tab_name,
+            )
+        else:
+            result += channel_tab_template.substitute(
+                href_attribute = 'href="' + URL_ORIGIN + "/channel/" + channel_id + "/" + tab_name.lower() + '"',
+                tab_name = tab_name,
+            )
+    return result
+            
+
+
+
 def channel_videos_html(polymer_json, current_page=1, number_of_videos = 1000, current_query_string=''):
     microformat = polymer_json[1]['response']['microformat']['microformatDataRenderer']
     channel_url = microformat['urlCanonical'].rstrip('/')
@@ -176,12 +196,38 @@ def channel_videos_html(polymer_json, current_page=1, number_of_videos = 1000, c
     
     return yt_channel_items_template.substitute(
         channel_title       = microformat['title'],
-        channel_about_url   = URL_ORIGIN + "/channel/" + channel_id + "/about",
+        channel_tabs        = channel_tabs_html(channel_id, 'Videos'),
         avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
         page_title          = microformat['title'] + ' - Channel',
         items               = items_html,
         page_buttons        = common.page_buttons_html(current_page, math.ceil(number_of_videos/30), URL_ORIGIN + "/channel/" + channel_id + "/videos", current_query_string),
         number_of_results   = '{:,}'.format(number_of_videos) + " videos",
+    )
+
+def channel_playlists_html(polymer_json):
+    microformat = polymer_json[1]['response']['microformat']['microformatDataRenderer']
+    channel_url = microformat['urlCanonical'].rstrip('/')
+    channel_id = channel_url[channel_url.rfind('/')+1:]
+    try:
+        items = polymer_json[1]['response']['continuationContents']['gridContinuation']['items']
+    except KeyError:
+        response = polymer_json[1]['response']
+        try:
+            contents = response['contents']
+        except KeyError:
+            items = []
+        else:
+            items = contents['twoColumnBrowseResultsRenderer']['tabs'][2]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['gridRenderer']['items']
+    items_html = grid_items_html(items, {'author': microformat['title']})
+    
+    return yt_channel_items_template.substitute(
+        channel_title       = microformat['title'],
+        channel_tabs        = channel_tabs_html(channel_id, 'Playlists'),
+        avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
+        page_title          = microformat['title'] + ' - Channel',
+        items               = items_html,
+        page_buttons        = '',
+        number_of_results   = '',
     )
 
 channel_link_template = Template('''
@@ -218,7 +264,7 @@ def channel_about_page(polymer_json):
         description         = description,
         links               = channel_links,
         stats               = stats,
-        channel_videos_url  = common.URL_ORIGIN + '/channel/' + channel_metadata['channelId'] + '/videos',
+        channel_tabs        = channel_tabs_html(channel_metadata['channelId'], 'About'),
     )
     
 def get_channel_page(url, query_string=''):
@@ -247,6 +293,10 @@ def get_channel_page(url, query_string=''):
         polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/about?pbj=1', headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_about_page(polymer_json)
+    elif tab == 'playlists':
+        polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1', headers_1)
+        polymer_json = json.loads(polymer_json)
+        return channel_playlists_html(polymer_json)
     else:
         raise ValueError('Unknown channel tab: ' + tab)
     
@@ -265,5 +315,9 @@ def get_user_page(url, query_string=''):
         polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/about?pbj=1', headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_about_page(polymer_json)
+    elif page == 'playlists':
+        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/playlists?pbj=1', headers_1)
+        polymer_json = json.loads(polymer_json)
+        return channel_playlists_html(polymer_json)
     else:
         raise ValueError('Unknown channel page: ' + page)

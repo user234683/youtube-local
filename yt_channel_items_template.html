@@ -82,6 +82,9 @@
                     .item-grid .video-thumbnail-img{
                         width:168px;
                     }
+                    .item-grid .playlist-thumbnail-img{
+                        width:168px;
+                    }
                 .page-button-row{
                     grid-column: 1 / span 2;
                 }
@@ -117,8 +120,7 @@
             <img class="avatar" src="$avatar">
             <h2 class="title">$channel_title</h2>
             <nav class="channel-tabs">
-                <a class="tab page-button">Videos</a>
-                <a class="tab page-button" href="$channel_about_url">About</a>
+$channel_tabs
             </nav>
             <div id="number-of-results">$number_of_results</div>
 $items
