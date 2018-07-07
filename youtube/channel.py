@@ -178,7 +178,15 @@ def channel_playlists_html(polymer_json):
         except KeyError:
             items = []
         else:
-            items = contents['twoColumnBrowseResultsRenderer']['tabs'][2]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['gridRenderer']['items']
+            item_section = contents['twoColumnBrowseResultsRenderer']['tabs'][2]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]
+            try:
+                items = item_section['gridRenderer']['items']
+            except KeyError:
+                if "messageRenderer" in item_section:
+                    items = []
+                else:
+                    raise
+
     items_html = grid_items_html(items, {'author': microformat['title']})
     
     return yt_channel_items_template.substitute(
@@ -256,6 +264,8 @@ def get_channel_page(url, query_string=''):
         return channel_about_page(polymer_json)
     elif tab == 'playlists':
         polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1', headers_1)
+        '''with open('debug/channel_playlists_debug', 'wb') as f:
+            f.write(polymer_json)'''
         polymer_json = json.loads(polymer_json)
         return channel_playlists_html(polymer_json)
     else:

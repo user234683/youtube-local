@@ -60,7 +60,7 @@ medium_playlist_item_template = Template('''
 
                     <a class="title" href="$url" title="$title">$title</a>
                     
-                    <address><a href="$author_url">$author</a></address>
+                    <div class="stats">$stats</div>
                 </div>
 ''')
 medium_video_item_template = Template('''
@@ -446,7 +446,7 @@ stat_templates = (
     Template('''<span class="views">$views</span>'''),
     Template('''<time datetime="$datetime">$published</time>'''),
 )
-def get_video_stats(html_ready):
+def get_stats(html_ready):
     stats = []
     if 'author' in html_ready:
         if 'author_url' in html_ready:
@@ -479,7 +479,7 @@ def video_item_html(item, template, html_exclude=set()):
     
     for key in html_exclude:
         del html_ready[key]
-    html_ready['stats'] = get_video_stats(html_ready)
+    html_ready['stats'] = get_stats(html_ready)
 
     return template.substitute(html_ready)
 
@@ -489,6 +489,11 @@ def playlist_item_html(item, template, html_exclude=set()):
 
     html_ready['url'] = URL_ORIGIN + "/playlist?list=" + html_ready['id']
     html_ready['datetime'] = '' #TODO
+
+    for key in html_exclude:
+        del html_ready[key]
+    html_ready['stats'] = get_stats(html_ready)
+
     return template.substitute(html_ready)
 
 
