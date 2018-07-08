@@ -1,6 +1,6 @@
 import mimetypes
 import urllib.parse
-from youtube import watch_later, watch, search, playlist, channel, comments
+from youtube import local_playlist, watch, search, playlist, channel, comments
 YOUTUBE_FILES = (
     "/shared.css",
     "/opensearch.xml",
@@ -47,8 +47,8 @@ def youtube(env, start_response):
     elif method == "POST":
         if path == "/edit_playlist":
             fields = urllib.parse.parse_qs(env['wsgi.input'].read().decode())
-            if fields['action'][0] == 'add' and fields['playlist_name'][0] == 'watch_later':
-                watch_later.add_to_watch_later(fields['video_info_list'])
+            if fields['action'][0] == 'add':
+                local_playlist.add_to_playlist(fields['playlist_name'][0], fields['video_info_list'])
                 
             start_response('204 No Content', ())
         else:

@@ -3,8 +3,8 @@ __pycache__/
 *$py.class
 youtube_dl/
 debug/
+data/
 banned_addresses.txt
 youtube/common_old.py
 youtube/common_older.py
 youtube/watch_old.py
-youtube/watch_later.txt
