@@ -51,32 +51,37 @@ page_button_template = Template('''<a class="page-button" href="$href">$page</a>
 current_page_button_template = Template('''<div class="current-page-button">$page</a>''')
 
 medium_playlist_item_template = Template('''
-                <div class="medium-item">
-                    <a class="playlist-thumbnail-box" href="$url" title="$title">
-                        <img class="playlist-thumbnail-img" src="$thumbnail">
-                        <div class="playlist-thumbnail-info">
-                            <span>$size</span>
-                        </div>
-                    </a>
+                <div class="medium-item-box">
+                    <div class="medium-item">
+                        <a class="playlist-thumbnail-box" href="$url" title="$title">
+                            <img class="playlist-thumbnail-img" src="$thumbnail">
+                            <div class="playlist-thumbnail-info">
+                                <span>$size</span>
+                            </div>
+                        </a>
 
-                    <a class="title" href="$url" title="$title">$title</a>
-                    
-                    <div class="stats">$stats</div>
+                        <a class="title" href="$url" title="$title">$title</a>
+                        
+                        <div class="stats">$stats</div>
+                    </div>
                 </div>
 ''')
 medium_video_item_template = Template('''
-                <div class="medium-item">
-                    <a class="video-thumbnail-box" href="$url" title="$title">
-                        <img class="video-thumbnail-img" src="$thumbnail">
-                        <span class="video-duration">$duration</span>
-                    </a>
+                <div class="medium-item-box">
+                    <div class="medium-item">
+                        <a class="video-thumbnail-box" href="$url" title="$title">
+                            <img class="video-thumbnail-img" src="$thumbnail">
+                            <span class="video-duration">$duration</span>
+                        </a>
 
-                    <a class="title" href="$url">$title</a>
-                    
-                    <div class="stats">$stats</div>
+                        <a class="title" href="$url">$title</a>
+                        
+                        <div class="stats">$stats</div>
 
-                    <span class="description">$description</span>
-                    <span class="badges">$badges</span>
+                        <span class="description">$description</span>
+                        <span class="badges">$badges</span>
+                    </div>
+                    <input class="item-checkbox" type="checkbox" name="video_info_list" value="$video_info" form="playlist-add">
                 </div>
 ''')
 
@@ -114,18 +119,20 @@ small_playlist_item_template = Template('''
 ''')
 
 medium_channel_item_template = Template('''
-                <div class="medium-item">
-                    <a class="video-thumbnail-box" href="$url" title="$title">
-                        <img class="video-thumbnail-img" src="$thumbnail">
-                        <span class="video-duration">$duration</span>
-                    </a>
+                <div class="medium-item-box">
+                    <div class="medium-item">
+                        <a class="video-thumbnail-box" href="$url" title="$title">
+                            <img class="video-thumbnail-img" src="$thumbnail">
+                            <span class="video-duration">$duration</span>
+                        </a>
 
-                    <a class="title" href="$url">$title</a>
-                    
-                    <span>$subscriber_count</span>
-                    <span>$size</span>
+                        <a class="title" href="$url">$title</a>
+                        
+                        <span>$subscriber_count</span>
+                        <span>$size</span>
 
-                    <span class="description">$description</span>
+                        <span class="description">$description</span>
+                    </div>
                 </div>
 ''')
 

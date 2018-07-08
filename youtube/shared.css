@@ -169,6 +169,11 @@ address{
         grid-row: 5;
     }
 
+.medium-item-box{
+
+    display:grid;
+    grid-template-columns: 1fr 0fr;
+}
 .medium-item{
     background-color:#bcbcbc;
     text-decoration:none;
@@ -291,6 +296,8 @@ address{
 
 /* ---Thumbnails for videos---- */
 .video-thumbnail-box{
+    max-height:100%;
+
     grid-column:1;
     grid-row:1 / span 6;
     
@@ -313,6 +320,8 @@ address{
 
 /* ---Thumbnails for playlists---- */
 .playlist-thumbnail-box{
+    max-height:100%;
+
     grid-column:1;
     grid-row:1 / span 6;
     
