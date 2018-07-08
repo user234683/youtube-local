@@ -115,6 +115,7 @@ def get_playlist_page(query_string):
     stats += playlist_stat_template.substitute(stat=html_ready['size'] + ' videos')
     stats += playlist_stat_template.substitute(stat=html_ready['views'])
     return yt_playlist_template.substitute(
+        header          = common.get_header(),
         videos          = videos_html,
         page_buttons    = page_buttons,
         stats = stats,

@@ -11,18 +11,8 @@
             }
 
             header{
-                display:grid;
                 grid-template-columns: 3fr 1fr;
             }
-                #header-left{
-                    grid-column:1;
-                    
-                    display:grid;
-                    grid-template-columns: 1fr 800px;
-                }
-                    #site-search{
-                        grid-column: 2;
-                    }
                 
             #left{
                 grid-column: 1;
@@ -91,14 +81,7 @@
         </style>
     </head>
     <body>
-        <header>
-            <div id="header-left">
-                <form id="site-search" action="/youtube.com/search">
-                    <input type="search" name="query" class="search-box">
-                    <button type="submit" value="Search" class="search-button">Search</button>
-                </form>
-            </div>
-        </header>
+$header
         <main>
             <div id="left">
                 <div class="playlist-metadata">

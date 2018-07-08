@@ -1,5 +1,5 @@
 import json
-import youtube.proto as proto
+from youtube import proto, common
 import base64
 from youtube.common import uppercase_escape, default_multi_get, format_text_runs, URL_ORIGIN, fetch_url
 from string import Template
@@ -98,8 +98,8 @@ def request_comments(ctoken, replies=False):
             print("got <!DOCTYPE>, retrying")
             continue
         break
-    '''with open('debug/comments_debug', 'wb') as f:
-        f.write(content)'''
+    with open('debug/comments_debug', 'wb') as f:
+        f.write(content)
     return content
 
 def parse_comments(content, replies=False):
@@ -181,6 +181,7 @@ def get_comments_page(query_string):
         more_comments_button = more_comments_template.substitute(url = URL_ORIGIN + '/comments?ctoken=' + ctoken)
 
     return yt_comments_template.substitute(
+        header = common.get_header(),
         comments = comments_html,
         page_title = 'Comments',
         more_comments_button=more_comments_button,

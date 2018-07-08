@@ -278,6 +278,7 @@ def get_watch_page(query_string):
         page = yt_watch_template.substitute(
             video_title=html.escape(info["title"]),
             page_title=html.escape(info["title"]),
+            header=common.get_header(),
             uploader=html.escape(info["uploader"]),
             uploader_channel_url='/' + info["uploader_url"],
             #upload_date=datetime.datetime.fromtimestamp(info["timestamp"]).strftime("%d %b %Y %H:%M:%S"),

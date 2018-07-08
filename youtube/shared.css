@@ -23,6 +23,9 @@ body{
         background-color:#333333;
 
         grid-row: 1;
+
+        display:grid;
+        grid-template-columns: 3fr 2fr;
     }
 
     main{
@@ -35,28 +38,62 @@ button{
 address{
     font-style:normal;
 }
-#site-search{           
-    display: grid;
-    grid-template-columns: 1fr 0fr;
 
-}
-
-    #site-search .search-box{
-        align-self:center;
-        height:25px;
-        border:0;
-        
-        grid-column: 1;
-    }
-    #site-search .search-button{
-        grid-column: 2;
-        align-self:center;
-        height:25px;
-
-        border-style:solid;
-        border-width:1px;
-    }
+#header-left{
+    grid-column:1;
     
+    display:grid;
+    grid-template-columns: 1fr 640px;
+}
+    #site-search{
+        grid-column: 2;
+        display: grid;
+        grid-template-columns: 1fr 0fr;
+
+    }
+
+        #site-search .search-box{
+            align-self:center;
+            height:25px;
+            border:0;
+            
+            grid-column: 1;
+        }
+        #site-search .search-button{
+            grid-column: 2;
+            align-self:center;
+            height:25px;
+
+            border-style:solid;
+            border-width:1px;
+        }
+ 
+#header-right{
+    grid-column:2;
+    
+    display:grid;
+    grid-template-columns:40px 400px 100px 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+    #playlist-add{
+        display:contents;
+    }
+        #playlist-name-selection{
+            grid-column:2;
+            grid-row:1;
+            justify-self:start;
+        }
+        #playlist-add-button{
+            grid-column:2;
+            grid-row:2;
+            justify-self:start;
+        }
+        #item-selection-reset{
+            grid-column:3;
+            grid-row:2;
+            justify-self:center;
+        }
+   
 .item-list{
     display: grid;
     grid-auto-rows: 138px;

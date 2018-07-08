@@ -5,44 +5,6 @@
         <title>$page_title</title>
         <link href="/youtube.com/shared.css" type="text/css" rel="stylesheet">
         <style type="text/css">
-            header{
-                display:grid;
-                grid-template-columns: 3fr 2fr;
-            }
-                #header-left{
-                    grid-column:1;
-                    
-                    display:grid;
-                    grid-template-columns: 1fr 640px;
-                }
-                    #site-search{
-                        grid-column: 2;
-                    }
-                #header-right{
-                    grid-column:2;
-                    
-                    display:grid;
-                    grid-template-columns:40px 400px 100px 1fr;
-                    grid-template-rows: 1fr 1fr;
-                }
-                    #playlist-add{
-                        display:contents;
-                    }
-                        #playlist-name-selection{
-                            grid-column:2;
-                            grid-row:1;
-                            justify-self:start;
-                        }
-                        #playlist-add-button{
-                            grid-column:2;
-                            grid-row:2;
-                            justify-self:start;
-                        }
-                        #item-selection-reset{
-                            grid-column:3;
-                            grid-row:2;
-                            justify-self:center;
-                        }
             main{
                 display:grid;
                 grid-template-rows: 0fr 0fr 1fr;
@@ -82,24 +44,7 @@
         </style>
     </head>
     <body>
-        <header>
-            <div id="header-left">
-                <form id="site-search" action="/youtube.com/search">
-                    <input type="search" name="query" class="search-box">
-                    <button type="submit" value="Search" class="search-button">Search</button>
-                </form>
-            </div>
-            <div id="header-right">
-                <form id="playlist-add" action="/youtube.com/edit_playlist" method="post" target="_self">
-                    <input type="hidden" name="action" value="add">
-                    <select name="playlist_name" id="playlist-name-selection">
-                        <option value="watch_later">watch_later</option>
-                    </select>
-                    <button type="submit" id="playlist-add-button">Add to playlist</button>
-                    <button type="reset" id="item-selection-reset">Clear selection</button>
-                </form>
-            </div>
-        </header>
+$header
         <main>       
             <img class="avatar" src="$avatar">
             <h2 class="title">$channel_title</h2>

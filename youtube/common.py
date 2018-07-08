@@ -1,4 +1,5 @@
 from youtube.template import Template
+from youtube import local_playlist
 import html
 import json
 import re
@@ -280,8 +281,33 @@ def medium_video_item_html(medium_video_info):
         )
 
 
-
-
+header_template = Template('''
+        <header>
+            <div id="header-left">
+                <form id="site-search" action="/youtube.com/search">
+                    <input type="search" name="query" class="search-box">
+                    <button type="submit" value="Search" class="search-button">Search</button>
+                </form>
+            </div>
+            <div id="header-right">
+                <form id="playlist-add" action="/youtube.com/edit_playlist" method="post" target="_self">
+                    <input type="hidden" name="action" value="add">
+                    <input name="playlist_name" id="playlist-name-selection" list="playlist-options" type="text">
+                    <datalist id="playlist-options">
+$playlists
+                    </datalist>
+                    <button type="submit" id="playlist-add-button">Add to playlist</button>
+                    <button type="reset" id="item-selection-reset">Clear selection</button>
+                </form>
+            </div>
+        </header>
+''')
+playlist_option_template = Template('''<option value="$name">$name</option>''')
+def get_header():
+    playlists = ''
+    for name in local_playlist.get_playlist_names():
+        playlists += playlist_option_template.substitute(name = name)
+    return header_template.substitute(playlists=playlists)
 
 
 

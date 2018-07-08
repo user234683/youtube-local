@@ -156,6 +156,7 @@ def channel_videos_html(polymer_json, current_page=1, number_of_videos = 1000, c
     items_html = grid_items_html(items, {'author': microformat['title']})
     
     return yt_channel_items_template.substitute(
+        header              = common.get_header(),
         channel_title       = microformat['title'],
         channel_tabs        = channel_tabs_html(channel_id, 'Videos'),
         avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
@@ -190,6 +191,7 @@ def channel_playlists_html(polymer_json):
     items_html = grid_items_html(items, {'author': microformat['title']})
     
     return yt_channel_items_template.substitute(
+        header              = common.get_header(),
         channel_title       = microformat['title'],
         channel_tabs        = channel_tabs_html(channel_id, 'Playlists'),
         avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
@@ -227,6 +229,7 @@ def channel_about_page(polymer_json):
     except KeyError:
         description = ''
     return yt_channel_about_template.substitute(
+        header              = common.get_header(),
         page_title          = common.get_plain_text(channel_metadata['title']) + ' - About',
         channel_title       = common.get_plain_text(channel_metadata['title']),
         avatar              = html.escape(avatar),
