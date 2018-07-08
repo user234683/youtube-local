@@ -241,7 +241,7 @@ def small_video_item_html(item):
         duration    = item["duration"],
         url         = URL_ORIGIN + "/watch?v=" + item["id"],
         thumbnail   = get_thumbnail_url(item['id']),
-        video_info  = html.escape(json.dumps(video_info)),
+        video_info  = html.escape(video_info),
     )
 
 def small_playlist_item_html(item):
