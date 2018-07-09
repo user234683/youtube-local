@@ -264,7 +264,8 @@ address{
         min-width: 0;
 
         overflow:hidden;
-        max-height: 3.6em;
+        max-height: 3.3em;
+        line-height: 1.1em;
     }
     .small-item address{
         grid-column: 2;
