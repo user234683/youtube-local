@@ -178,7 +178,7 @@ address{
 .medium-item-box{
 
     display:grid;
-    grid-template-columns: 1fr 0fr;
+    grid-template-columns: 1fr 30px;
 }
 .medium-item{
     background-color:#bcbcbc;
@@ -244,7 +244,7 @@ address{
     font-size: 12px;
 
     display:grid;
-    grid-template-columns: 1fr 0fr;
+    grid-template-columns: 1fr 30px;
     grid-template-rows: 94px;
 }
 
