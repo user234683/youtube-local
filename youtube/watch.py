@@ -266,7 +266,12 @@ def get_watch_page(query_string):
         #chosen_format = choose_format(info)
         sort_formats(info)
         
-        
+        video_info = {
+            "duration": common.seconds_to_timestamp(info["duration"]),
+            "id":       info['id'],
+            "title":    info['title'],
+            "author":   info['uploader'],
+        }
 
         upload_year = info["upload_date"][0:4]
         upload_month = info["upload_date"][4:6]
@@ -276,20 +281,20 @@ def get_watch_page(query_string):
         related_videos_html = get_related_items_html(info)
         
         page = yt_watch_template.substitute(
-            video_title=html.escape(info["title"]),
-            page_title=html.escape(info["title"]),
-            header=common.get_header(),
-            uploader=html.escape(info["uploader"]),
-            uploader_channel_url='/' + info["uploader_url"],
-            #upload_date=datetime.datetime.fromtimestamp(info["timestamp"]).strftime("%d %b %Y %H:%M:%S"),
-            upload_date = upload_date,
-            views='{:,}'.format(info["view_count"]),
-            likes=(lambda x: '{:,}'.format(x) if x is not None else "")(info["like_count"]),
-            dislikes=(lambda x: '{:,}'.format(x) if x is not None else "")(info["dislike_count"]),
-            description=html.escape(info["description"]),
-            video_sources=formats_html(info),
-            related = related_videos_html,
-            comments=comments_html,
-            more_comments_button = more_comments_button,
+            video_title             = html.escape(info["title"]),
+            page_title              = html.escape(info["title"]),
+            header                  = common.get_header(),
+            uploader                = html.escape(info["uploader"]),
+            uploader_channel_url    = '/' + info["uploader_url"],
+            upload_date             = upload_date,
+            views                   = '{:,}'.format(info["view_count"]),
+            likes           = (lambda x: '{:,}'.format(x) if x is not None else "")(info["like_count"]),
+            dislikes        = (lambda x: '{:,}'.format(x) if x is not None else "")(info["dislike_count"]),
+            video_info              = html.escape(json.dumps(video_info)),
+            description             = html.escape(info["description"]),
+            video_sources           = formats_html(info),
+            related                 = related_videos_html,
+            comments                = comments_html,
+            more_comments_button    = more_comments_button,
         )
         return page

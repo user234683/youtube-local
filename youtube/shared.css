@@ -159,6 +159,12 @@ address{
         grid-row: 4;
         justify-self:end;
     }
+    .full-item .checkbox{
+        justify-self:end;
+
+        grid-row: 5;
+        grid-column: 2;
+    }
     .full-item .description{
         background-color:#d0d0d0;
         margin-top:8px;
@@ -166,7 +172,7 @@ address{
         min-width: 0;
 
         grid-column: 1 / span 2;
-        grid-row: 5;
+        grid-row: 6;
     }
 
 .medium-item-box{
