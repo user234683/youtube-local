@@ -42,7 +42,8 @@ URL_ORIGIN = "/https://www.youtube.com"
 # first_video_id
 
 
-
+with open('yt_basic_template.html', 'r', encoding='utf-8') as file:
+    yt_basic_template = Template(file.read())
 
 
 

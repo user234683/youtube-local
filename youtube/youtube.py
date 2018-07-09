@@ -40,6 +40,10 @@ def youtube(env, start_response):
             start_response('200 OK',  (('Content-type','text/html'),) )
             return channel.get_user_page(path[6:], query_string=query_string).encode()
 
+        elif path.startswith("/playlists"):
+            start_response('200 OK',  (('Content-type','text/html'),) )
+            return local_playlist.get_playlist_page(path[10:], query_string=query_string).encode()
+
         else:
             start_response('404 Not Found',  () )
             return b'404 Not Found'
