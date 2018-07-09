@@ -129,7 +129,7 @@ def get_search_page(query_string, parameters=()):
         
     
     result = Template(yt_search_results_template).substitute(
-        header              = common.get_header(),
+        header              = common.get_header(query),
         results             = result_list_html, 
         page_title          = query + " - Search", 
         search_box_value    = html.escape(query),

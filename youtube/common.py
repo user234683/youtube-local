@@ -293,7 +293,7 @@ header_template = Template('''
         <header>
             <div id="header-left">
                 <form id="site-search" action="/youtube.com/search">
-                    <input type="search" name="query" class="search-box">
+                    <input type="search" name="query" class="search-box" value="$search_box_value">
                     <button type="submit" value="Search" class="search-button">Search</button>
                 </form>
             </div>
@@ -311,11 +311,11 @@ $playlists
         </header>
 ''')
 playlist_option_template = Template('''<option value="$name">$name</option>''')
-def get_header():
+def get_header(search_box_value=""):
     playlists = ''
     for name in local_playlist.get_playlist_names():
         playlists += playlist_option_template.substitute(name = name)
-    return header_template.substitute(playlists=playlists)
+    return header_template.substitute(playlists = playlists, search_box_value = html.escape(search_box_value))
 
 
 
