@@ -1,6 +1,6 @@
 import mimetypes
 import urllib.parse
-from youtube import local_playlist, watch, search, playlist, channel, comments
+from youtube import local_playlist, watch, search, playlist, channel, comments, common
 YOUTUBE_FILES = (
     "/shared.css",
     "/opensearch.xml",
@@ -43,7 +43,9 @@ def youtube(env, start_response):
         elif path.startswith("/playlists"):
             start_response('200 OK',  (('Content-type','text/html'),) )
             return local_playlist.get_playlist_page(path[10:], query_string=query_string).encode()
-
+        elif path.startswith("/api/"):
+            start_response('200 OK',  () )
+            return common.fetch_url('https://www.youtube.com' + path + ('?' + query_string if query_string else ''))
         else:
             start_response('404 Not Found',  () )
             return b'404 Not Found'

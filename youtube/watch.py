@@ -114,8 +114,7 @@ _formats = {
 
 
 
-source_tag_template = Template('''
-<source src="$src" type="$type">''')
+
 
 with open("yt_watch_template.html", "r") as file:
     yt_watch_template = Template(file.read())
@@ -245,7 +244,43 @@ def choose_format(info):
             current_best = (format, video_priority_index)
     return current_best[0]
 
+subtitles_tag_template = Template('''
+<track label="$label" src="$src" kind="subtitles" srclang="$srclang" $default>''')
+def subtitles_html(info):
+    result = ''
+    default_found = False
+    for language, formats in info['subtitles'].items():
+        for format in formats:
+            if format['ext'] == 'vtt':
+                if language == "en":
+                    default_found = True
+                result += subtitles_tag_template.substitute(
+                    src = html.escape('/' + format['url']),
+                    label = html.escape(language),
+                    srclang = html.escape(language),
+                    default = 'default' if language == 'en' else '',
+                )
+                break
+    try:
+        formats = info['automatic_captions']['en']
+    except KeyError:
+        pass
+    else:
+        for format in formats:
+            if format['ext'] == 'vtt':
+                result += subtitles_tag_template.substitute(
+                    src = html.escape('/' + format['url']),
+                    label = 'en' + ' - Automatic',
+                    srclang = 'en',
+                    default = '' if default_found else 'default',
+                )
+    return result
+
+
 more_comments_template = Template('''<a class="page-button more-comments" href="$url">More comments</a>''')
+source_tag_template = Template('''
+<source src="$src" type="$type">''')
+
 def get_watch_page(query_string):
         id = urllib.parse.parse_qs(query_string)['v'][0]
         tasks = (
@@ -292,7 +327,7 @@ def get_watch_page(query_string):
             dislikes        = (lambda x: '{:,}'.format(x) if x is not None else "")(info["dislike_count"]),
             video_info              = html.escape(json.dumps(video_info)),
             description             = html.escape(info["description"]),
-            video_sources           = formats_html(info),
+            video_sources           = formats_html(info) + subtitles_html(info),
             related                 = related_videos_html,
             comments                = comments_html,
             more_comments_button    = more_comments_button,
