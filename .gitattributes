@@ -15,6 +15,8 @@
 *.css       text
 *.txt       text
 
+*.bat       text eol=crlf
+
 # Binary files
 # ============
 *.db		binary

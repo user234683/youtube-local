@@ -2,6 +2,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 youtube_dl_old/
+python/
+gevent/
 debug/
 data/
 banned_addresses.txt
