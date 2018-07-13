@@ -266,7 +266,7 @@ def get_channel_page(url, query_string=''):
         polymer_json = json.loads(polymer_json)
         return channel_about_page(polymer_json)
     elif tab == 'playlists':
-        polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1', headers_1)
+        polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1&view=1', headers_1)
         '''with open('debug/channel_playlists_debug', 'wb') as f:
             f.write(polymer_json)'''
         polymer_json = json.loads(polymer_json)
@@ -290,7 +290,7 @@ def get_user_page(url, query_string=''):
         polymer_json = json.loads(polymer_json)
         return channel_about_page(polymer_json)
     elif page == 'playlists':
-        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/playlists?pbj=1', headers_1)
+        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/playlists?pbj=1&view=1', headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_playlists_html(polymer_json)
     else:
