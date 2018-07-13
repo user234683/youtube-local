@@ -31,11 +31,8 @@ Local playlists are found at http://localhost/youtube.com/playlists
 
 ### Using Tor
 
-Change 
-```ROUTE_TOR = False```
-to
-```ROUTE_TOR = True```
-in server.py to enable Tor routing
+Change `route_tor = False` to `route_tor = True` in settings.txt to enable Tor routing.
+If settings.txt doesn't exist yet, run the program and it will be created with the default settings.
 
 Ensure tor is listening for Socks5 connections on port 9050 (a simple way to accomplish this is by opening the Tor Browser Bundle and leaving it open). Your connections should now be routed through Tor.
 
