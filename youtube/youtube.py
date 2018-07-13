@@ -45,7 +45,9 @@ def youtube(env, start_response):
             return local_playlist.get_playlist_page(path[10:], query_string=query_string).encode()
         elif path.startswith("/api/"):
             start_response('200 OK',  () )
-            return common.fetch_url('https://www.youtube.com' + path + ('?' + query_string if query_string else ''))
+            result = common.fetch_url('https://www.youtube.com' + path + ('?' + query_string if query_string else ''))
+            result = result.replace(b"align:start position:0%", b"")
+            return result
         else:
             start_response('404 Not Found',  () )
             return b'404 Not Found'
