@@ -7,6 +7,7 @@ import youtube.common as common
 from youtube.common import default_multi_get, get_thumbnail_url, video_id, URL_ORIGIN
 import youtube.comments as comments
 import gevent
+import settings
 
 video_height_priority = (360, 480, 240, 720, 1080)
 
@@ -252,17 +253,17 @@ def subtitles_html(info):
     for language, formats in info['subtitles'].items():
         for format in formats:
             if format['ext'] == 'vtt':
-                if language == "en":
+                if language == settings.subtitles_language:
                     default_found = True
                 result += subtitles_tag_template.substitute(
                     src = html.escape('/' + format['url']),
                     label = html.escape(language),
                     srclang = html.escape(language),
-                    default = 'default' if language == 'en' else '',
+                    default = 'default' if language == settings.subtitles_language and settings.subtitles_mode > 0 else '',
                 )
                 break
     try:
-        formats = info['automatic_captions']['en']
+        formats = info['automatic_captions'][settings.subtitles_language]
     except KeyError:
         pass
     else:
@@ -270,9 +271,9 @@ def subtitles_html(info):
             if format['ext'] == 'vtt':
                 result += subtitles_tag_template.substitute(
                     src = html.escape('/' + format['url']),
-                    label = 'en' + ' - Automatic',
-                    srclang = 'en',
-                    default = '' if default_found else 'default',
+                    label = settings.subtitles_language + ' - Automatic',
+                    srclang = settings.subtitles_language,
+                    default = 'default' if settings.subtitles_mode == 2 and not default_found else '',
                 )
     return result
 
