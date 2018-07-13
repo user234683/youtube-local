@@ -10,13 +10,15 @@ import socks
 import subprocess
 import re
 
-ROUTE_TOR = True
-PORT_NUMBER=80
-ALLOW_FOREIGN_ADDRESSES=False
+import settings
+
 
 BAN_FILE = "banned_addresses.txt"
-with open(BAN_FILE, 'r') as f:
-    banned_addresses = f.read().splitlines()
+try:
+    with open(BAN_FILE, 'r') as f:
+        banned_addresses = f.read().splitlines()
+except FileNotFoundError:
+    banned_addresses = ()
 
 def ban_address(address):
     banned_addresses.append(address)
@@ -127,15 +129,15 @@ def site_dispatch(env, start_response):
 
 
 
-if ROUTE_TOR:
+if settings.route_tor:
     #subprocess.Popen(TOR_PATH)
     socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5, '127.0.0.1', 9150)
     socket.socket = socks.socksocket
     gevent.socket.socket = socks.socksocket
 
-if ALLOW_FOREIGN_ADDRESSES:
-    server = WSGIServer(('0.0.0.0', PORT_NUMBER), site_dispatch)
+if settings.allow_foreign_addresses:
+    server = WSGIServer(('0.0.0.0', settings.port_number), site_dispatch)
 else:
-    server = WSGIServer(('127.0.0.1', PORT_NUMBER), site_dispatch)
-print('Started httpserver on port ' , PORT_NUMBER)
+    server = WSGIServer(('127.0.0.1', settings.port_number), site_dispatch)
+print('Started httpserver on port ' , settings.port_number)
 server.serve_forever()

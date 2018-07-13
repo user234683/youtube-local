@@ -4,3 +4,4 @@ __pycache__/
 debug/
 data/
 banned_addresses.txt
+settings.txt
