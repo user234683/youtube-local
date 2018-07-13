@@ -1,12 +1,6 @@
 __pycache__/
 *.py[cod]
 *$py.class
-youtube_dl_old/
-python/
-gevent/
 debug/
 data/
 banned_addresses.txt
-youtube/common_old.py
-youtube/common_older.py
-youtube/watch_old.py
