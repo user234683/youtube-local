@@ -128,7 +128,7 @@ address{
     display: grid;
     grid-template-rows: 0fr 0fr 0fr 0fr 0fr;
     grid-template-columns: 1fr 1fr;
-    
+    align-content: start;
 }
     .full-item video{
         grid-column: 1 / span 2;
