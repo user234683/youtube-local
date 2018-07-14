@@ -6,11 +6,12 @@ from string import Template
 import urllib.request
 import urllib
 import html
+import settings
 comment_template = Template('''
                 <div class="comment-container">
                     <div class="comment">
                         <a class="author-avatar" href="$author_url" title="$author">
-                            <img class="author-avatar-img" src="$author_avatar">
+$avatar
                         </a>
                         <address>
                             <a class="author" href="$author_url" title="$author">$author</a>
@@ -23,6 +24,8 @@ $replies
 
                 </div>
 ''')
+comment_avatar_template = Template('''                            <img class="author-avatar-img" src="$author_avatar">''')
+
 reply_link_template = Template('''
                     <a href="$url" class="replies">View replies</a>
 ''')
@@ -143,10 +146,17 @@ def get_comments_html(result):
         replies = ''
         if comment['replies_url']:
             replies = reply_link_template.substitute(url=comment['replies_url'])
+        if settings.enable_comment_avatars:
+            avatar = comment_avatar_template.substitute(
+                author_url = URL_ORIGIN + comment['author_url'],
+                author_avatar = '/' + comment['author_avatar'],
+            )
+        else:
+            avatar = ''
         html_result += comment_template.substitute(
             author=html.escape(comment['author']),
             author_url = URL_ORIGIN + comment['author_url'],
-            author_avatar = '/' + comment['author_avatar'],
+            avatar = avatar,
             likes = str(comment['likes']) + ' likes' if str(comment['likes']) != '0' else '',
             published = comment['published'],
             text = format_text_runs(comment['text']),
@@ -157,8 +167,10 @@ def get_comments_html(result):
     return html_result, result['ctoken']
     
 def video_comments(video_id, sort=0, offset=0, secret_key=''):
-    result = parse_comments(request_comments(make_comment_ctoken(video_id, sort, offset, secret_key)))
-    return get_comments_html(result)
+    if settings.enable_comments:
+        result = parse_comments(request_comments(make_comment_ctoken(video_id, sort, offset, secret_key)))
+        return get_comments_html(result)
+    return '', ''
 
 more_comments_template = Template('''<a class="page-button more-comments" href="$url">More comments</a>''')
 

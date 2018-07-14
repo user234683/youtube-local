@@ -16,6 +16,8 @@
     grid-row: 1 / span 3;
     align-self: start;
     margin-right: 5px;
+    height:32px;
+    width:32px;
 }
 
 .comment address{

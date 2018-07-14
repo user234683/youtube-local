@@ -9,6 +9,10 @@ subtitles_mode = 0
 
 # ISO 639 language code: https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
 subtitles_language = "en"
+
+enable_related_videos = True
+enable_comments = True
+enable_comment_avatars = True
 '''
 exec(default_settings)
 try:

@@ -314,7 +314,10 @@ def get_watch_page(query_string):
         upload_day = info["upload_date"][6:8]
         upload_date = upload_month + "/" + upload_day + "/" + upload_year
         
-        related_videos_html = get_related_items_html(info)
+        if settings.enable_related_videos:
+            related_videos_html = get_related_items_html(info)
+        else:
+            related_videos_html = ''
         
         page = yt_watch_template.substitute(
             video_title             = html.escape(info["title"]),
