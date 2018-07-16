@@ -211,22 +211,28 @@ def watch_page_related_playlist_info(item):
 
     
 def sort_formats(info):
-    info['formats'].sort(key=lambda x: default_multi_get(_formats, x['format_id'], 'height', default=0))
-    for index, format in enumerate(info['formats']):
+    sorted_formats = info['formats'].copy()
+    sorted_formats.sort(key=lambda x: default_multi_get(_formats, x['format_id'], 'height', default=0))
+    for index, format in enumerate(sorted_formats):
         if default_multi_get(_formats, format['format_id'], 'height', default=0) >= 360:
             break
-    info['formats'] = info['formats'][index:] + info['formats'][0:index]
-    info['formats'] = [format for format in info['formats'] if format['acodec'] != 'none' and format['vcodec'] != 'none']
-    
-def formats_html(info):
+    sorted_formats = sorted_formats[index:] + sorted_formats[0:index]
+    sorted_formats = [format for format in info['formats'] if format['acodec'] != 'none' and format['vcodec'] != 'none']
+    return sorted_formats
+
+source_tag_template = Template('''
+<source src="$src" type="$type">''')
+def formats_html(formats):
     result = ''
-    for format in info['formats']:
+    for format in formats:
         result += source_tag_template.substitute(
             src=format['url'],
             type='audio/' + format['ext'] if format['vcodec'] == "none" else 'video/' + format['ext'],
         )
     return result
-    
+
+
+
 def choose_format(info):
     suitable_formats = []
     with open('teste.txt', 'w', encoding='utf-8') as f:
@@ -279,14 +285,16 @@ def subtitles_html(info):
 
 
 more_comments_template = Template('''<a class="page-button more-comments" href="$url">More comments</a>''')
-source_tag_template = Template('''
-<source src="$src" type="$type">''')
+
+download_link_template = Template('''
+<a href="$url"> <span>$ext</span> <span>$resolution</span> <span>$note</span></a>''')
 
 def get_watch_page(query_string):
         id = urllib.parse.parse_qs(query_string)['v'][0]
+        downloader = YoutubeDL(params={'youtube_include_dash_manifest':False})
         tasks = (
             gevent.spawn(comments.video_comments, id ), 
-            gevent.spawn(YoutubeDL(params={'youtube_include_dash_manifest':False}).extract_info, "https://www.youtube.com/watch?v=" + id, download=False)
+            gevent.spawn(downloader.extract_info, "https://www.youtube.com/watch?v=" + id, download=False)
         )
         gevent.joinall(tasks)
         comments_info, info = tasks[0].value, tasks[1].value
@@ -300,7 +308,7 @@ def get_watch_page(query_string):
         #info = YoutubeDL().extract_info(url, download=False)
         
         #chosen_format = choose_format(info)
-        sort_formats(info)
+        sorted_formats = sort_formats(info)
         
         video_info = {
             "duration": common.seconds_to_timestamp(info["duration"]),
@@ -318,7 +326,18 @@ def get_watch_page(query_string):
             related_videos_html = get_related_items_html(info)
         else:
             related_videos_html = ''
-        
+
+
+
+        download_options = ''
+        for format in info['formats']:
+            download_options += download_link_template.substitute(
+                url        = html.escape(format['url']),
+                ext         = html.escape(format['ext']),
+                resolution  = html.escape(downloader.format_resolution(format)),
+                note        = html.escape(downloader._format_note(format)),
+            )
+
         page = yt_watch_template.substitute(
             video_title             = html.escape(info["title"]),
             page_title              = html.escape(info["title"]),
@@ -329,9 +348,10 @@ def get_watch_page(query_string):
             views           = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("view_count", None)),
             likes           = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("like_count", None)),
             dislikes        = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("dislike_count", None)),
+            download_options        = download_options,
             video_info              = html.escape(json.dumps(video_info)),
             description             = html.escape(info["description"]),
-            video_sources           = formats_html(info) + subtitles_html(info),
+            video_sources           = formats_html(sorted_formats) + subtitles_html(info),
             related                 = related_videos_html,
             comments                = comments_html,
             more_comments_button    = more_comments_button,

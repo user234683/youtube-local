@@ -67,6 +67,12 @@ $video_sources
 
                     <time datetime="$upload_date">Published on $upload_date</time>
                     <span class="likes-dislikes">$likes likes $dislikes dislikes</span>
+                    <div class="dropdown">
+                        <button class="dropdown-label">Download</button>
+                        <div class="dropdown-content">
+$download_options
+                        </div>
+                    </div>
                     <input class="checkbox" name="video_info_list" value="$video_info" form="playlist-add" type="checkbox">
 
                     <span class="description">$description</span>
