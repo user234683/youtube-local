@@ -138,7 +138,7 @@ medium_channel_item_template = Template('''
 ''')
 
 
-def fetch_url(url, headers=(), timeout=5, report_text=None):
+def fetch_url(url, headers=(), timeout=15, report_text=None):
     if isinstance(headers, list):
         headers +=  [('Accept-Encoding', 'gzip, br')]
         headers = dict(headers)
