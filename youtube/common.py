@@ -366,7 +366,7 @@ dispatch = {
     'lengthText':           ('duration',    get_text),
     'thumbnail':            ('thumbnail',   get_thumbnail),
     'thumbnails':           ('thumbnail',   lambda node: node[0]['thumbnails'][0]['url']),
-    
+
     'videoCountText':       ('size',        get_text),
     'playlistId':           ('id',          lambda node: node),
 
@@ -400,12 +400,17 @@ def renderer_info(renderer):
             pass
         else:
             for overlay in overlays:
-                try:
+                if 'thumbnailOverlayTimeStatusRenderer' in overlay:
                     info['duration'] = get_text(overlay['thumbnailOverlayTimeStatusRenderer']['text'])
-                except KeyError:
-                    pass
-                else:
-                    break
+                # show renderers don't have videoCountText
+                elif 'thumbnailOverlayBottomPanelRenderer' in overlay:
+                    info['size'] = get_text(overlay['thumbnailOverlayBottomPanelRenderer']['text'])
+
+        # show renderers don't have playlistId, have to dig into the url to get it
+        try:
+            info['id'] = renderer['navigationEndpoint']['watchEndpoint']['playlistId']
+        except KeyError:
+            pass
         for key, node in renderer.items():
             if key in ('longBylineText', 'shortBylineText'):
                 info['author'] = get_text(node)
@@ -414,13 +419,15 @@ def renderer_info(renderer):
                 except KeyError:
                     pass
 
-                continue
-
-            try:
-                simple_key, function = dispatch[key]
-            except KeyError:
-                continue
-            info[simple_key] = function(node)
+            # show renderers don't have thumbnail key at top level, dig into thumbnailRenderer
+            elif key == 'thumbnailRenderer' and 'showCustomThumbnailRenderer' in node:
+                info['thumbnail'] = node['showCustomThumbnailRenderer']['thumbnail']['thumbnails'][0]['url']
+            else:
+                try:
+                    simple_key, function = dispatch[key]
+                except KeyError:
+                    continue
+                info[simple_key] = function(node)
         return info
     except KeyError:
         print(renderer)
@@ -585,18 +592,6 @@ did_you_mean = Template('''
 def renderer_html(renderer, additional_info={}, current_query_string=''):
     type = list(renderer.keys())[0]
     renderer = renderer[type]
-    if type in ('videoRenderer', 'playlistRenderer', 'radioRenderer', 'compactVideoRenderer', 'compactPlaylistRenderer', 'compactRadioRenderer', 'gridVideoRenderer', 'gridPlaylistRenderer', 'gridRadioRenderer'):
-        info = renderer_info(renderer)
-        info.update(additional_info)
-        html_exclude = set(additional_info.keys())
-        if type == 'compactVideoRenderer':
-            return video_item_html(info, small_video_item_template, html_exclude=html_exclude)
-        if type in ('compactPlaylistRenderer', 'compactRadioRenderer'):
-            return playlist_item_html(info, small_playlist_item_template, html_exclude=html_exclude)
-        if type in ('videoRenderer', 'gridVideoRenderer'):
-            return video_item_html(info, medium_video_item_template, html_exclude=html_exclude)
-        if type in ('playlistRenderer', 'gridPlaylistRenderer', 'radioRenderer', 'gridRadioRenderer'):
-            return playlist_item_html(info, medium_playlist_item_template, html_exclude=html_exclude)
 
     if type == 'channelRenderer':
         info = renderer_info(renderer)
@@ -606,5 +601,18 @@ def renderer_html(renderer, additional_info={}, current_query_string=''):
     
     if type == 'movieRenderer':
         return ''
+
+    info = renderer_info(renderer)
+    info.update(additional_info)
+    html_exclude = set(additional_info.keys())
+    if type == 'compactVideoRenderer':
+        return video_item_html(info, small_video_item_template, html_exclude=html_exclude)
+    if type in ('compactPlaylistRenderer', 'compactRadioRenderer', 'compactShowRenderer'):
+        return playlist_item_html(info, small_playlist_item_template, html_exclude=html_exclude)
+    if type in ('videoRenderer', 'gridVideoRenderer'):
+        return video_item_html(info, medium_video_item_template, html_exclude=html_exclude)
+    if type in ('playlistRenderer', 'gridPlaylistRenderer', 'radioRenderer', 'gridRadioRenderer', 'gridShowRenderer', 'showRenderer'):
+        return playlist_item_html(info, medium_playlist_item_template, html_exclude=html_exclude)
+
     print(renderer)
     raise NotImplementedError('Unknown renderer type: ' + type)
