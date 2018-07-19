@@ -119,9 +119,22 @@ def grid_items_html(items, additional_info={}):
     result += '''\n</nav>'''
     return result
 
+def list_items_html(items, additional_info={}):
+    result = '''                <nav class="item-list">'''
+    for item in items:
+        result += common.renderer_html(item, additional_info)
+    result += '''\n</nav>'''
+    return result
+
 channel_tab_template = Template('''\n<a class="tab page-button"$href_attribute>$tab_name</a>''')
+channel_search_template = Template('''
+                <form class="channel-search" action="$action">
+                    <input type="search" name="query" class="search-box" value="$search_box_value">
+                    <button type="submit" value="Search" class="search-button">Search</button>
+                </form>''')
+
 tabs = ('Videos', 'Playlists', 'About')
-def channel_tabs_html(channel_id, current_tab):
+def channel_tabs_html(channel_id, current_tab, search_box_value=''):
     result = ''
     for tab_name in tabs:
         if tab_name == current_tab:
@@ -134,6 +147,10 @@ def channel_tabs_html(channel_id, current_tab):
                 href_attribute = 'href="' + URL_ORIGIN + "/channel/" + channel_id + "/" + tab_name.lower() + '"',
                 tab_name = tab_name,
             )
+    result += channel_search_template.substitute(
+        action = URL_ORIGIN + "/channel/" + channel_id + "/search",
+        search_box_value = html.escape(search_box_value),
+    )
     return result
             
 
@@ -238,7 +255,44 @@ def channel_about_page(polymer_json):
         stats               = stats,
         channel_tabs        = channel_tabs_html(channel_metadata['channelId'], 'About'),
     )
+
+def channel_search_page(polymer_json, query, current_page=1, number_of_videos = 1000, current_query_string=''):
+    microformat = polymer_json[1]['response']['microformat']['microformatDataRenderer']
+    channel_url = microformat['urlCanonical'].rstrip('/')
+    channel_id = channel_url[channel_url.rfind('/')+1:]
+
+    response = polymer_json[1]['response']
+    try:
+        items = response['contents']['twoColumnBrowseResultsRenderer']['tabs'][6]['expandableTabRenderer']['content']['sectionListRenderer']['contents']
+    except KeyError:
+        items = response['continuationContents']['sectionListContinuation']['contents']
+
+    items_html = list_items_html(items)
+
+    return yt_channel_items_template.substitute(
+        header              = common.get_header(),
+        channel_title       = html.escape(query + ' - Channel search'),
+        channel_tabs        = channel_tabs_html(channel_id, '', query),
+        avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
+        page_title          = microformat['title'] + ' - Channel',
+        items               = items_html,
+        page_buttons        = common.page_buttons_html(current_page, math.ceil(number_of_videos/29), URL_ORIGIN + "/channel/" + channel_id + "/search", current_query_string),
+        number_of_results   = '',
+    )
+def get_channel_search_json(channel_id, query, page):
+    params = proto.string(2, 'search') + proto.string(15, str(page))
+    params = proto.percent_b64encode(params)
+    ctoken = proto.string(2, channel_id) + proto.string(3, params) + proto.string(11, query)
+    ctoken = base64.urlsafe_b64encode(proto.nested(80226972, ctoken)).decode('ascii')
+
+    polymer_json = common.fetch_url("https://www.youtube.com/browse_ajax?ctoken=" + ctoken, headers_1)
+    '''with open('debug/channel_search_debug', 'wb') as f:
+        f.write(polymer_json)'''
+    polymer_json = json.loads(polymer_json)
+
+    return polymer_json
     
+
 def get_channel_page(url, query_string=''):
     path_components = url.rstrip('/').lstrip('/').split('/')
     channel_id = path_components[0]
@@ -251,6 +305,7 @@ def get_channel_page(url, query_string=''):
     page_number = int(common.default_multi_get(parameters, 'page', 0, default='1'))
     sort = common.default_multi_get(parameters, 'sort', 0, default='3')
     view = common.default_multi_get(parameters, 'view', 0, default='1')
+    query = common.default_multi_get(parameters, 'query', 0, default='')
 
     if tab == 'videos':
         tasks = (
@@ -271,6 +326,15 @@ def get_channel_page(url, query_string=''):
             f.write(polymer_json)'''
         polymer_json = json.loads(polymer_json)
         return channel_playlists_html(polymer_json)
+    elif tab == 'search':
+        tasks = (
+            gevent.spawn(get_number_of_videos, channel_id ), 
+            gevent.spawn(get_channel_search_json, channel_id, query, page_number)
+        )
+        gevent.joinall(tasks)
+        number_of_videos, polymer_json = tasks[0].value, tasks[1].value
+
+        return channel_search_page(polymer_json, query, page_number, number_of_videos, query_string)
     else:
         raise ValueError('Unknown channel tab: ' + tab)
     
@@ -293,5 +357,10 @@ def get_user_page(url, query_string=''):
         polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/playlists?pbj=1&view=1', headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_playlists_html(polymer_json)
+    elif page == 'search':
+        raise NotImplementedError()
+        '''polymer_json = common.fetch_url('https://www.youtube.com/user' + username +  '/search?pbj=1&' + query_string, headers_1)
+        polymer_json = json.loads(polymer_json)
+        return channel_search_page('''
     else:
         raise ValueError('Unknown channel page: ' + page)

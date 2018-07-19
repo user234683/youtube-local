@@ -593,6 +593,8 @@ did_you_mean = Template('''
 def renderer_html(renderer, additional_info={}, current_query_string=''):
     type = list(renderer.keys())[0]
     renderer = renderer[type]
+    if type == 'itemSectionRenderer':
+        return renderer_html(renderer['contents'][0], additional_info, current_query_string)
 
     if type == 'channelRenderer':
         info = renderer_info(renderer)
