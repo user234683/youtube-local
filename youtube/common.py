@@ -307,6 +307,7 @@ $playlists
                     <button type="submit" id="playlist-add-button">Add to playlist</button>
                     <button type="reset" id="item-selection-reset">Clear selection</button>
                 </form>
+                <a href="/youtube.com/playlists" id="local-playlists">Local playlists</a>
             </div>
         </header>
 ''')
