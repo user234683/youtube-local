@@ -49,7 +49,8 @@ from ..utils import (
     uppercase_escape,
     urlencode_postdata,
 )
-
+class YoutubeError(Exception):
+    pass
 
 class YoutubeBaseInfoExtractor(InfoExtractor):
     """Provide base functions for Youtube extractors"""
@@ -1554,6 +1555,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                     r'"sts"\s*:\s*(\d+)', embed_webpage, 'sts', default=''),
             })
             video_info_url = proto + '://www.youtube.com/get_video_info?' + data
+            
             video_info_webpage = self._download_webpage(
                 video_info_url, video_id,
                 note='Refetching age-gated info webpage',
@@ -1646,7 +1648,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                     unavailable_message = extract_unavailable_message()
                     if unavailable_message:
                         reason = unavailable_message
-                raise ExtractorError(
+                raise YoutubeError(
                     'YouTube said: %s' % reason,
                     expected=True, video_id=video_id)
             else:
@@ -1895,7 +1897,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
             if not error_message:
                 error_message = extract_unavailable_message()
             if error_message:
-                raise ExtractorError(error_message, expected=True)
+                raise YoutubeError(error_message)
             raise ExtractorError('no conn, hlsvp or url_encoded_fmt_stream_map information found in video info')
 
         # uploader

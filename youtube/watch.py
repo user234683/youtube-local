@@ -1,4 +1,5 @@
 from youtube_dl.YoutubeDL import YoutubeDL
+from youtube_dl.extractor.youtube import YoutubeError
 import json
 import urllib
 from string import Template
@@ -289,12 +290,18 @@ more_comments_template = Template('''<a class="page-button more-comments" href="
 download_link_template = Template('''
 <a href="$url"> <span>$ext</span> <span>$resolution</span> <span>$note</span></a>''')
 
+def extract_info(downloader, *args, **kwargs):
+    try:
+        return downloader.extract_info(*args, **kwargs)
+    except YoutubeError as e:
+        return str(e)
+
 def get_watch_page(query_string):
         id = urllib.parse.parse_qs(query_string)['v'][0]
         downloader = YoutubeDL(params={'youtube_include_dash_manifest':False})
         tasks = (
             gevent.spawn(comments.video_comments, id ), 
-            gevent.spawn(downloader.extract_info, "https://www.youtube.com/watch?v=" + id, download=False)
+            gevent.spawn(extract_info, downloader, "https://www.youtube.com/watch?v=" + id, download=False)
         )
         gevent.joinall(tasks)
         comments_info, info = tasks[0].value, tasks[1].value
@@ -308,6 +315,15 @@ def get_watch_page(query_string):
         #info = YoutubeDL().extract_info(url, download=False)
         
         #chosen_format = choose_format(info)
+
+        if isinstance(info, str): # youtube error
+            return common.yt_basic_template.substitute(
+                page_title = "Error",
+                style = "",
+                header = common.get_header(),
+                page = html.escape(info),
+            )
+            
         sorted_formats = sort_formats(info)
         
         video_info = {
