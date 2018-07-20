@@ -40,30 +40,18 @@ def get_playlist_names():
         if ext == '.txt':
             yield name
 
-'''
-            main{
-                display:grid;
-                grid-template-columns: 3fr 1fr;
-            }
+def remove_from_playlist(name, video_info_list):
+    ids = [json.loads(video)['id'] for video in video_info_list]
+    with open(os.path.join(playlists_directory, name + ".txt"), 'r', encoding='utf-8') as file:
+        videos = file.read()
+    videos_in = videos.splitlines()
+    videos_out = []
+    for video in videos_in:
+        if json.loads(video)['id'] not in ids:
+            videos_out.append(video)
+    with open(os.path.join(playlists_directory, name + ".txt"), 'w', encoding='utf-8') as file:
+        file.write("\n".join(videos_out) + "\n")
 
-            header{
-                grid-template-columns: 3fr 1fr;
-            }
-
-            #left{
-                grid-column: 1;
-                grid-row: 1;
-                
-                display: grid;
-                grid-template-columns: 1fr 800px;
-                grid-template-rows: 0fr 1fr 0fr;
-            }
-
-            #right{
-                grid-column: 2;
-                grid-row: 1;
-            }
-'''
 def get_playlists_list_page():
     page = '''<ul>\n'''
     list_item_template = Template('''    <li><a href="$url">$name</a></li>\n''')

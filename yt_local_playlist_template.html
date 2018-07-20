@@ -20,11 +20,27 @@
                 grid-row: 1;
                 
                 display: grid;
-                grid-template-columns: 1fr 800px;
+                grid-template-columns: 1fr 800px auto;
                 grid-template-rows: 0fr 1fr 0fr;
             }
                 .playlist-title{
                     grid-column:2;
+                }
+                #playlist-remove-button{
+                    grid-column:3;
+                    align-self: center;
+                    white-space: nowrap;
+                }
+                #results{
+                    
+                    grid-row: 2;
+                    grid-column: 2 / span 2;
+                    
+                    
+                    display: grid;
+                    grid-auto-rows: 0fr;
+                    grid-row-gap: 10px;
+                    
                 }
                 .page-button-row{
                     grid-row: 3;
@@ -38,17 +54,7 @@
                 grid-row: 1;
 
             }
-            #results{
-                
-                grid-row: 2;
-                grid-column: 2;
-                
-                
-                display: grid;
-                grid-auto-rows: 0fr;
-                grid-row-gap: 10px;
-                
-            }
+
         </style>
     </head>
     <body>
@@ -56,6 +62,8 @@ $header
         <main>
             <div id="left">
                 <h2 class="playlist-title">$title</h2>
+                <input type="hidden" name="playlist_page" value="$title" form="playlist-edit">
+                <button type="submit" id="playlist-remove-button" name="action" value="remove" form="playlist-edit">Remove from playlist</button>
                 <div id="results">          
 $videos
                 </div>

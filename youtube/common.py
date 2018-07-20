@@ -82,7 +82,7 @@ medium_video_item_template = Template('''
                         <span class="description">$description</span>
                         <span class="badges">$badges</span>
                     </div>
-                    <input class="item-checkbox" type="checkbox" name="video_info_list" value="$video_info" form="playlist-add">
+                    <input class="item-checkbox" type="checkbox" name="video_info_list" value="$video_info" form="playlist-edit">
                 </div>
 ''')
 
@@ -99,7 +99,7 @@ small_video_item_template = Template('''
                         <span class="views">$views</span>
                         
                     </div>
-                    <input class="item-checkbox" type="checkbox" name="video_info_list" value="$video_info" form="playlist-add">
+                    <input class="item-checkbox" type="checkbox" name="video_info_list" value="$video_info" form="playlist-edit">
                 </div>
 ''')
 
@@ -298,13 +298,12 @@ header_template = Template('''
                 </form>
             </div>
             <div id="header-right">
-                <form id="playlist-add" action="/youtube.com/edit_playlist" method="post" target="_self">
-                    <input type="hidden" name="action" value="add">
+                <form id="playlist-edit" action="/youtube.com/edit_playlist" method="post" target="_self">
                     <input name="playlist_name" id="playlist-name-selection" list="playlist-options" type="text">
                     <datalist id="playlist-options">
 $playlists
                     </datalist>
-                    <button type="submit" id="playlist-add-button">Add to playlist</button>
+                    <button type="submit" id="playlist-add-button" name="action" value="add">Add to playlist</button>
                     <button type="reset" id="item-selection-reset">Clear selection</button>
                 </form>
                 <a href="/youtube.com/playlists" id="local-playlists">Local playlists</a>

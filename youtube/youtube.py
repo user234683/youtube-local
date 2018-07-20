@@ -57,8 +57,20 @@ def youtube(env, start_response):
             fields = urllib.parse.parse_qs(env['wsgi.input'].read().decode())
             if fields['action'][0] == 'add':
                 local_playlist.add_to_playlist(fields['playlist_name'][0], fields['video_info_list'])
-                
-            start_response('204 No Content', ())
+                start_response('204 No Content', ())
+            elif fields['action'][0] == 'remove':
+                try:
+                    playlist_name = fields['playlist_page'][0]
+                except KeyError:
+                    playlist_name = fields['playlist_name'][0]
+                local_playlist.remove_from_playlist(playlist_name, fields['video_info_list'])
+                start_response('200 OK', ())
+                return local_playlist.get_playlist_page(playlist_name).encode() 
+            else:
+                start_response('400 Bad Request', ())
+                return b'400 Bad Request'
+
+            
         else:
             start_response('404 Not Found', ())
             return b'404 Not Found' 
