@@ -602,7 +602,7 @@ def renderer_html(renderer, additional_info={}, current_query_string=''):
         html_ready['url'] = URL_ORIGIN + "/channel/" + html_ready['id']
         return medium_channel_item_template.substitute(html_ready)
     
-    if type == 'movieRenderer':
+    if type in ('movieRenderer', 'clarificationRenderer'):
         return ''
 
     info = renderer_info(renderer)
