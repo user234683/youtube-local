@@ -30,7 +30,7 @@
 .comment .text{
     grid-column: 2 / span 2;
     grid-row: 2;
-    white-space: pre-line;
+    white-space: pre-wrap;
     min-width: 0;
 }
 
