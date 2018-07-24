@@ -42,7 +42,7 @@ def proxy_site(env, start_response):
         url += '?' + env['QUERY_STRING']
     req = urllib.request.Request(url, headers=headers)
     response = urllib.request.urlopen(req, timeout = 10)
-    start_response('200 OK', () )
+    start_response('200 OK', response.getheaders() )
     return response.read()
 
 site_handlers = {
