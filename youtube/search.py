@@ -40,11 +40,12 @@ features = {
     'location': 23,
 }
 
-def page_number_to_sp_parameter(page):
+def page_number_to_sp_parameter(page, autocorrect=1):
     offset = (int(page) - 1)*20    # 20 results per page
-    return base64.urlsafe_b64encode(proto.uint(9, offset) + proto.string(61, b'')).decode('ascii')
+    autocorrect = proto.nested(8, proto.uint(1, 1 - int(autocorrect) ))
+    return base64.urlsafe_b64encode(proto.uint(9, offset) + proto.string(61, b'') + autocorrect).decode('ascii')
 
-def get_search_json(query, page):
+def get_search_json(query, page, autocorrect):
     url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote_plus(query)
     headers = {
         'Host': 'www.youtube.com',
@@ -54,7 +55,7 @@ def get_search_json(query, page):
         'X-YouTube-Client-Name': '1',
         'X-YouTube-Client-Version': '2.20180418',
     }
-    url += "&pbj=1&sp=" + page_number_to_sp_parameter(page)
+    url += "&pbj=1&sp=" + page_number_to_sp_parameter(page, autocorrect)
     content = common.fetch_url(url, headers=headers)
     info = json.loads(content)
     return info
@@ -83,8 +84,9 @@ def get_search_page(query_string, parameters=()):
         return yt_search_template
     query = qs_query["query"][0]
     page = qs_query.get("page", "1")[0]
+    autocorrect = qs_query.get("autocorrect", "1")[0]
 
-    info = get_search_json(query, page)
+    info = get_search_json(query, page, autocorrect)
     
     estimated_results = int(info[1]['response']['estimatedResults'])
     estimated_pages = ceil(estimated_results/20)
