@@ -407,6 +407,7 @@ address{
     .dropdown:hover .dropdown-content {
         display: grid;
         grid-auto-rows:30px;
+        padding-bottom: 50px;
     }
         .dropdown-content a{
             white-space: nowrap;
