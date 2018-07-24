@@ -502,17 +502,19 @@ def get_stats(html_ready):
     return ' | '.join(stats)
 
 def video_item_html(item, template, html_exclude=set()):
-    html_ready = get_html_ready(item)
+
     video_info = {}
     for key in ('id', 'title', 'author'):
         try:
-            video_info[key] = html_ready[key] 
+            video_info[key] = item[key] 
         except KeyError:
             video_info[key] = ''
     try:
-        video_info['duration'] = html_ready['duration']
+        video_info['duration'] = item['duration']
     except KeyError:
         video_info['duration'] = 'Live'     # livestreams don't have a duration
+
+    html_ready = get_html_ready(item)
 
     html_ready['video_info'] = html.escape(json.dumps(video_info) )
     html_ready['url'] = URL_ORIGIN + "/watch?v=" + html_ready['id']
