@@ -295,6 +295,25 @@ header_template = Template('''
                 <form id="site-search" action="/youtube.com/search">
                     <input type="search" name="query" class="search-box" value="$search_box_value">
                     <button type="submit" value="Search" class="search-button">Search</button>
+                    <div class="dropdown">
+                        <button class="dropdown-label">Options</button>
+                        <div class="css-sucks">
+                            <div class="dropdown-content">
+                                <h3>Sort by</h3>
+                                <input type="radio" id="sort_relevance" name="sort" value="0">
+                                <label for="sort_relevance">Relevance</label>
+
+                                <input type="radio" id="sort_upload_date" name="sort" value="2">
+                                <label for="sort_upload_date">Upload date</label>
+
+                                <input type="radio" id="sort_view_count" name="sort" value="3">
+                                <label for="sort_view_count">View count</label>
+
+                                <input type="radio" id="sort_rating" name="sort" value="1">
+                                <label for="sort_rating">Rating</label>
+                            </div>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div id="header-right">

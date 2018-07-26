@@ -46,7 +46,7 @@ address{
     #site-search{
         grid-column: 2;
         display: grid;
-        grid-template-columns: 1fr 0fr;
+        grid-template-columns: 1fr auto auto;
 
     }
 
@@ -65,7 +65,46 @@ address{
             border-style:solid;
             border-width:1px;
         }
- 
+        #site-search .dropdown{
+            margin-left:5px;
+            grid-column: 3;
+            align-self:center;
+            height:25px;
+        }
+            #site-search .dropdown button{
+                align-self:center;
+                height:25px;
+
+                border-style:solid;
+                border-width:1px;
+            }
+            #site-search .css-sucks{
+                width:0px;
+                height:0px;
+            }
+                #site-search .dropdown-content{
+                    grid-template-columns: auto auto;
+                    white-space: nowrap;
+                }
+                    #site-search .dropdown-content h3{
+                        grid-column:1 / span 2;
+                    }
+
+.dropdown{
+    z-index:1;
+}
+    .dropdown-content{
+        display:none;
+        background-color: #e9e9e9;
+    }
+    .dropdown:hover .dropdown-content{
+        /* For some reason, if this is just grid, it will insist on being 0px wide just like its 0px by 0px parent */
+        /* making it inline-grid happened to fix it */
+        display:inline-grid;
+    }
+
+
+
 #header-right{
     grid-column:2;
     
@@ -387,33 +426,3 @@ address{
         font-weight: bold;
         text-align: center;
     }
-
-
-.dropdown{
-    z-index:1;
-    justify-self:start;
-    min-width:0px;
-}
-
-    .dropdown-label{
-        background-color: #e9e9e9;
-        border-style: outset;
-        border-width: 2px;
-        font-weight: bold;
-    }
-
-    .dropdown-content{
-        display:none;
-        background-color: #e9e9e9;
-    }
-    .dropdown:hover .dropdown-content {
-        display: grid;
-        grid-auto-rows:30px;
-        padding-bottom: 50px;
-    }
-        .dropdown-content a{
-            white-space: nowrap;
-            display:grid;
-            grid-template-columns: 60px 90px auto;
-            max-height: 1.2em;
-        }
