@@ -58,7 +58,6 @@ def get_search_json(query, page, autocorrect, sort):
         'X-YouTube-Client-Version': '2.20180418',
     }
     url += "&pbj=1&sp=" + page_number_to_sp_parameter(page, autocorrect, sort).replace("=", "%3D")
-    print(url)
     content = common.fetch_url(url, headers=headers)
     info = json.loads(content)
     return info
