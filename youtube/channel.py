@@ -169,7 +169,7 @@ def channel_videos_html(polymer_json, current_page=1, number_of_videos = 1000, c
         except KeyError:
             items = []
         else:
-            items = contents['twoColumnBrowseResultsRenderer']['tabs'][1]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['gridRenderer']['items']
+            items = tab_with_content(contents['twoColumnBrowseResultsRenderer']['tabs'])['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['gridRenderer']['items']
     items_html = grid_items_html(items, {'author': microformat['title']})
     
     return yt_channel_items_template.substitute(
@@ -196,7 +196,7 @@ def channel_playlists_html(polymer_json):
         except KeyError:
             items = []
         else:
-            item_section = contents['twoColumnBrowseResultsRenderer']['tabs'][2]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]
+            item_section = tab_with_content(contents['twoColumnBrowseResultsRenderer']['tabs'])['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]
             try:
                 items = item_section['gridRenderer']['items']
             except KeyError:
@@ -218,6 +218,20 @@ def channel_playlists_html(polymer_json):
         number_of_results   = '',
     )
 
+# Example channel where tabs do not have definite index: https://www.youtube.com/channel/UC4gQ8i3FD7YbhOgqUkeQEJg
+def tab_with_content(tabs):
+    for tab in tabs:
+        try:
+            renderer = tab['tabRenderer']
+        except KeyError:
+            renderer = tab['expandableTabRenderer']
+        try:
+            return renderer['content']
+        except KeyError:
+            pass
+
+    raise Exception("No tabs found with content")
+
 channel_link_template = Template('''
 <a href="$url">$text</a>''')
 stat_template = Template('''
@@ -225,7 +239,7 @@ stat_template = Template('''
 def channel_about_page(polymer_json):
     avatar = '/' + polymer_json[1]['response']['microformat']['microformatDataRenderer']['thumbnail']['thumbnails'][0]['url']
     # my goodness...
-    channel_metadata = polymer_json[1]['response']['contents']['twoColumnBrowseResultsRenderer']['tabs'][5]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['channelAboutFullMetadataRenderer']
+    channel_metadata = tab_with_content(polymer_json[1]['response']['contents']['twoColumnBrowseResultsRenderer']['tabs'])['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['channelAboutFullMetadataRenderer']
     channel_links = ''
     for link_json in channel_metadata['primaryLinks']:
         channel_links += channel_link_template.substitute(
@@ -263,7 +277,7 @@ def channel_search_page(polymer_json, query, current_page=1, number_of_videos = 
 
     response = polymer_json[1]['response']
     try:
-        items = response['contents']['twoColumnBrowseResultsRenderer']['tabs'][6]['expandableTabRenderer']['content']['sectionListRenderer']['contents']
+        items = tab_with_content(response['contents']['twoColumnBrowseResultsRenderer']['tabs'])['sectionListRenderer']['contents']
     except KeyError:
         items = response['continuationContents']['sectionListContinuation']['contents']
 
