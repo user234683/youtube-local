@@ -233,7 +233,7 @@ def tab_with_content(tabs):
     raise Exception("No tabs found with content")
 
 channel_link_template = Template('''
-<a href="$url">$text</a>''')
+<li><a href="$url">$text</a></li>''')
 stat_template = Template('''
 <li>$stat_value</li>''')
 def channel_about_page(polymer_json):
