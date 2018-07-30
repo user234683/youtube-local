@@ -253,6 +253,7 @@ address{
     .medium-item .title{
         grid-column:2 / span 2;
         grid-row:1;
+        justify-self:start;
         min-width: 0;
         max-height:3.6em;
         overflow:hidden;
@@ -327,6 +328,7 @@ address{
         font-weight: 500;
         text-decoration:initial;
         min-width: 0;
+        justify-self:start;
 
         overflow:hidden;
         max-height: 3.3em;
