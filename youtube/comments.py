@@ -101,8 +101,8 @@ def request_comments(ctoken, replies=False):
             print("got <!DOCTYPE>, retrying")
             continue
         break
-    with open('debug/comments_debug', 'wb') as f:
-        f.write(content)
+    '''with open('debug/comments_debug', 'wb') as f:
+        f.write(content)'''
     return content
 
 def parse_comments(content, replies=False):
