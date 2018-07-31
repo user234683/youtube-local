@@ -30,6 +30,8 @@ You can use an addon such as [Redirector](https://addons.mozilla.org/en-US/firef
 
 Local playlists are found at http://localhost/youtube.com/playlists
 
+youtube-local can be added as a search engine in firefox to make searching more convenient. See [here](https://support.mozilla.org/en-US/kb/add-or-remove-search-engine-firefox) for information on firefox search plugins.
+
 ### Using Tor
 
 Change `route_tor = False` to `route_tor = True` in settings.txt to enable Tor routing.
@@ -39,13 +41,13 @@ Ensure tor is listening for Socks5 connections on port 9050 (a simple way to acc
 
 ## Planned Features
 
-- Options for saving videos and playlists
+- Options for saving playlists
 - Settings
 - Subscriptions
 - Posting comments
 - And others I couldn't think of when making this list
 
-Pull requests are welcome
+Pull requests and issues are welcome
 
 ## Screenshots
 [Channel](https://user-images.githubusercontent.com/28744867/42792117-bb8d7e9c-8928-11e8-8776-60076a7ad3de.png)
@@ -54,3 +56,5 @@ Pull requests are welcome
 ## License
 
 This project is licensed under the GNU Affero General Public License v3 (GNU AGPLv3) or any later version.
+
+Permission is hereby granted to the youtube-dl project at https://github.com/rg3/youtube-dl to relicense any portion of this software under the Unlicense, public domain, or whichever license is in use by youtube-dl at the time of relicensing, for the purpose of inclusion of said portion into youtube-dl. Relicensing permission is not granted for any purpose outside of direct inclusion into the [official repository](https://github.com/rg3/youtube-dl) of youtube-dl. If inclusion happens during the process of a pull-request, relicensing happens at the moment the pull request is merged into youtube-dl; until that moment, any cloned repositories of youtube-dl which make use of this software are subject to the terms of the GNU AGPLv3.
