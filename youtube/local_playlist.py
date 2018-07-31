@@ -9,6 +9,8 @@ with open('yt_local_playlist_template.html', 'r', encoding='utf-8') as file:
     local_playlist_template = Template(file.read())
 
 def add_to_playlist(name, video_info_list):
+    if not os.path.exists(playlists_directory):
+        os.makedirs(playlists_directory)
     with open(os.path.join(playlists_directory, name + ".txt"), "a", encoding='utf-8') as file:
         for info in video_info_list:
             file.write(info + "\n")
@@ -35,7 +37,11 @@ def get_local_playlist_page(name):
     )
 
 def get_playlist_names():
-    for item in os.listdir(playlists_directory):
+    try:
+        items = os.listdir(playlists_directory)
+    except FileNotFoundError:
+        return
+    for item in items:
         name, ext = os.path.splitext(item)
         if ext == '.txt':
             yield name
