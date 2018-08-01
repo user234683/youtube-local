@@ -9,9 +9,6 @@ from youtube import common, proto
 
 with open("yt_search_results_template.html", "r") as file:
     yt_search_results_template = file.read()
-    
-with open("yt_search_template.html", "r") as file:
-    yt_search_template = file.read()
 
 page_button_template = Template('''<a class="page-button" href="$href">$page</a>''')
 current_page_button_template = Template('''<div class="page-button">$page</div>''')
@@ -83,7 +80,12 @@ did_you_mean = Template('''
 def get_search_page(query_string, parameters=()):
     qs_query = urllib.parse.parse_qs(query_string)
     if len(qs_query) == 0:
-        return yt_search_template
+        return common.yt_basic_template.substitute(
+            page_title = "Search",
+            header = common.get_header(),
+            style = '',
+            page = '',
+        )
     query = qs_query["query"][0]
     page = qs_query.get("page", "1")[0]
     autocorrect = int(qs_query.get("autocorrect", "1")[0])

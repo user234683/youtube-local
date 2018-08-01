@@ -15,6 +15,9 @@ def youtube(env, start_response):
                 mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
                 start_response('200 OK',  (('Content-type',mime_type),) )
                 return f.read()
+        elif path.lstrip('/') == "":
+            start_response('200 OK',  (('Content-type','text/html'),) )
+            return search.get_search_page(query_string).encode()
 
         elif path == "/comments":
             start_response('200 OK',  (('Content-type','text/html'),) )
