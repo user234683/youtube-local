@@ -15,18 +15,21 @@ Download the zip file under the Releases page. Unzip it anywhere you choose, it'
 
 ### Linux/MacOS
 
-Ensure you have python 3.6 or later installed. Then, install gevent, brotli, and PySocks by running
+Ensure you have python 3.5 or later installed. Then, install gevent, brotli, and PySocks by running
 ```
-pip install gevent brotli pysocks
+pip3 install gevent brotli pysocks
 ```
+**Note**: If pip isn't installed, install it according to [this answer](https://unix.stackexchange.com/a/182467), but make sure you run `python3 get-pip.py` instead of `python get-pip.py`
+
 Download the tarball under the Releases page and extract it.
 
 ## Usage
 
-On windows, open run.bat. On Linux/MacOS, run `python server.py`
+On windows, open run.bat. On Linux/MacOS, run `python3 server.py`.
+**Note**: On Linux/MacOS, you may need root in order for it to listen for http connections (as it is an http server that listens only for connections from your machine)
 
 Access youtube URLs by prefixing them with `localhost/`, For instance, `http://localhost/https://www.youtube.com/watch?v=vBgulDeV2RU`
-You can use an addon such as [Redirector](https://addons.mozilla.org/en-US/firefox/addon/redirector/) to automatically redirect Youtube URLs to youtube-local. I use the include pattern `^(https?://(?:[a-zA-Z0-9_-]*\.)?(?:youtube\.com|youtu\.be)/.*)` and the redirect pattern `http://localhost/$1`
+You can use an addon such as [Redirector](https://addons.mozilla.org/en-US/firefox/addon/redirector/) to automatically redirect Youtube URLs to youtube-local. I use the include pattern `^(https?://(?:[a-zA-Z0-9_-]*\.)?(?:youtube\.com|youtu\.be)/.*)` and the redirect pattern `http://localhost/$1`. I also exlude `^https?://(?:[a-zA-Z0-9_-]*\.)?youtube\.com/feed/subscriptions` for subscriptions.
 
 Local playlists are found at http://localhost/youtube.com/playlists
 
