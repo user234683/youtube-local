@@ -285,10 +285,10 @@ def channel_search_page(polymer_json, query, current_page=1, number_of_videos = 
 
     return yt_channel_items_template.substitute(
         header              = common.get_header(),
-        channel_title       = html.escape(query + ' - Channel search'),
+        channel_title       = html.escape(microformat['title']),
         channel_tabs        = channel_tabs_html(channel_id, '', query),
         avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
-        page_title          = microformat['title'] + ' - Channel',
+        page_title          = html.escape(query + ' - Channel search'),
         items               = items_html,
         page_buttons        = common.page_buttons_html(current_page, math.ceil(number_of_videos/29), URL_ORIGIN + "/channel/" + channel_id + "/search", current_query_string),
         number_of_results   = '',
