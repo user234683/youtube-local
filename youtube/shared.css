@@ -227,11 +227,15 @@ address{
         grid-column: 1 / span 2;
         grid-row: 6;
     }
+    .full-item .music-list{
+        grid-row:7;
+        grid-column: 1 / span 2;
+    }
     .full-item .comments{
-        grid-row: 7;
+        grid-row: 8;
     }
     .full-item .more-comments{
-        grid-row: 8;
+        grid-row: 9;
     }
 
 .medium-item-box{

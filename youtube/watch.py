@@ -296,6 +296,10 @@ def extract_info(downloader, *args, **kwargs):
     except YoutubeError as e:
         return str(e)
 
+music_list_table_row = Template('''<tr>
+    <td>$attribute</td>
+    <td>$value</td>
+''')
 def get_watch_page(query_string):
         id = urllib.parse.parse_qs(query_string)['v'][0]
         downloader = YoutubeDL(params={'youtube_include_dash_manifest':False})
@@ -343,7 +347,32 @@ def get_watch_page(query_string):
         else:
             related_videos_html = ''
 
+        music_list = info['music_list']
+        if len(music_list) == 0:
+            music_list_html = ''
+        else:
+            music_list_html = '''<hr>
+<table>
+    <caption>Music</caption>
+    <tr>
+        <th>Artist</th>
+        <th>Title</th>
+        <th>Album</th>
+    </tr>
+'''
+            for track in music_list:
+                music_list_html += '''<tr>\n'''
+                for attribute in ('artist', 'title', 'album'):
+                    try:
+                        value = track[attribute]
+                    except KeyError:
+                        music_list_html += '''<td></td>'''
+                    else:
+                        music_list_html += '''<td>''' + html.escape(value) + '''</td>'''
+                music_list_html += '''</tr>\n'''
+            music_list_html += '''</table>\n'''
 
+        
 
         download_options = ''
         for format in info['formats']:
@@ -371,5 +400,6 @@ def get_watch_page(query_string):
             related                 = related_videos_html,
             comments                = comments_html,
             more_comments_button    = more_comments_button,
+            music_list              = music_list_html,
         )
         return page

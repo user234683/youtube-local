@@ -10,6 +10,7 @@ import random
 import re
 import time
 import traceback
+import html
 
 from .common import InfoExtractor, SearchInfoExtractor
 from ..jsinterp import JSInterpreter
@@ -1479,6 +1480,8 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
             })
         return chapters
 
+    ul_tag_pattern = re.compile(r'(</?ul)')
+    music_info_pattern = re.compile(r'<h4 class="title">\s*(Song|Music|Artist|Album)\s*</h4>\s*<ul class="content watch-info-tag-list">\s*<li>(?:<a[^>]*>)?([^<]*)(?:</a>)?</li>')
     def _real_extract(self, url):
         url, smuggled_data = unsmuggle_url(url, {})
 
@@ -1528,6 +1531,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
         def extract_view_count(v_info):
             return int_or_none(try_get(v_info, lambda x: x['view_count'][0]))
 
+        # Related videos
         related_vid_info = self._search_regex(r"""'RELATED_PLAYER_ARGS':\s*(\{.*?\})""", video_webpage, "related_player_args", default='')
 
         if related_vid_info == '':
@@ -1539,6 +1543,44 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
             else:
                 related_vids = (compat_parse_qs(related_item) for related_item in related_vid_info.split(","))
                 related_vids = [{key : value[0] for key,value in vid.items()} for vid in related_vids]
+
+        # Music list
+        # Test case: https://www.youtube.com/watch?v=jbkZdRglnKY
+        music_list = []
+        metadata_start = video_webpage.find('<ul class="watch-extras-section">')
+        if metadata_start != -1:
+            metadata_start += 33
+            tag_index = metadata_start
+            open_tags = 1
+            while open_tags > 0:
+                match = self.ul_tag_pattern.search(video_webpage, tag_index)
+                if match is None:
+                    print("Couldn't match ul tag")
+                    break
+                tag_index = match.end()
+                tag = match.group(1)
+                if tag == "<ul":
+                    open_tags += 1
+                else:
+                    open_tags -= 1
+            else:
+                last_index = 0
+                metadata = video_webpage[metadata_start:tag_index]
+                current_song = None
+                while True:
+                    match = self.music_info_pattern.search(metadata, last_index)
+                    if match is None:
+                        if current_song is not None:
+                            music_list.append(current_song)
+                        break
+                    title, value = match.group(1), html.unescape(match.group(2))
+                    if title in ("Song", "Music"):
+                        if current_song is not None:
+                            music_list.append(current_song)
+                        current_song = {"title": value}
+                    else:
+                        current_song[title.lower()] = value
+                    last_index = match.end()
 
         # Get video info
         embed_webpage = None
@@ -2120,6 +2162,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
             'track': track,
             'artist': artist,
             'related_vids': related_vids,
+            'music_list': music_list,
         }
 
 

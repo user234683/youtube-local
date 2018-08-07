@@ -23,6 +23,21 @@
                 .full-item{
                     grid-column: 2;                   
                 }
+                .music-list{
+                    background-color: #d0d0d0;
+                }
+                .music-list table,th,td{
+                    border: 1px solid;
+                }
+                .music-list th,td{
+                    padding-left:4px;
+                    padding-right:5px;
+                }
+                .music-list caption{
+                    text-align:left;
+                    font-weight:bold;
+                    margin-bottom:5px;
+                }
                 .comments{
                     grid-column: 1 / span 2;
                     grid-row: 6;
@@ -106,7 +121,9 @@ $download_options
                     <input class="checkbox" name="video_info_list" value="$video_info" form="playlist-edit" type="checkbox">
 
                     <span class="description">$description</span>
-                    
+                    <div class="music-list">
+$music_list
+                    </div>
                     <section class="comments">
 $comments
                     </section>
