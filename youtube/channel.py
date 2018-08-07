@@ -64,8 +64,10 @@ def channel_ctoken(channel_id, page, sort, tab, view=1):
     tab = proto.string(2, tab )
     sort = proto.uint(3, int(sort))
     page = proto.string(15, str(page) )
+    # example with shelves in videos tab: https://www.youtube.com/channel/UCNL1ZadSjHpjm4q9j2sVtOA/videos
+    shelf_view = proto.uint(4, 0)
     view = proto.uint(6, int(view))
-    continuation_info = proto.string( 3, proto.percent_b64encode(tab + view + sort + page) )
+    continuation_info = proto.string( 3, proto.percent_b64encode(tab + view + sort + shelf_view + page) )
     
     channel_id = proto.string(2, channel_id )
     pointless_nest = proto.string(80226972, channel_id + continuation_info)
@@ -360,7 +362,7 @@ def get_user_page(url, query_string=''):
     except IndexError:
         page = 'videos'
     if page == 'videos':
-        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/videos?pbj=1', headers_1)
+        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/videos?pbj=1&view=0', headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_videos_html(polymer_json)
     elif page == 'about':
