@@ -1935,9 +1935,9 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 a_format.setdefault('http_headers', {})['Youtubedl-no-compression'] = 'True'
                 formats.append(a_format)
         else:
-            error_message = clean_html(video_info.get('reason', [None])[0])
+            error_message = extract_unavailable_message()
             if not error_message:
-                error_message = extract_unavailable_message()
+                error_message = clean_html(video_info.get('reason', [None])[0])
             if error_message:
                 raise YoutubeError(error_message)
             raise ExtractorError('no conn, hlsvp or url_encoded_fmt_stream_map information found in video info')
