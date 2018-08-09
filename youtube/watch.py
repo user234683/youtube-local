@@ -351,20 +351,33 @@ def get_watch_page(query_string):
         if len(music_list) == 0:
             music_list_html = ''
         else:
+            # get the set of attributes which are used by atleast 1 track
+            # so there isn't an empty, extraneous album column which no tracks use, for example
+            used_attributes = set()
+            for track in music_list:
+                used_attributes = used_attributes | track.keys()
+
+            # now put them in the right order
+            ordered_attributes = []
+            for attribute in ('Artist', 'Title', 'Album'):
+                if attribute.lower() in used_attributes:
+                    ordered_attributes.append(attribute)
+
             music_list_html = '''<hr>
 <table>
     <caption>Music</caption>
     <tr>
-        <th>Artist</th>
-        <th>Title</th>
-        <th>Album</th>
-    </tr>
 '''
+            # table headings
+            for attribute in ordered_attributes:
+                music_list_html += "<th>" + attribute + "</th>\n"
+            music_list_html += '''</tr>\n'''
+
             for track in music_list:
                 music_list_html += '''<tr>\n'''
-                for attribute in ('artist', 'title', 'album'):
+                for attribute in ordered_attributes:
                     try:
-                        value = track[attribute]
+                        value = track[attribute.lower()]
                     except KeyError:
                         music_list_html += '''<td></td>'''
                     else:
