@@ -1530,6 +1530,8 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
 
         def extract_view_count(v_info):
             return int_or_none(try_get(v_info, lambda x: x['view_count'][0]))
+        # Is it unlisted?
+        unlisted = (self._search_regex('''<meta itemprop="unlisted" content="(\w*)">''', video_webpage, 'is_unlisted', default='False') == "True")
 
         # Related videos
         related_vid_info = self._search_regex(r"""'RELATED_PLAYER_ARGS':\s*(\{.*?\})""", video_webpage, "related_player_args", default='')
@@ -1679,6 +1681,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
 
         if 'token' not in video_info:
             if 'reason' in video_info:
+                print(video_info['reason'])
                 if 'The uploader has not made this video available in your country.' in video_info['reason']:
                     regions_allowed = self._html_search_meta(
                         'regionsAllowed', video_webpage, default=None)
@@ -1936,8 +1939,10 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 formats.append(a_format)
         else:
             error_message = extract_unavailable_message()
+            alt_error_message = clean_html(video_info.get('reason', [None])[0])
+            print(alt_error_message)
             if not error_message:
-                error_message = clean_html(video_info.get('reason', [None])[0])
+                error_message = alt_error_message
             if error_message:
                 raise YoutubeError(error_message)
             raise ExtractorError('no conn, hlsvp or url_encoded_fmt_stream_map information found in video info')
@@ -2163,6 +2168,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
             'artist': artist,
             'related_vids': related_vids,
             'music_list': music_list,
+            'unlisted': unlisted,
         }
 
 

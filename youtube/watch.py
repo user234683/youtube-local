@@ -414,5 +414,6 @@ def get_watch_page(query_string):
             comments                = comments_html,
             more_comments_button    = more_comments_button,
             music_list              = music_list_html,
+            is_unlisted             = '<span class="is-unlisted">Unlisted</span>' if info['unlisted'] else '',
         )
         return page
