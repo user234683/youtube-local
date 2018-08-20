@@ -5,6 +5,7 @@ YOUTUBE_FILES = (
     "/shared.css",
     "/opensearch.xml",
     '/comments.css',
+    '/favicon.ico',
 )
 
 def youtube(env, start_response):
