@@ -7,6 +7,7 @@ import urllib.request
 import urllib
 import html
 import settings
+import re
 comment_template = Template('''
                 <div class="comment-container">
                     <div class="comment">
@@ -27,7 +28,7 @@ $replies
 comment_avatar_template = Template('''                            <img class="author-avatar-img" src="$author_avatar">''')
 
 reply_link_template = Template('''
-                    <a href="$url" class="replies">View replies</a>
+                    <a href="$url" class="replies">$view_replies_text</a>
 ''')
 with open("yt_comments_template.html", "r") as file:
     yt_comments_template = Template(file.read())
@@ -78,12 +79,11 @@ def get_ids(ctoken):
     return params[2].decode('ascii'), video_id.decode('ascii')
 
 mobile_headers = {
-    'Host': 'm.youtube.com',
     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
     'Accept': '*/*',
     'Accept-Language': 'en-US,en;q=0.5',
     'X-YouTube-Client-Name': '2',
-    'X-YouTube-Client-Version': '1.20180613',
+    'X-YouTube-Client-Version': '2.20180823',
 }
 def request_comments(ctoken, replies=False):
     if replies: # let's make it use different urls for no reason despite all the data being encoded
@@ -105,7 +105,7 @@ def request_comments(ctoken, replies=False):
         f.write(content)'''
     return content
 
-def parse_comments(content, replies=False):
+def parse_comments_ajax(content, replies=False):
     try:
         content = json.loads(uppercase_escape(content.decode('utf-8')))
         #print(content)
@@ -140,12 +140,68 @@ def parse_comments(content, replies=False):
         print("Finished getting and parsing comments")
     return {'ctoken': ctoken, 'comments': comments}
 
+reply_count_regex = re.compile(r'(\d+)')
+def parse_comments_polymer(content, replies=False):
+    try:
+        content = json.loads(uppercase_escape(content.decode('utf-8')))
+        #print(content)
+        try:
+            comments_raw = content[1]['response']['continuationContents']['commentSectionContinuation']['items']
+        except KeyError:
+            comments_raw = content[1]['response']['continuationContents']['commentRepliesContinuation']['contents']
+
+        ctoken = default_multi_get(content, 1, 'response', 'continuationContents', 'commentSectionContinuation', 'continuations', 0, 'nextContinuationData', 'continuation', default='')
+        
+        comments = []
+        for comment_raw in comments_raw:
+            replies_url = ''
+            view_replies_text = ''
+            try:
+                comment_raw = comment_raw['commentThreadRenderer']
+            except KeyError:
+                pass
+            else:
+                if not replies:
+                    if 'replies' in comment_raw:
+                        reply_ctoken = comment_raw['replies']['commentRepliesRenderer']['continuations'][0]['nextContinuationData']['continuation']
+                        comment_id, video_id = get_ids(reply_ctoken)
+                        replies_url = URL_ORIGIN + '/comments?parent_id=' + comment_id + "&video_id=" + video_id
+                        view_replies_text = common.get_plain_text(comment_raw['replies']['commentRepliesRenderer']['moreText'])
+                        match = reply_count_regex.search(view_replies_text)
+                        if match is None:
+                            view_replies_text = '1 reply'
+                        else:
+                            view_replies_text = match.group(1) + " replies"
+                comment_raw = comment_raw['comment']
+            
+            comment_raw = comment_raw['commentRenderer']
+            comment = {
+            'author': common.get_plain_text(comment_raw['authorText']),
+            'author_url': comment_raw['authorEndpoint']['commandMetadata']['webCommandMetadata']['url'],
+            'author_avatar': comment_raw['authorThumbnail']['thumbnails'][0]['url'],
+            'likes': comment_raw['likeCount'],
+            'published': common.get_plain_text(comment_raw['publishedTimeText']),
+            'text': comment_raw['contentText']['runs'],
+            'view_replies_text': view_replies_text,
+            'replies_url': replies_url,
+            }
+            comments.append(comment)
+    except Exception as e:
+        print('Error parsing comments: ' + str(e))
+        comments = ()
+        ctoken = ''
+    else:
+        print("Finished getting and parsing comments")
+    return {'ctoken': ctoken, 'comments': comments}
+
+
+
 def get_comments_html(result):
     html_result = ''
     for comment in result['comments']:
         replies = ''
         if comment['replies_url']:
-            replies = reply_link_template.substitute(url=comment['replies_url'])
+            replies = reply_link_template.substitute(url=comment['replies_url'], view_replies_text=html.escape(comment['view_replies_text']))
         if settings.enable_comment_avatars:
             avatar = comment_avatar_template.substitute(
                 author_url = URL_ORIGIN + comment['author_url'],
@@ -168,7 +224,7 @@ def get_comments_html(result):
     
 def video_comments(video_id, sort=0, offset=0, secret_key=''):
     if settings.enable_comments:
-        result = parse_comments(request_comments(make_comment_ctoken(video_id, sort, offset, secret_key)))
+        result = parse_comments_polymer(request_comments(make_comment_ctoken(video_id, sort, offset, secret_key)))
         return get_comments_html(result)
     return '', ''
 
@@ -185,7 +241,7 @@ def get_comments_page(query_string):
         ctoken = comment_replies_ctoken(video_id, parent_id)
         replies = True
     
-    result = parse_comments(request_comments(ctoken, replies), replies)
+    result = parse_comments_polymer(request_comments(ctoken, replies), replies)
     comments_html, ctoken = get_comments_html(result)
     if ctoken == '':
         more_comments_button = ''
