@@ -198,7 +198,7 @@ address{
         padding-left:2px;
         padding-right:2px;
     }
-    .full-item address{
+    .full-item>address{
         grid-column: 1;
         grid-row: 4;
         justify-self: start;
