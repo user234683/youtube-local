@@ -210,7 +210,7 @@ def get_comments_html(result):
         else:
             avatar = ''
         html_result += comment_template.substitute(
-            author=html.escape(comment['author']),
+            author=comment['author'],
             author_url = URL_ORIGIN + comment['author_url'],
             avatar = avatar,
             likes = str(comment['likes']) + ' likes' if str(comment['likes']) != '0' else '',
