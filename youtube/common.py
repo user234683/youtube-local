@@ -75,7 +75,7 @@ medium_video_item_template = Template('''
                             <span class="video-duration">$duration</span>
                         </a>
 
-                        <a class="title" href="$url">$title</a>
+                        <a class="title" href="$url" title="$title">$title</a>
                         
                         <div class="stats">$stats</div>
 
