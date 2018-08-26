@@ -71,6 +71,20 @@ def comment_replies_ctoken(video_id, comment_id, max_results=500):
     result = proto.nested(2, proto.string(2, video_id)) + proto.uint(3,6) + proto.nested(6, params)
     return base64.urlsafe_b64encode(result).decode('ascii')
 
+def ctoken_metadata(ctoken):
+    result = dict()
+    params = proto.parse(proto.b64_to_bytes(ctoken))
+    result['video_id'] = proto.parse(params[2])[2]
+
+    offset_information = proto.parse(params[6])
+    result['offset'] = offset_information.get(5, 0)
+
+    result['is_replies'] = False
+    if 3 in offset_information:
+        if 2 in offset_information[3]:
+            result['is_replies'] = True
+    return result
+
 def get_ids(ctoken):
     params = proto.parse(proto.b64_to_bytes(ctoken))
     video_id = proto.parse(params[2])[2]
@@ -240,7 +254,12 @@ def get_comments_page(query_string):
 
         ctoken = comment_replies_ctoken(video_id, parent_id)
         replies = True
-    
+
+    metadata = ctoken_metadata(ctoken)
+    if replies:
+        page_title = 'Replies'
+    else:
+        page_title = 'Comments page ' + str(int(metadata['offset']/20) + 1)
     result = parse_comments_polymer(request_comments(ctoken, replies), replies)
     comments_html, ctoken = get_comments_html(result)
     if ctoken == '':
@@ -251,7 +270,7 @@ def get_comments_page(query_string):
     return yt_comments_template.substitute(
         header = common.get_header(),
         comments = comments_html,
-        page_title = 'Comments',
+        page_title = page_title,
         more_comments_button=more_comments_button,
     )
 
