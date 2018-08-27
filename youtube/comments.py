@@ -74,7 +74,7 @@ def comment_replies_ctoken(video_id, comment_id, max_results=500):
 def ctoken_metadata(ctoken):
     result = dict()
     params = proto.parse(proto.b64_to_bytes(ctoken))
-    result['video_id'] = proto.parse(params[2])[2]
+    result['video_id'] = proto.parse(params[2])[2].decode('ascii')
 
     offset_information = proto.parse(params[6])
     result['offset'] = offset_information.get(5, 0)
@@ -157,6 +157,7 @@ def parse_comments_ajax(content, replies=False):
 reply_count_regex = re.compile(r'(\d+)')
 def parse_comments_polymer(content, replies=False):
     try:
+        video_title = ''
         content = json.loads(uppercase_escape(content.decode('utf-8')))
         #print(content)
         try:
@@ -175,17 +176,18 @@ def parse_comments_polymer(content, replies=False):
             except KeyError:
                 pass
             else:
-                if not replies:
-                    if 'replies' in comment_raw:
-                        reply_ctoken = comment_raw['replies']['commentRepliesRenderer']['continuations'][0]['nextContinuationData']['continuation']
-                        comment_id, video_id = get_ids(reply_ctoken)
-                        replies_url = URL_ORIGIN + '/comments?parent_id=' + comment_id + "&video_id=" + video_id
-                        view_replies_text = common.get_plain_text(comment_raw['replies']['commentRepliesRenderer']['moreText'])
-                        match = reply_count_regex.search(view_replies_text)
-                        if match is None:
-                            view_replies_text = '1 reply'
-                        else:
-                            view_replies_text = match.group(1) + " replies"
+                if 'commentTargetTitle' in comment_raw:
+                    video_title = comment_raw['commentTargetTitle']['runs'][0]['text']
+                if 'replies' in comment_raw:
+                    reply_ctoken = comment_raw['replies']['commentRepliesRenderer']['continuations'][0]['nextContinuationData']['continuation']
+                    comment_id, video_id = get_ids(reply_ctoken)
+                    replies_url = URL_ORIGIN + '/comments?parent_id=' + comment_id + "&video_id=" + video_id
+                    view_replies_text = common.get_plain_text(comment_raw['replies']['commentRepliesRenderer']['moreText'])
+                    match = reply_count_regex.search(view_replies_text)
+                    if match is None:
+                        view_replies_text = '1 reply'
+                    else:
+                        view_replies_text = match.group(1) + " replies"
                 comment_raw = comment_raw['comment']
             
             comment_raw = comment_raw['commentRenderer']
@@ -206,7 +208,7 @@ def parse_comments_polymer(content, replies=False):
         ctoken = ''
     else:
         print("Finished getting and parsing comments")
-    return {'ctoken': ctoken, 'comments': comments}
+    return {'ctoken': ctoken, 'comments': comments, 'video_title': video_title}
 
 
 
@@ -243,7 +245,16 @@ def video_comments(video_id, sort=0, offset=0, secret_key=''):
     return '', ''
 
 more_comments_template = Template('''<a class="page-button more-comments" href="$url">More comments</a>''')
+video_metadata_template = Template('''<section class="video-metadata">
+    <a class="video-metadata-thumbnail-box" href="$url" title="$title">
+        <img class="video-metadata-thumbnail-img" src="$thumbnail" height="180px" width="320px">
+    </a>
+    <a class="title" href="$url" title="$title">$title</a>
 
+    <h2>Comments page $page_number</h2>
+    <hr>
+</section>
+''')
 def get_comments_page(query_string):
     parameters = urllib.parse.parse_qs(query_string)
     ctoken = default_multi_get(parameters, 'ctoken', 0, default='')
@@ -255,13 +266,25 @@ def get_comments_page(query_string):
         ctoken = comment_replies_ctoken(video_id, parent_id)
         replies = True
 
+    parsed_comments = parse_comments_polymer(request_comments(ctoken, replies), replies)
+
     metadata = ctoken_metadata(ctoken)
     if replies:
         page_title = 'Replies'
+        video_metadata = ''
     else:
-        page_title = 'Comments page ' + str(int(metadata['offset']/20) + 1)
-    result = parse_comments_polymer(request_comments(ctoken, replies), replies)
-    comments_html, ctoken = get_comments_html(result)
+        page_number = str(int(metadata['offset']/20) + 1)
+        page_title = 'Comments page ' + page_number
+        
+        video_metadata = video_metadata_template.substitute(
+            page_number = page_number,
+            title = html.escape(parsed_comments['video_title']),
+            url = common.URL_ORIGIN + '/watch?v=' + metadata['video_id'],
+            thumbnail = '/i.ytimg.com/vi/'+ metadata['video_id'] + '/mqdefault.jpg',
+        )
+
+
+    comments_html, ctoken = get_comments_html(parsed_comments)
     if ctoken == '':
         more_comments_button = ''
     else:
@@ -269,6 +292,7 @@ def get_comments_page(query_string):
 
     return yt_comments_template.substitute(
         header = common.get_header(),
+        video_metadata = video_metadata,
         comments = comments_html,
         page_title = page_title,
         more_comments_button=more_comments_button,
