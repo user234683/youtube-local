@@ -22,8 +22,93 @@
                 grid-template-columns: 1fr 640px;
             }
                 .full-item{
-                    grid-column: 2;                   
+                    display: grid;
+                    grid-column: 2;
+                    grid-template-rows: 0fr 0fr 0fr 0fr 20px 0fr 0fr;
+                    grid-template-columns: 1fr 1fr;
+                    align-content: start;
                 }
+                    .full-item > video{
+                        grid-column: 1 / span 2;
+                        grid-row: 1;
+                    }
+                    .full-item > .title{
+                        grid-column: 1 / span 2;
+                        grid-row:2;
+                        min-width: 0;
+                    }
+                    .full-item > .is-unlisted{
+                        background-color: #d0d0d0;
+                        justify-self:start;
+                        padding-left:2px;
+                        padding-right:2px;
+                    }
+                    .full-item > address{
+                        grid-column: 1;
+                        grid-row: 4;
+                        justify-self: start;
+                    }
+                    .full-item > .views{
+                        grid-column: 2;
+                        grid-row: 4;
+                        justify-self:end;
+                    }
+                    .full-item > time{
+                        grid-column: 1;
+                        grid-row: 5;
+                        justify-self:start;
+                    }
+                    .full-item > .likes-dislikes{
+                        grid-column: 2;
+                        grid-row: 5;
+                        justify-self:end;
+                    }
+                    .full-item > .download-dropdown{
+                        grid-column:1;
+                        grid-row: 6;
+                    }
+                    .full-item > .checkbox{
+                        justify-self:end;
+
+                        grid-row: 6;
+                        grid-column: 2;
+                    }
+                    .full-item > .description{
+                        background-color:#d0d0d0;
+                        margin-top:8px;
+                        white-space: pre-wrap;
+                        min-width: 0;
+
+                        grid-column: 1 / span 2;
+                        grid-row: 7;
+                    }
+                    .full-item .music-list{
+                        grid-row:8;
+                        grid-column: 1 / span 2;
+                    }
+                    .comment-count{
+                        font-weight:bold;
+                        grid-row:9;
+                        grid-column: 1 / span 2;
+                    }
+                    .post-comment-link{
+                        grid-row:10;
+                        grid-column: 1;
+                        justify-self:start;
+                    }
+                    .full-item .comments{
+                        grid-column: 1 / span 2;
+                        grid-row: 11;
+                        margin-top:10px;
+                    }
+                        .comment{
+                            width:640px;
+                        }
+                    .full-item .more-comments{
+                        grid-row: 12;
+                        grid-column: 1 / span 2;
+                    }
+
                 .music-list{
                     background-color: #d0d0d0;
                 }
@@ -38,17 +123,6 @@
                     text-align:left;
                     font-weight:bold;
                     margin-bottom:5px;
-                }
-                .comments{
-                    grid-column: 1 / span 2;
-                    grid-row: 6;
-                    margin-top:10px;
-                }
-                    .comment{
-                        width:640px;
-                    }
-                .more-comments{
-                    grid-column: 1 / span 2;
                 }
             #right{
                 background-color:#cccccc;
@@ -129,6 +203,8 @@ $download_options
                     <div class="music-list">
 $music_list
                     </div>
+                    <div class="comment-count">$comment_count</div>
+                    $post_comment_link
                     <section class="comments">
 $comments
                     </section>

@@ -385,7 +385,6 @@ def get_watch_page(query_string):
                 music_list_html += '''</tr>\n'''
             music_list_html += '''</table>\n'''
 
-        
 
         download_options = ''
         for format in info['formats']:
@@ -395,6 +394,10 @@ def get_watch_page(query_string):
                 resolution  = html.escape(downloader.format_resolution(format)),
                 note        = html.escape(downloader._format_note(format)),
             )
+
+        post_comment_url = common.URL_ORIGIN + "/post_comment?v=" + id
+        post_comment_link = '''<a class="post-comment-link" href="''' + post_comment_url + '''">Post comment</a>'''
+
 
         page = yt_watch_template.substitute(
             video_title             = html.escape(info["title"]),
@@ -411,6 +414,8 @@ def get_watch_page(query_string):
             description             = html.escape(info["description"]),
             video_sources           = formats_html(sorted_formats) + subtitles_html(info),
             related                 = related_videos_html,
+            post_comment_link       = post_comment_link,
+            comment_count           = '',
             comments                = comments_html,
             more_comments_button    = more_comments_button,
             music_list              = music_list_html,
