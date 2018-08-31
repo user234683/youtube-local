@@ -638,5 +638,6 @@ def renderer_html(renderer, additional_info={}, current_query_string=''):
     if type in ('playlistRenderer', 'gridPlaylistRenderer', 'radioRenderer', 'gridRadioRenderer', 'gridShowRenderer', 'showRenderer'):
         return playlist_item_html(info, medium_playlist_item_template, html_exclude=html_exclude)
 
-    print(renderer)
-    raise NotImplementedError('Unknown renderer type: ' + type)
+    #print(renderer)
+    #raise NotImplementedError('Unknown renderer type: ' + type)
+    return ''
