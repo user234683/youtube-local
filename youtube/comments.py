@@ -206,7 +206,6 @@ def parse_comments_polymer(content, replies=False):
         print('Error parsing comments: ' + str(e))
         comments = ()
         ctoken = ''
-        raise
     else:
         print("Finished getting and parsing comments")
     return {'ctoken': ctoken, 'comments': comments, 'video_title': video_title}
@@ -273,6 +272,10 @@ def get_comments_page(query_string):
     if replies:
         page_title = 'Replies'
         video_metadata = ''
+        comment_box = '''<form action="" method="post" class="comment-form">
+    <textarea name="comment_text"></textarea>
+    <button type="submit" class="post-comment-button">Post reply</button>
+</form>'''
     else:
         page_number = str(int(metadata['offset']/20) + 1)
         page_title = 'Comments page ' + page_number
@@ -283,6 +286,7 @@ def get_comments_page(query_string):
             url = common.URL_ORIGIN + '/watch?v=' + metadata['video_id'],
             thumbnail = '/i.ytimg.com/vi/'+ metadata['video_id'] + '/mqdefault.jpg',
         )
+        comment_box = ''
 
 
     comments_html, ctoken = get_comments_html(parsed_comments)
@@ -293,6 +297,7 @@ def get_comments_page(query_string):
 
     return yt_comments_template.substitute(
         header = common.get_header(),
+        comment_box = comment_box,
         video_metadata = video_metadata,
         comments = comments_html,
         page_title = page_title,

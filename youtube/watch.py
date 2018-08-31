@@ -385,6 +385,10 @@ def get_watch_page(query_string):
                 music_list_html += '''</tr>\n'''
             music_list_html += '''</table>\n'''
 
+        with open('data/googlevideo-domains.txt', 'a+', encoding='utf-8') as f:
+            url = info['formats'][0]['url']
+            subdomain = url[0:url.find(".googlevideo.com")]
+            f.write(subdomain + "\n")
 
         download_options = ''
         for format in info['formats']:

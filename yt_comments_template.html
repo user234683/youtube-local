@@ -24,6 +24,18 @@
                 .video-metadata{
                     grid-column: 2;
                 }
+                .comment-form{
+                    display:contents;
+                }
+                textarea{
+                    grid-column:2;
+                    resize: vertical;
+                }
+                .post-comment-button{
+                    grid-column:2;
+                    justify-self:end;
+                    margin-top:10px;
+                }
                 .comments{
                     grid-column:2;
                 }
@@ -40,6 +52,7 @@ $header
         <main>
             <div id="left">
 $video_metadata
+$comment_box
                 <section class="comments">
 $comments
                 </section>

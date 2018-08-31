@@ -80,7 +80,7 @@ def youtube(env, start_response):
             else:
                 start_response('400 Bad Request', ())
                 return b'400 Bad Request'
-        elif path == "/post_comment":
+        elif path in ("/post_comment", "/comments"):
             start_response('200 OK',  () )
             return account_functions.post_comment(query_string, fields).encode()
 
