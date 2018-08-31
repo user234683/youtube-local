@@ -197,7 +197,7 @@ def parse_comments_polymer(content, replies=False):
             'author_avatar': comment_raw['authorThumbnail']['thumbnails'][0]['url'],
             'likes': comment_raw['likeCount'],
             'published': common.get_plain_text(comment_raw['publishedTimeText']),
-            'text': comment_raw['contentText']['runs'],
+            'text': comment_raw['contentText'].get('runs', ''),
             'view_replies_text': view_replies_text,
             'replies_url': replies_url,
             }
@@ -206,6 +206,7 @@ def parse_comments_polymer(content, replies=False):
         print('Error parsing comments: ' + str(e))
         comments = ()
         ctoken = ''
+        raise
     else:
         print("Finished getting and parsing comments")
     return {'ctoken': ctoken, 'comments': comments, 'video_title': video_title}
