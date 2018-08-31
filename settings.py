@@ -13,6 +13,13 @@ subtitles_language = "en"
 enable_related_videos = True
 enable_comments = True
 enable_comment_avatars = True
+
+# 0 to sort by top
+# 1 to sort by newest
+default_comment_sorting = 0
+
+# developer use to debug 403s
+gather_googlevideo_domains = False
 '''
 exec(default_settings)
 try:

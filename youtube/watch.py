@@ -304,7 +304,7 @@ def get_watch_page(query_string):
         id = urllib.parse.parse_qs(query_string)['v'][0]
         downloader = YoutubeDL(params={'youtube_include_dash_manifest':False})
         tasks = (
-            gevent.spawn(comments.video_comments, id ), 
+            gevent.spawn(comments.video_comments, id, int(settings.default_comment_sorting) ), 
             gevent.spawn(extract_info, downloader, "https://www.youtube.com/watch?v=" + id, download=False)
         )
         gevent.joinall(tasks)
@@ -384,11 +384,11 @@ def get_watch_page(query_string):
                         music_list_html += '''<td>''' + html.escape(value) + '''</td>'''
                 music_list_html += '''</tr>\n'''
             music_list_html += '''</table>\n'''
-
-        with open('data/googlevideo-domains.txt', 'a+', encoding='utf-8') as f:
-            url = info['formats'][0]['url']
-            subdomain = url[0:url.find(".googlevideo.com")]
-            f.write(subdomain + "\n")
+        if settings.gather_googlevideo_domains:
+            with open('data/googlevideo-domains.txt', 'a+', encoding='utf-8') as f:
+                url = info['formats'][0]['url']
+                subdomain = url[0:url.find(".googlevideo.com")]
+                f.write(subdomain + "\n")
 
         download_options = ''
         for format in info['formats']:
