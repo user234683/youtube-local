@@ -122,65 +122,6 @@ with open("yt_watch_template.html", "r") as file:
     yt_watch_template = Template(file.read())
     
 
-
-# example:
-#https://www.youtube.com/related_ajax?ctoken=CBQSJhILVGNxV29rOEF1YkXAAQDIAQDgAQGiAg0o____________AUAAGAAq0gEInJOqsOyB1tAaCNeMgaD4spLIKQioxdHSu8SF9JgBCLr27tnaioDpXwj1-L_R3s7r2wcIv8TnueeUo908CMXSganIrvHDJgiVuMirrqbgqYABCJDsu8PBzdGW8wEI_-WI2t-c-IlQCOK_m_KB_rP5wAEIl7S4serqnq5YCNSs55mMt8qLyQEImvutmp-x9LaCAQiVg96VpY_pqJMBCOPsgdTflsGRsQEI7ZfYleKIub0tCIrcsb7a_uu95gEIi9Gz6_bC76zEAQjo1c_W8JzlkhI%3D&continuation=CBQSJhILVGNxV29rOEF1YkXAAQDIAQDgAQGiAg0o____________AUAAGAAq0gEInJOqsOyB1tAaCNeMgaD4spLIKQioxdHSu8SF9JgBCLr27tnaioDpXwj1-L_R3s7r2wcIv8TnueeUo908CMXSganIrvHDJgiVuMirrqbgqYABCJDsu8PBzdGW8wEI_-WI2t-c-IlQCOK_m_KB_rP5wAEIl7S4serqnq5YCNSs55mMt8qLyQEImvutmp-x9LaCAQiVg96VpY_pqJMBCOPsgdTflsGRsQEI7ZfYleKIub0tCIrcsb7a_uu95gEIi9Gz6_bC76zEAQjo1c_W8JzlkhI%3D&itct=CCkQybcCIhMIg8PShInX2gIVgdvBCh15WA0ZKPgd
-def get_bloated_more_related_videos(video_url, related_videos_token, id_token):
-    related_videos_token = urllib.parse.quote(related_videos_token)
-    url = "https://www.youtube.com/related_ajax?ctoken=" + related_videos_token + "&continuation=" + related_videos_token
-    headers = {
-        'Host': 'www.youtube.com',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)',
-        'Accept': '*/*',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Referer': video_url,
-        'X-YouTube-Client-Name': '1',
-        'X-YouTube-Client-Version': '2.20180418',
-        'X-Youtube-Identity-Token': id_token,
-
-    }
-    #print(url)
-    req = urllib.request.Request(url, headers=headers)
-    response = urllib.request.urlopen(req, timeout = 5)
-    content = response.read()
-    info = json.loads(content)
-    return info
-
-def get_more_related_videos_info(video_url, related_videos_token, id_token):
-    results = []
-    info = get_bloated_more_related_videos(video_url, related_videos_token, id_token)
-    bloated_results = info[1]['response']['continuationContents']['watchNextSecondaryResultsContinuation']['results']
-    for bloated_result in bloated_results:
-        bloated_result = bloated_result['compactVideoRenderer']
-        results.append({
-            "title": bloated_result['title']['simpleText'],
-            "video_id": bloated_result['videoId'],
-            "views_text": bloated_result['viewCountText']['simpleText'],
-            "length_text": default_multi_get(bloated_result, 'lengthText', 'simpleText', default=''), # livestreams dont have a length
-            "length_text": bloated_result['lengthText']['simpleText'],
-            "uploader_name": bloated_result['longBylineText']['runs'][0]['text'],
-            "uploader_url": bloated_result['longBylineText']['runs'][0]['navigationEndpoint']['commandMetadata']['webCommandMetadata']['url'],
-        })
-    return results
-
-def more_related_videos_html(video_info):
-    related_videos = get_related_videos(url, 1, video_info['related_videos_token'], video_info['id_token'])
-            
-    related_videos_html = ""
-    for video in related_videos:
-        related_videos_html += Template(video_related_template).substitute(
-            video_title=html.escape(video["title"]),
-            views=video["views_text"],
-            uploader=html.escape(video["uploader_name"]),
-            uploader_channel_url=video["uploader_url"],
-            length=video["length_text"],
-            video_url = "/youtube.com/watch?v=" + video["video_id"],
-            thumbnail_url= get_thumbnail_url(video['video_id']),
-        )
-    return related_videos_html
-
-
-
 def get_related_items_html(info):
     result = ""
     for item in info['related_vids']:
@@ -232,25 +173,6 @@ def formats_html(formats):
         )
     return result
 
-
-
-def choose_format(info):
-    suitable_formats = []
-    with open('teste.txt', 'w', encoding='utf-8') as f:
-        f.write(json.dumps(info['formats']))
-    for format in info['formats']:
-        if (format["ext"] in ("mp4", "webm") 
-        and format["acodec"] != "none"
-        and format["vcodec"] != "none"
-        and format.get("height","none") in video_height_priority):
-            suitable_formats.append(format)
-
-    current_best = (suitable_formats[0],video_height_priority.index(suitable_formats[0]["height"]))
-    for format in suitable_formats:
-        video_priority_index = video_height_priority.index(format["height"])
-        if video_priority_index < current_best[1]:
-            current_best = (format, video_priority_index)
-    return current_best[0]
 
 subtitles_tag_template = Template('''
 <track label="$label" src="$src" kind="subtitles" srclang="$srclang" $default>''')
