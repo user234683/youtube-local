@@ -1,10 +1,10 @@
 .video-metadata{    
     display: grid;
     grid-template-columns: auto 1fr;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto auto 1fr auto;
 }
     .video-metadata > .video-metadata-thumbnail-box{
-        grid-row: 1 / span 2;
+        grid-row: 1 / span 3;
     }
     .video-metadata > .title{
         word-wrap:break-word;
@@ -14,8 +14,11 @@
         grid-row: 2;
         font-size: 15px;
     }
+    .video-metadata > span{
+        grid-row:3;
+    }
     .video-metadata > hr{
-        grid-row: 3;
+        grid-row: 4;
         grid-column: 1 / span 2;
         width: 100%;
     }

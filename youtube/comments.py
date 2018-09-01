@@ -80,9 +80,13 @@ def ctoken_metadata(ctoken):
     result['offset'] = offset_information.get(5, 0)
 
     result['is_replies'] = False
-    if 3 in offset_information:
-        if 2 in offset_information[3]:
-            result['is_replies'] = True
+    if (3 in offset_information) and (2 in offset_information[3]):
+        result['is_replies'] = True
+    else:
+        try:
+            result['sort'] = offset_information[4][6]
+        except KeyError:
+            result['sort'] = 0
     return result
 
 def get_ids(ctoken):
@@ -252,6 +256,7 @@ video_metadata_template = Template('''<section class="video-metadata">
     <a class="title" href="$url" title="$title">$title</a>
 
     <h2>Comments page $page_number</h2>
+    <span>Sorted by $sort</span>
     <hr>
 </section>
 ''')
@@ -282,6 +287,7 @@ def get_comments_page(query_string):
         
         video_metadata = video_metadata_template.substitute(
             page_number = page_number,
+            sort = 'top' if metadata['sort'] == 0 else 'newest',
             title = html.escape(parsed_comments['video_title']),
             url = common.URL_ORIGIN + '/watch?v=' + metadata['video_id'],
             thumbnail = '/i.ytimg.com/vi/'+ metadata['video_id'] + '/mqdefault.jpg',

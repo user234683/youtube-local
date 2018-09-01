@@ -93,12 +93,7 @@ def post_comment(query_string, fields):
         return comments.get_comments_page(query_string)
     else:
         _post_comment(fields['comment_text'][0], fields['video_id'][0], token, cookie_data)
-        return common.yt_basic_template.substitute(
-            page_title = "Success",
-            style = '',
-            header = common.get_header(),
-            page = 'Comment sucessfully posted',
-        )
+        return comments.get_comments_page('ctoken=' + comments.make_comment_ctoken(video_id, sort=1))
         
 
 def get_post_comment_page(query_string):
@@ -120,7 +115,7 @@ textarea{
     grid-column:2;
 }'''
     page = '''<div class="left">
-    <form action="" method="post" class="comment-form">
+    <form action="''' + common.URL_ORIGIN + '/comments?ctoken=' + comments.make_comment_ctoken(video_id, sort=1).replace("=", "%3D") + '''" method="post" class="comment-form">
         <textarea name="comment_text"></textarea>
         <input type="hidden" name="video_id" value="''' + video_id + '''">
         <button type="submit">Post comment</button>
