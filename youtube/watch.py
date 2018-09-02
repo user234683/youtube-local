@@ -230,13 +230,9 @@ def get_watch_page(query_string):
             gevent.spawn(extract_info, downloader, "https://www.youtube.com/watch?v=" + id, download=False)
         )
         gevent.joinall(tasks)
-        comments_info, info = tasks[0].value, tasks[1].value
-        comments_html, ctoken = comments_info
+        comments_html, info = tasks[0].value, tasks[1].value
 
-        if ctoken == '':
-            more_comments_button = ''
-        else:
-            more_comments_button = more_comments_template.substitute(url = URL_ORIGIN + '/comments?ctoken=' + ctoken)
+
         #comments_html = comments.comments_html(video_id(url))
         #info = YoutubeDL().extract_info(url, download=False)
         
@@ -340,10 +336,9 @@ def get_watch_page(query_string):
             description             = html.escape(info["description"]),
             video_sources           = formats_html(sorted_formats) + subtitles_html(info),
             related                 = related_videos_html,
-            post_comment_link       = post_comment_link,
-            comment_count           = '',
+
             comments                = comments_html,
-            more_comments_button    = more_comments_button,
+
             music_list              = music_list_html,
             is_unlisted             = '<span class="is-unlisted">Unlisted</span>' if info['unlisted'] else '',
         )

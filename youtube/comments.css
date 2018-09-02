@@ -23,7 +23,34 @@
         width: 100%;
     }
 
+.comments-area{
+    display:grid;
+}
+    .comment-form{
+        display:contents;
+    }
+    .comments-area textarea{
+        resize: vertical;
+        margin-top:10px;
+    }
+    .post-comment-button{
+        margin-top:10px;
+        justify-self:end;
+    }
+    .comment-links{
+        display:grid;
+        grid-auto-flow: column;
+        grid-column-gap: 10px;
+        justify-content:start;
+    }
+        .comment-links a{
+            background-color: #d0d0d0;
+            padding: 2px;
+            justify-self:start;
+        }
+
 .comments{
+    margin-top:10px;
     grid-row-gap: 10px;
     display: grid;
     align-content:start;
@@ -84,5 +111,5 @@
 
 .more-comments{
     justify-self:center;
-
+    margin-top:10px;
 }

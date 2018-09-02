@@ -86,31 +86,15 @@
                         grid-row:8;
                         grid-column: 1 / span 2;
                     }
-                    .comment-count{
-                        font-weight:bold;
-                        grid-row:9;
+
+                    .full-item .comments-area{
                         grid-column: 1 / span 2;
-                    }
-                    .post-comment-link{
-                        grid-row:10;
-                        grid-column: 1;
-                        justify-self:start;
-                        margin-top: 10px;
-                        background-color: #d0d0d0;
-                        padding: 2px;
-                    }
-                    .full-item .comments{
-                        grid-column: 1 / span 2;
-                        grid-row: 11;
+                        grid-row: 9;
                         margin-top:10px;
                     }
                         .comment{
                             width:640px;
                         }
-                    .full-item .more-comments{
-                        grid-row: 12;
-                        grid-column: 1 / span 2;
-                    }
 
                 .music-list{
                     background-color: #d0d0d0;
@@ -206,12 +190,7 @@ $download_options
                     <div class="music-list">
 $music_list
                     </div>
-                    <div class="comment-count">$comment_count</div>
-                    $post_comment_link
-                    <section class="comments">
 $comments
-                    </section>
-$more_comments_button
                 </article>
             </div>
             

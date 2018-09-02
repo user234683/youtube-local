@@ -8,6 +8,15 @@ import urllib
 import html
 import settings
 import re
+comment_area_template = Template('''
+<section class="comment-area">
+$video-metadata
+$comment-links
+$comment-box
+$comments
+$more-comments-button    
+</section>
+''')
 comment_template = Template('''
                 <div class="comment-container">
                     <div class="comment">
@@ -80,11 +89,11 @@ def ctoken_metadata(ctoken):
     result['offset'] = offset_information.get(5, 0)
 
     result['is_replies'] = False
-    if (3 in offset_information) and (2 in offset_information[3]):
+    if (3 in offset_information) and (2 in proto.parse(offset_information[3])):
         result['is_replies'] = True
     else:
         try:
-            result['sort'] = offset_information[4][6]
+            result['sort'] = proto.parse(offset_information[4])[6]
         except KeyError:
             result['sort'] = 0
     return result
@@ -119,8 +128,8 @@ def request_comments(ctoken, replies=False):
             print("got <!DOCTYPE>, retrying")
             continue
         break
-    '''with open('debug/comments_debug', 'wb') as f:
-        f.write(content)'''
+    with open('debug/comments_debug', 'wb') as f:
+        f.write(content)
     return content
 
 def parse_comments_ajax(content, replies=False):
@@ -163,11 +172,15 @@ def parse_comments_polymer(content, replies=False):
     try:
         video_title = ''
         content = json.loads(uppercase_escape(content.decode('utf-8')))
+        url = content[1]['url']
+        ctoken = urllib.parse.parse_qs(url[url.find('?')+1:])['ctoken'][0]
+        video_id = ctoken_metadata(ctoken)['video_id']
         #print(content)
         try:
             comments_raw = content[1]['response']['continuationContents']['commentSectionContinuation']['items']
         except KeyError:
             comments_raw = content[1]['response']['continuationContents']['commentRepliesContinuation']['contents']
+            replies = True
 
         ctoken = default_multi_get(content, 1, 'response', 'continuationContents', 'commentSectionContinuation', 'continuations', 0, 'nextContinuationData', 'continuation', default='')
         
@@ -192,6 +205,10 @@ def parse_comments_polymer(content, replies=False):
                         view_replies_text = '1 reply'
                     else:
                         view_replies_text = match.group(1) + " replies"
+                elif not replies:
+                    view_replies_text = "Reply"
+                    parent_id = comment_raw['comment']['commentRenderer']['commentId']
+                    replies_url = URL_ORIGIN + '/post_comment?parent_id=' + parent_id + "&video_id=" + video_id
                 comment_raw = comment_raw['comment']
             
             comment_raw = comment_raw['commentRenderer']
@@ -216,9 +233,9 @@ def parse_comments_polymer(content, replies=False):
 
 
 
-def get_comments_html(result):
+def get_comments_html(comments):
     html_result = ''
-    for comment in result['comments']:
+    for comment in comments:
         replies = ''
         if comment['replies_url']:
             replies = reply_link_template.substitute(url=comment['replies_url'], view_replies_text=html.escape(comment['view_replies_text']))
@@ -240,13 +257,38 @@ def get_comments_html(result):
             replies=replies,
             #replies='',
         )
-    return html_result, result['ctoken']
+    return html_result
     
 def video_comments(video_id, sort=0, offset=0, secret_key=''):
     if settings.enable_comments:
-        result = parse_comments_polymer(request_comments(make_comment_ctoken(video_id, sort, offset, secret_key)))
-        return get_comments_html(result)
-    return '', ''
+        post_comment_url = common.URL_ORIGIN + "/post_comment?video_id=" + video_id
+        post_comment_link = '''<a class="post-comment-link" href="''' + post_comment_url + '''">Post comment</a>'''
+
+        other_sort_url = common.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(video_id, sort=1 - sort)
+        other_sort_name = 'newest' if sort == 0 else 'top'
+        other_sort_link = '''<a href="''' + other_sort_url + '''">Sort by ''' + other_sort_name + '''</a>'''
+
+        comment_links = '''<div class="comment-links">\n'''
+        comment_links += other_sort_link + '\n' + post_comment_link + '\n'
+        comment_links += '''</div>'''
+        
+        comment_info = parse_comments_polymer(request_comments(make_comment_ctoken(video_id, sort, offset, secret_key)))
+        ctoken = comment_info['ctoken']
+
+        if ctoken == '':
+            more_comments_button = ''
+        else:
+            more_comments_button = more_comments_template.substitute(url = common.URL_ORIGIN + '/comments?ctoken=' + ctoken)
+
+        result = '''<section class="comments-area">\n'''
+        result += comment_links + '\n'
+        result += '<div class="comments">\n'
+        result += get_comments_html(comment_info['comments']) + '\n'
+        result += '</div>\n'
+        result += more_comments_button + '\n'
+        result += '''</section>'''
+        return result
+    return ''
 
 more_comments_template = Template('''<a class="page-button more-comments" href="$url">More comments</a>''')
 video_metadata_template = Template('''<section class="video-metadata">
@@ -257,9 +299,14 @@ video_metadata_template = Template('''<section class="video-metadata">
 
     <h2>Comments page $page_number</h2>
     <span>Sorted by $sort</span>
-    <hr>
 </section>
 ''')
+comment_box_template = Template('''
+<form action="$form_action" method="post" class="comment-form">
+    <textarea name="comment_text"></textarea>
+    $video_id_input
+    <button type="submit" class="post-comment-button">$post_text</button>
+</form>''')
 def get_comments_page(query_string):
     parameters = urllib.parse.parse_qs(query_string)
     ctoken = default_multi_get(parameters, 'ctoken', 0, default='')
@@ -271,16 +318,14 @@ def get_comments_page(query_string):
         ctoken = comment_replies_ctoken(video_id, parent_id)
         replies = True
 
-    parsed_comments = parse_comments_polymer(request_comments(ctoken, replies), replies)
+    comment_info = parse_comments_polymer(request_comments(ctoken, replies), replies)
 
     metadata = ctoken_metadata(ctoken)
     if replies:
         page_title = 'Replies'
         video_metadata = ''
-        comment_box = '''<form action="" method="post" class="comment-form">
-    <textarea name="comment_text"></textarea>
-    <button type="submit" class="post-comment-button">Post reply</button>
-</form>'''
+        comment_box = comment_box_template.substitute(form_action='', video_id_input='', post_text='Post reply')
+        comment_links = ''
     else:
         page_number = str(int(metadata['offset']/20) + 1)
         page_title = 'Comments page ' + page_number
@@ -288,25 +333,40 @@ def get_comments_page(query_string):
         video_metadata = video_metadata_template.substitute(
             page_number = page_number,
             sort = 'top' if metadata['sort'] == 0 else 'newest',
-            title = html.escape(parsed_comments['video_title']),
+            title = html.escape(comment_info['video_title']),
             url = common.URL_ORIGIN + '/watch?v=' + metadata['video_id'],
             thumbnail = '/i.ytimg.com/vi/'+ metadata['video_id'] + '/mqdefault.jpg',
         )
-        comment_box = ''
+        comment_box = comment_box_template.substitute(
+            form_action= common.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(metadata['video_id'], sort=1).replace("=", "%3D"),
+            video_id_input='''<input type="hidden" name="video_id" value="''' + metadata['video_id'] + '''">''',
+            post_text='Post comment'
+        )
+
+        other_sort_url = common.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(metadata['video_id'], sort=1 - metadata['sort'])
+        other_sort_name = 'newest' if metadata['sort'] == 0 else 'top'
+        other_sort_link = '''<a href="''' + other_sort_url + '''">Sort by ''' + other_sort_name + '''</a>'''
 
 
-    comments_html, ctoken = get_comments_html(parsed_comments)
+        comment_links = '''<div class="comment-links">\n'''
+        comment_links += other_sort_link + '\n'
+        comment_links += '''</div>'''
+
+    comments_html = get_comments_html(comment_info['comments'])
+    ctoken = comment_info['ctoken']
     if ctoken == '':
         more_comments_button = ''
     else:
         more_comments_button = more_comments_template.substitute(url = URL_ORIGIN + '/comments?ctoken=' + ctoken)
-
+    comments_area = '<section class="comments-area">\n'
+    comments_area += video_metadata + comment_box + comment_links + '\n'
+    comments_area += '<div class="comments">\n'
+    comments_area += comments_html + '\n'
+    comments_area += '</div>\n'
+    comments_area += more_comments_button + '\n'
+    comments_area += '</section>\n'
     return yt_comments_template.substitute(
         header = common.get_header(),
-        comment_box = comment_box,
-        video_metadata = video_metadata,
-        comments = comments_html,
+        comments_area = comments_area,
         page_title = page_title,
-        more_comments_button=more_comments_button,
     )
-

@@ -29,8 +29,9 @@ def _post_comment(text, video_id, session_token, cookie):
 
     req = urllib.request.Request("https://m.youtube.com/service_ajax?name=createCommentEndpoint", headers=headers, data=data)
     response = urllib.request.urlopen(req, timeout = 5)
+    content = response.read()
     '''with open('debug/post_comment_response', 'wb') as f:
-        f.write(response.read())'''
+        f.write(content)'''
 
 
 def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie):
@@ -59,8 +60,9 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
 
     req = urllib.request.Request("https://m.youtube.com/service_ajax?name=createCommentReplyEndpoint", headers=headers, data=data)
     response = urllib.request.urlopen(req, timeout = 5)
+    content = response.read()
     '''with open('debug/post_comment_response', 'wb') as f:
-        f.write(response.read())'''
+        f.write(content)'''
 
 
 
@@ -98,7 +100,9 @@ def post_comment(query_string, fields):
 
 def get_post_comment_page(query_string):
     parameters = urllib.parse.parse_qs(query_string)
-    video_id = parameters['v'][0]
+    video_id = parameters['video_id'][0]
+    parent_id = common.default_multi_get(parameters, 'parent_id', 0, default='')
+    
     style = ''' main{
     display: grid;
     grid-template-columns: 3fr 2fr;
@@ -108,22 +112,28 @@ def get_post_comment_page(query_string):
     grid-template-columns: 1fr 640px;
 }
 textarea{
-    width: 462px;
+    width: 460px;
     height: 85px;
 }
 .comment-form{
     grid-column:2;
 }'''
-    page = '''<div class="left">
-    <form action="''' + common.URL_ORIGIN + '/comments?ctoken=' + comments.make_comment_ctoken(video_id, sort=1).replace("=", "%3D") + '''" method="post" class="comment-form">
-        <textarea name="comment_text"></textarea>
-        <input type="hidden" name="video_id" value="''' + video_id + '''">
-        <button type="submit">Post comment</button>
-    </form>
-</div>
-'''
+    if parent_id:   # comment reply
+        comment_box = comments.comment_box_template.substitute(
+            form_action = common.URL_ORIGIN + '/comments?parent_id=' + parent_id + "&video_id=" + video_id,
+            video_id_input = '',
+            post_text = "Post reply",
+        )
+    else:
+        comment_box = comments.comment_box_template.substitute(
+            form_action = common.URL_ORIGIN + '/comments?ctoken=' + comments.make_comment_ctoken(video_id, sort=1).replace("=", "%3D"),
+            video_id_input = '''<input type="hidden" name="video_id" value="''' + video_id + '''">''',
+            post_text = "Post comment",
+        )
+        
+    page = '''<div class="left">\n''' + comment_box + '''</div>\n'''
     return common.yt_basic_template.substitute(
-        page_title = "Post a comment",
+        page_title = "Post comment reply" if parent_id else "Post a comment",
         style = style,
         header = common.get_header(),
         page = page,

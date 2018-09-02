@@ -21,42 +21,19 @@
                 grid-template-columns: 1fr 640px;
                 grid-template-rows: 0fr 0fr 0fr;
             }
-                .video-metadata{
-                    grid-column: 2;
-                }
-                .comment-form{
-                    display:contents;
-                }
-                textarea{
-                    grid-column:2;
-                    resize: vertical;
-                }
-                .post-comment-button{
-                    grid-column:2;
-                    justify-self:end;
-                    margin-top:10px;
-                }
-                .comments{
+                .comments-area{
                     grid-column:2;
                 }
                     .comment{
                         width:640px;
                     }
-                #left .page-button{
-                    grid-column:2;
-                }
         </style>
     </head>
     <body>
 $header
         <main>
             <div id="left">
-$video_metadata
-$comment_box
-                <section class="comments">
-$comments
-                </section>
-$more_comments_button
+$comments_area
             </div>
         </main>
     </body>
