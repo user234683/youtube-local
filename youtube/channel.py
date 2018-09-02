@@ -44,7 +44,7 @@ headers_1 = (
     ('Accept', '*/*'),
     ('Accept-Language', 'en-US,en;q=0.5'),
     ('X-YouTube-Client-Name', '1'),
-    ('X-YouTube-Client-Version', '2.20180614'),
+    ('X-YouTube-Client-Version', '2.20180830'),
 )
 # https://www.youtube.com/browse_ajax?action_continuation=1&direct_render=1&continuation=4qmFsgJAEhhVQzdVY3M0MkZaeTN1WXpqcnF6T0lIc3caJEVnWjJhV1JsYjNNZ0FEZ0JZQUZxQUhvQk1yZ0JBQSUzRCUzRA%3D%3D
 # https://www.youtube.com/browse_ajax?ctoken=4qmFsgJAEhhVQzdVY3M0MkZaeTN1WXpqcnF6T0lIc3caJEVnWjJhV1JsYjNNZ0FEZ0JZQUZxQUhvQk1yZ0JBQSUzRCUzRA%3D%3D&continuation=4qmFsgJAEhhVQzdVY3M0MkZaeTN1WXpqcnF6T0lIc3caJEVnWjJhV1JsYjNNZ0FEZ0JZQUZxQUhvQk1yZ0JBQSUzRCUzRA%3D%3D&itct=CDsQybcCIhMIhZi1krTc2wIVjMicCh2HXQnhKJsc
@@ -79,7 +79,7 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1):
     url = "https://www.youtube.com/browse_ajax?ctoken=" + ctoken
 
     print("Sending channel tab ajax request")
-    content = common.fetch_url(url, headers_1)
+    content = common.fetch_url(url, common.desktop_ua + headers_1)
     print("Finished recieving channel tab response")
 
     '''with open('debug/channel_debug', 'wb') as f:
@@ -301,7 +301,7 @@ def get_channel_search_json(channel_id, query, page):
     ctoken = proto.string(2, channel_id) + proto.string(3, params) + proto.string(11, query)
     ctoken = base64.urlsafe_b64encode(proto.nested(80226972, ctoken)).decode('ascii')
 
-    polymer_json = common.fetch_url("https://www.youtube.com/browse_ajax?ctoken=" + ctoken, headers_1)
+    polymer_json = common.fetch_url("https://www.youtube.com/browse_ajax?ctoken=" + ctoken, common.desktop_ua + headers_1)
     '''with open('debug/channel_search_debug', 'wb') as f:
         f.write(polymer_json)'''
     polymer_json = json.loads(polymer_json)
@@ -333,11 +333,11 @@ def get_channel_page(url, query_string=''):
 
         return channel_videos_html(polymer_json, page_number, number_of_videos, query_string)
     elif tab == 'about':
-        polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/about?pbj=1', headers_1)
+        polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/about?pbj=1', common.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_about_page(polymer_json)
     elif tab == 'playlists':
-        polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1&view=1', headers_1)
+        polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1&view=1', common.desktop_ua + headers_1)
         '''with open('debug/channel_playlists_debug', 'wb') as f:
             f.write(polymer_json)'''
         polymer_json = json.loads(polymer_json)
@@ -362,20 +362,20 @@ def get_user_page(url, query_string=''):
     except IndexError:
         page = 'videos'
     if page == 'videos':
-        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/videos?pbj=1&view=0', headers_1)
+        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/videos?pbj=1&view=0', common.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_videos_html(polymer_json)
     elif page == 'about':
-        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/about?pbj=1', headers_1)
+        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/about?pbj=1', common.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_about_page(polymer_json)
     elif page == 'playlists':
-        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/playlists?pbj=1&view=1', headers_1)
+        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/playlists?pbj=1&view=1', common.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_playlists_html(polymer_json)
     elif page == 'search':
         raise NotImplementedError()
-        '''polymer_json = common.fetch_url('https://www.youtube.com/user' + username +  '/search?pbj=1&' + query_string, headers_1)
+        '''polymer_json = common.fetch_url('https://www.youtube.com/user' + username +  '/search?pbj=1&' + query_string, common.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_search_page('''
     else:

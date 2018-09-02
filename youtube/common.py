@@ -171,6 +171,8 @@ def fetch_url(url, headers=(), timeout=15, report_text=None):
 
 mobile_user_agent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1'
 mobile_ua = (('User-Agent', mobile_user_agent),)
+desktop_user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0'
+desktop_ua = (('User-Agent', desktop_user_agent),)
 
 def dict_add(*dicts):
     for dictionary in dicts[1:]:
