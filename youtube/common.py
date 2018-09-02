@@ -292,7 +292,7 @@ def medium_video_item_html(medium_video_info):
 
 header_template = Template('''
         <header>
-            <div id="header-left">
+
                 <form id="site-search" action="/youtube.com/search">
                     <input type="search" name="query" class="search-box" value="$search_box_value">
                     <button type="submit" value="Search" class="search-button">Search</button>
@@ -316,7 +316,7 @@ header_template = Template('''
                         </div>
                     </div>
                 </form>
-            </div>
+
             <div id="header-right">
                 <form id="playlist-edit" action="/youtube.com/edit_playlist" method="post" target="_self">
                     <input name="playlist_name" id="playlist-name-selection" list="playlist-options" type="text">
