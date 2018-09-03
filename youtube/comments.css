@@ -86,6 +86,7 @@
     grid-row: 2;
     white-space: pre-wrap;
     min-width: 0;
+    word-wrap: break-word;
 }
 
 .comment time{
