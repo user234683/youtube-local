@@ -128,9 +128,16 @@ def request_comments(ctoken, replies=False):
             print("got <!DOCTYPE>, retrying")
             continue
         break
-    with open('debug/comments_debug', 'wb') as f:
-        f.write(content)
+    '''with open('debug/comments_debug', 'wb') as f:
+        f.write(content)'''
     return content
+
+def single_comment_ctoken(video_id, comment_id):
+    page_params = proto.string(2, video_id) + proto.string(6, proto.percent_b64encode(proto.string(15, comment_id)))
+
+    result = proto.nested(2, page_params) + proto.uint(3,6)
+    return base64.urlsafe_b64encode(result).decode('ascii')
+    
 
 def parse_comments_ajax(content, replies=False):
     try:
