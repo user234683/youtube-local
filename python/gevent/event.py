@@ -1,21 +1,34 @@
 # Copyright (c) 2009-2016 Denis Bilenko, gevent contributors. See LICENSE for details.
+# cython: auto_pickle=False,embedsignature=True,always_allow_keywords=False,infer_types=True
+
 """Basic synchronization primitives: Event and AsyncResult"""
 from __future__ import print_function
 import sys
-from gevent.hub import get_hub, getcurrent, _NONE
+
+from gevent._util import _NONE
 from gevent._compat import reraise
-from gevent.hub import InvalidSwitchError
-from gevent.timeout import Timeout
 from gevent._tblib import dump_traceback, load_traceback
 
-__all__ = ['Event', 'AsyncResult']
+from gevent._hub_local import get_hub_noargs as get_hub
+
+from gevent.exceptions import InvalidSwitchError
+from gevent.timeout import Timeout
+
+
+__all__ = [
+    'Event',
+    'AsyncResult',
+]
+
+locals()['getcurrent'] = __import__('greenlet').getcurrent
+locals()['greenlet_init'] = lambda: None
 
 
 class _AbstractLinkable(object):
     # Encapsulates the standard parts of the linking and notifying protocol
     # common to both repeatable events and one-time events (AsyncResult).
 
-    _notifier = None
+    __slots__ = ('_links', 'hub', '_notifier')
 
     def __init__(self):
         # Also previously, AsyncResult maintained the order of notifications, but Event
@@ -30,6 +43,7 @@ class _AbstractLinkable(object):
         # uniqueness would be with a 2.7+ OrderedDict.)
         self._links = set()
         self.hub = get_hub()
+        self._notifier = None
 
     def ready(self):
         # Instances must define this
@@ -90,18 +104,17 @@ class _AbstractLinkable(object):
         # bool(self._notifier) would turn to False as soon as we exit this
         # method anyway.
         del todo
-        del self._notifier
+        self._notifier = None
 
     def _wait_core(self, timeout, catch=Timeout):
         # The core of the wait implementation, handling
         # switching and linking. If *catch* is set to (),
         # a timeout that elapses will be allowed to be raised.
         # Returns a true value if the wait succeeded without timing out.
-        switch = getcurrent().switch
+        switch = getcurrent().switch # pylint:disable=undefined-variable
         self.rawlink(switch)
         try:
-            timer = Timeout._start_new_or_dummy(timeout)
-            try:
+            with Timeout._start_new_or_dummy(timeout) as timer:
                 try:
                     result = self.hub.switch()
                     if result is not self: # pragma: no cover
@@ -113,8 +126,6 @@ class _AbstractLinkable(object):
                     # test_set_and_clear and test_timeout in test_threading
                     # rely on the exact return values, not just truthish-ness
                     return False
-            finally:
-                timer.cancel()
         finally:
             self.unlink(switch)
 
@@ -146,7 +157,11 @@ class Event(_AbstractLinkable):
         the waiting greenlets being awakened. These details may change in the future.
     """
 
-    _flag = False
+    __slots__ = ('_flag', '__weakref__')
+
+    def __init__(self):
+        _AbstractLinkable.__init__(self)
+        self._flag = False
 
     def __str__(self):
         return '<%s %s _links[%s]>' % (self.__class__.__name__, (self._flag and 'set') or 'clear', len(self._links))
@@ -155,8 +170,14 @@ class Event(_AbstractLinkable):
         """Return true if and only if the internal flag is true."""
         return self._flag
 
-    isSet = is_set  # makes it a better drop-in replacement for threading.Event
-    ready = is_set  # makes it compatible with AsyncResult and Greenlet (for example in wait())
+    def isSet(self):
+        # makes it a better drop-in replacement for threading.Event
+        return self._flag
+
+    def ready(self):
+        # makes it compatible with AsyncResult and Greenlet (for
+        # example in wait())
+        return self._flag
 
     def set(self):
         """
@@ -219,7 +240,7 @@ class Event(_AbstractLinkable):
         return self._wait(timeout)
 
     def _reset_internal_locks(self): # pragma: no cover
-        # for compatibility with threading.Event (only in case of patch_all(Event=True), by default Event is not patched)
+        # for compatibility with threading.Event
         #  Exception AttributeError: AttributeError("'Event' object has no attribute '_reset_internal_locks'",)
         # in <module 'threading' from '/usr/lib/python2.7/threading.pyc'> ignored
         pass
@@ -275,9 +296,12 @@ class AsyncResult(_AbstractLinkable):
        merged.
     """
 
-    _value = _NONE
-    _exc_info = ()
-    _notifier = None
+    __slots__ = ('_value', '_exc_info', '_imap_task_index')
+
+    def __init__(self):
+        _AbstractLinkable.__init__(self)
+        self._value = _NONE
+        self._exc_info = ()
 
     @property
     def _exception(self):
@@ -357,7 +381,7 @@ class AsyncResult(_AbstractLinkable):
     def get(self, block=True, timeout=None):
         """Return the stored value or raise the exception.
 
-        If this instance already holds a value or an exception, return  or raise it immediatelly.
+        If this instance already holds a value or an exception, return  or raise it immediately.
         Otherwise, block until another greenlet calls :meth:`set` or :meth:`set_exception` or
         until the optional timeout occurs.
 
@@ -446,3 +470,12 @@ class AsyncResult(_AbstractLinkable):
         return False
 
     # exception is a method, we use it as a property
+
+def _init():
+    greenlet_init() # pylint:disable=undefined-variable
+
+_init()
+
+
+from gevent._util import import_c_accel
+import_c_accel(globals(), 'gevent._event')

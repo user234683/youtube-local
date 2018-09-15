@@ -40,10 +40,15 @@ import signal
 import sys
 import traceback
 from gevent.event import AsyncResult
-from gevent.hub import get_hub, linkproxy, sleep, getcurrent
+from gevent.hub import _get_hub_noargs as get_hub
+from gevent.hub import linkproxy
+from gevent.hub import sleep
+from gevent.hub import getcurrent
 from gevent._compat import integer_types, string_types, xrange
 from gevent._compat import PY3
 from gevent._compat import reraise
+from gevent._compat import fspath
+from gevent._compat import fsencode
 from gevent._util import _NONE
 from gevent._util import copy_globals
 from gevent.fileobject import FileObject
@@ -108,6 +113,7 @@ __extra__ = [
     'CreateProcess',
     'INFINITE',
     'TerminateProcess',
+    'STILL_ACTIVE',
 
     # These were added for 3.5, but we make them available everywhere.
     'run',
@@ -144,6 +150,17 @@ if sys.version_info[:2] >= (3, 6):
     # This was added to __all__ for windows in 3.6
     __extra__.remove('STARTUPINFO')
     __imports__.append('STARTUPINFO')
+
+if sys.version_info[:2] >= (3, 7):
+    __imports__.extend([
+        'ABOVE_NORMAL_PRIORITY_CLASS', 'BELOW_NORMAL_PRIORITY_CLASS',
+        'HIGH_PRIORITY_CLASS', 'IDLE_PRIORITY_CLASS',
+        'NORMAL_PRIORITY_CLASS',
+        'REALTIME_PRIORITY_CLASS',
+        'CREATE_NO_WINDOW', 'DETACHED_PROCESS',
+        'CREATE_DEFAULT_ERROR_MODE',
+        'CREATE_BREAKAWAY_FROM_JOB'
+    ])
 
 actually_imported = copy_globals(__subprocess__, globals(),
                                  only_names=__imports__,
@@ -357,15 +374,26 @@ if 'TimeoutExpired' not in globals():
 
         .. versionadded:: 1.2a1
         """
+
         def __init__(self, cmd, timeout, output=None):
-            _Timeout.__init__(self, timeout, _use_timer=False)
+            _Timeout.__init__(self, None)
             self.cmd = cmd
-            self.timeout = timeout
+            self.seconds = timeout
             self.output = output
+
+        @property
+        def timeout(self):
+            return self.seconds
 
         def __str__(self):
             return ("Command '%s' timed out after %s seconds" %
                     (self.cmd, self.timeout))
+
+
+if hasattr(os, 'set_inheritable'):
+    _set_inheritable = os.set_inheritable
+else:
+    _set_inheritable = lambda i, v: True
 
 
 class Popen(object):
@@ -385,42 +413,59 @@ class Popen(object):
     .. versionchanged:: 1.2a1
        Instances now save the ``args`` attribute under Python 2.7. Previously this was
        restricted to Python 3.
+
+    .. versionchanged:: 1.2b1
+        Add the ``encoding`` and ``errors`` parameters for Python 3.
+
+    .. versionchanged:: 1.3a1
+       Accept "path-like" objects for the *cwd* parameter on all platforms.
+       This was added to Python 3.6. Previously with gevent, it only worked
+       on POSIX platforms on 3.6.
+
+    .. versionchanged:: 1.3a1
+       Add the ``text`` argument as a synonym for ``universal_newlines``,
+       as added on Python 3.7.
+
+    .. versionchanged:: 1.3a2
+       Allow the same keyword arguments under Python 2 as Python 3:
+       ``pass_fds``, ``start_new_session``, ``restore_signals``, ``encoding``
+       and ``errors``. Under Python 2, ``encoding`` and ``errors`` are ignored
+       because native handling of universal newlines is used.
+
+    .. versionchanged:: 1.3a2
+       Under Python 2, ``restore_signals`` defaults to ``False``. Previously it
+       defaulted to ``True``, the same as it did in Python 3.
     """
 
-    def __init__(self, args, bufsize=None, executable=None,
+    # The value returned from communicate() when there was nothing to read.
+    # Changes if we're in text mode or universal newlines mode.
+    _communicate_empty_value = b''
+
+    def __init__(self, args,
+                 bufsize=-1 if PY3 else 0,
+                 executable=None,
                  stdin=None, stdout=None, stderr=None,
                  preexec_fn=None, close_fds=_PLATFORM_DEFAULT_CLOSE_FDS, shell=False,
-                 cwd=None, env=None, universal_newlines=False,
-                 startupinfo=None, creationflags=0, threadpool=None,
-                 **kwargs):
-        """Create new Popen instance.
+                 cwd=None, env=None, universal_newlines=None,
+                 startupinfo=None, creationflags=0,
+                 restore_signals=PY3, start_new_session=False,
+                 pass_fds=(),
+                 # Added in 3.6. These are kept as ivars
+                 encoding=None, errors=None,
+                 # Added in 3.7. Not an ivar directly.
+                 text=None,
+                 # gevent additions
+                 threadpool=None):
 
-        :param kwargs: *Only* allowed under Python 3; under Python 2, any
-          unrecognized keyword arguments will result in a :exc:`TypeError`.
-          Under Python 3, keyword arguments can include ``pass_fds``, ``start_new_session``,
-          ``restore_signals``, ``encoding`` and ``errors``
-
-        .. versionchanged:: 1.2b1
-           Add the ``encoding`` and ``errors`` parameters for Python 3.
-        """
-
-        if not PY3 and kwargs:
-            raise TypeError("Got unexpected keyword arguments", kwargs)
-        pass_fds = kwargs.pop('pass_fds', ())
-        start_new_session = kwargs.pop('start_new_session', False)
-        restore_signals = kwargs.pop('restore_signals', True)
-        # Added in 3.6. These are kept as ivars
-        encoding = self.encoding = kwargs.pop('encoding', None)
-        errors = self.errors = kwargs.pop('errors', None)
+        self.encoding = encoding
+        self.errors = errors
 
         hub = get_hub()
 
         if bufsize is None:
-            # bufsize has different defaults on Py3 and Py2
-            if PY3:
-                bufsize = -1
-            else:
-                bufsize = 0
+            # Python 2 doesn't allow None at all, but Python 3 treats
+            # it the same as the default. We do as well.
+            bufsize = -1 if PY3 else 0
         if not isinstance(bufsize, integer_types):
             raise TypeError("bufsize must be an integer")
 
@@ -428,16 +473,20 @@ class Popen(object):
             if preexec_fn is not None:
                 raise ValueError("preexec_fn is not supported on Windows "
                                  "platforms")
-            any_stdio_set = (stdin is not None or stdout is not None or
-                             stderr is not None)
-            if close_fds is _PLATFORM_DEFAULT_CLOSE_FDS:
-                if any_stdio_set:
-                    close_fds = False
-                else:
+            if sys.version_info[:2] >= (3, 7):
+                if close_fds is _PLATFORM_DEFAULT_CLOSE_FDS:
                     close_fds = True
-            elif close_fds and any_stdio_set:
-                raise ValueError("close_fds is not supported on Windows "
-                                 "platforms if you redirect stdin/stdout/stderr")
+            else:
+                any_stdio_set = (stdin is not None or stdout is not None or
+                                 stderr is not None)
+                if close_fds is _PLATFORM_DEFAULT_CLOSE_FDS:
+                    if any_stdio_set:
+                        close_fds = False
+                    else:
+                        close_fds = True
+                elif close_fds and any_stdio_set:
+                    raise ValueError("close_fds is not supported on Windows "
+                                     "platforms if you redirect stdin/stdout/stderr")
             if threadpool is None:
                 threadpool = hub.threadpool
             self.threadpool = threadpool
@@ -464,6 +513,13 @@ class Popen(object):
             assert threadpool is None
             self._loop = hub.loop
 
+        # Validate the combinations of text and universal_newlines
+        if (text is not None and universal_newlines is not None
+                and bool(universal_newlines) != bool(text)):
+            raise SubprocessError('Cannot disambiguate when both text '
+                                  'and universal_newlines are supplied but '
+                                  'different. Pass one or the other.')
+
         self.args = args # Previously this was Py3 only.
         self.stdin = None
         self.stdout = None
@@ -485,7 +541,7 @@ class Popen(object):
         # On POSIX, the child objects are file descriptors.  On
         # Windows, these are Windows file handles.  The parent objects
         # are file descriptors on both platforms.  The parent objects
-        # are None when not using PIPEs. The child objects are None
+        # are -1 when not using PIPEs. The child objects are -1
         # when not redirecting.
 
         (p2cread, p2cwrite,
@@ -496,16 +552,21 @@ class Popen(object):
         # quickly terminating child could make our fds unwrappable
         # (see #8458).
         if mswindows:
-            if p2cwrite is not None:
+            if p2cwrite != -1:
                 p2cwrite = msvcrt.open_osfhandle(p2cwrite.Detach(), 0)
-            if c2pread is not None:
+            if c2pread != -1:
                 c2pread = msvcrt.open_osfhandle(c2pread.Detach(), 0)
-            if errread is not None:
+            if errread != -1:
                 errread = msvcrt.open_osfhandle(errread.Detach(), 0)
 
-        text_mode = PY3 and (self.encoding or self.errors or universal_newlines)
+        text_mode = PY3 and (self.encoding or self.errors or universal_newlines or text)
+        if text_mode or universal_newlines:
+            # Always a native str in universal_newlines mode, even when that
+            # str type is bytes. Additionally, text_mode is only true under
+            # Python 3, so it's actually a unicode str
+            self._communicate_empty_value = ''
 
-        if p2cwrite is not None:
+        if p2cwrite != -1:
             if PY3 and text_mode:
                 # Under Python 3, if we left on the 'b' we'd get different results
                 # depending on whether we used FileObjectPosix or FileObjectThread
@@ -516,7 +577,7 @@ class Popen(object):
                                               encoding=self.encoding, errors=self.errors)
             else:
                 self.stdin = FileObject(p2cwrite, 'wb', bufsize)
-        if c2pread is not None:
+        if c2pread != -1:
             if universal_newlines or text_mode:
                 if PY3:
                     # FileObjectThread doesn't support the 'U' qualifier
@@ -533,7 +594,7 @@ class Popen(object):
                     self.stdout = FileObject(c2pread, 'rU', bufsize)
             else:
                 self.stdout = FileObject(c2pread, 'rb', bufsize)
-        if errread is not None:
+        if errread != -1:
             if universal_newlines or text_mode:
                 if PY3:
                     self.stderr = FileObject(errread, 'rb', bufsize)
@@ -544,6 +605,10 @@ class Popen(object):
                 self.stderr = FileObject(errread, 'rb', bufsize)
 
         self._closed_child_pipe_fds = False
+        # Convert here for the sake of all platforms. os.chdir accepts
+        # path-like objects natively under 3.6, but CreateProcess
+        # doesn't.
+        cwd = fspath(cwd) if cwd is not None else None
         try:
             self._execute_child(args, executable, preexec_fn, close_fds,
                                 pass_fds, cwd, env, universal_newlines,
@@ -643,31 +708,33 @@ class Popen(object):
         # that no output should be lost in the event of a timeout.) Instead, we're
         # watching for the exception and ignoring it. It's not elegant,
         # but it works
-        if self.stdout:
-            def _read_out():
+        def _make_pipe_reader(pipe_name):
+            pipe = getattr(self, pipe_name)
+            buf_name = '_' + pipe_name + '_buffer'
+
+            def _read():
                 try:
-                    data = self.stdout.read()
+                    data = pipe.read()
                 except RuntimeError:
                     return
-                if self._stdout_buffer is not None:
-                    self._stdout_buffer += data
+                if not data:
+                    return
+                the_buffer = getattr(self, buf_name)
+                if the_buffer:
+                    the_buffer.append(data)
                 else:
-                    self._stdout_buffer = data
+                    setattr(self, buf_name, [data])
+            return _read
+
+        if self.stdout:
+            _read_out = _make_pipe_reader('stdout')
             stdout = spawn(_read_out)
             greenlets.append(stdout)
         else:
             stdout = None
 
         if self.stderr:
-            def _read_err():
-                try:
-                    data = self.stderr.read()
-                except RuntimeError:
-                    return
-                if self._stderr_buffer is not None:
-                    self._stderr_buffer += data
-                else:
-                    self._stderr_buffer = data
+            _read_err = _make_pipe_reader('stderr')
             stderr = spawn(_read_err)
             greenlets.append(stderr)
         else:
@@ -686,25 +753,30 @@ class Popen(object):
         if timeout is not None and len(done) != len(greenlets):
             raise TimeoutExpired(self.args, timeout)
 
-        if self.stdout:
-            try:
-                self.stdout.close()
-            except RuntimeError:
-                pass
-        if self.stderr:
-            try:
-                self.stderr.close()
-            except RuntimeError:
-                pass
+        for pipe in (self.stdout, self.stderr):
+            if pipe:
+                try:
+                    pipe.close()
+                except RuntimeError:
+                    pass
+
         self.wait()
-        stdout_value = self._stdout_buffer
-        self._stdout_buffer = None
-        stderr_value = self._stderr_buffer
-        self._stderr_buffer = None
-        # XXX: Under python 3 in universal newlines mode we should be
-        # returning str, not bytes
-        return (None if stdout is None else stdout_value or b'',
-                None if stderr is None else stderr_value or b'')
+
+        def _get_output_value(pipe_name):
+            buf_name = '_' + pipe_name + '_buffer'
+            buf_value = getattr(self, buf_name)
+            setattr(self, buf_name, None)
+            if buf_value:
+                buf_value = self._communicate_empty_value.join(buf_value)
+            else:
+                buf_value = self._communicate_empty_value
+            return buf_value
+
+        stdout_value = _get_output_value('stdout')
+        stderr_value = _get_output_value('stderr')
+
+        return (None if stdout is None else stdout_value,
+                None if stderr is None else stderr_value)
 
     def poll(self):
         """Check if child process has terminated. Set and return :attr:`returncode` attribute."""
@@ -743,11 +815,11 @@ class Popen(object):
             p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite
             """
             if stdin is None and stdout is None and stderr is None:
-                return (None, None, None, None, None, None)
+                return (-1, -1, -1, -1, -1, -1)
 
-            p2cread, p2cwrite = None, None
-            c2pread, c2pwrite = None, None
-            errread, errwrite = None, None
+            p2cread, p2cwrite = -1, -1
+            c2pread, c2pwrite = -1, -1
+            errread, errwrite = -1, -1
 
             try:
                 DEVNULL
@@ -843,6 +915,21 @@ class Popen(object):
                                        "shell or platform.")
             return w9xpopen
 
+
+        def _filter_handle_list(self, handle_list):
+            """Filter out console handles that can't be used
+            in lpAttributeList["handle_list"] and make sure the list
+            isn't empty. This also removes duplicate handles."""
+            # An handle with it's lowest two bits set might be a special console
+            # handle that if passed in lpAttributeList["handle_list"], will
+            # cause it to fail.
+            # Only works on 3.7+
+            return list({handle for handle in handle_list
+                         if handle & 0x3 != 0x3
+                         or _winapi.GetFileType(handle) !=
+                         _winapi.FILE_TYPE_CHAR})
+
+
         def _execute_child(self, args, executable, preexec_fn, close_fds,
                            pass_fds, cwd, env, universal_newlines,
                            startupinfo, creationflags, shell,
@@ -860,11 +947,43 @@ class Popen(object):
             # Process startup details
             if startupinfo is None:
                 startupinfo = STARTUPINFO()
-            if None not in (p2cread, c2pwrite, errwrite):
+            use_std_handles = -1 not in (p2cread, c2pwrite, errwrite)
+            if use_std_handles:
                 startupinfo.dwFlags |= STARTF_USESTDHANDLES
                 startupinfo.hStdInput = p2cread
                 startupinfo.hStdOutput = c2pwrite
                 startupinfo.hStdError = errwrite
+
+            if hasattr(startupinfo, 'lpAttributeList'):
+                # Support for Python >= 3.7
+
+                attribute_list = startupinfo.lpAttributeList
+                have_handle_list = bool(attribute_list and
+                                        "handle_list" in attribute_list and
+                                        attribute_list["handle_list"])
+
+                # If we were given an handle_list or need to create one
+                if have_handle_list or (use_std_handles and close_fds):
+                    if attribute_list is None:
+                        attribute_list = startupinfo.lpAttributeList = {}
+                    handle_list = attribute_list["handle_list"] = \
+                        list(attribute_list.get("handle_list", []))
+
+                    if use_std_handles:
+                        handle_list += [int(p2cread), int(c2pwrite), int(errwrite)]
+
+                    handle_list[:] = self._filter_handle_list(handle_list)
+
+                    if handle_list:
+                        if not close_fds:
+                            import warnings
+                            warnings.warn("startupinfo.lpAttributeList['handle_list'] "
+                                          "overriding close_fds", RuntimeWarning)
+
+                        # When using the handle_list we always request to inherit
+                        # handles but the only handles that will be inherited are
+                        # the ones in the handle_list
+                        close_fds = False
 
             if shell:
                 startupinfo.dwFlags |= STARTF_USESHOWWINDOW
@@ -979,7 +1098,21 @@ class Popen(object):
         def terminate(self):
             """Terminates the process
             """
-            TerminateProcess(self._handle, 1)
+            # Don't terminate a process that we know has already died.
+            if self.returncode is not None:
+                return
+            try:
+                TerminateProcess(self._handle, 1)
+            except OSError as e:
+                # ERROR_ACCESS_DENIED (winerror 5) is received when the
+                # process already died.
+                if e.winerror != 5:
+                    raise
+                rc = GetExitCodeProcess(self._handle)
+                if rc == STILL_ACTIVE:
+                    raise
+                self.returncode = rc
+                self.result.set(self.returncode)
 
         kill = terminate
 
@@ -997,9 +1130,9 @@ class Popen(object):
             """Construct and return tuple with IO objects:
             p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite
             """
-            p2cread, p2cwrite = None, None
-            c2pread, c2pwrite = None, None
-            errread, errwrite = None, None
+            p2cread, p2cwrite = -1, -1
+            c2pread, c2pwrite = -1, -1
+            errread, errwrite = -1, -1
 
             try:
                 DEVNULL
@@ -1037,7 +1170,10 @@ class Popen(object):
             elif stderr == PIPE:
                 errread, errwrite = self.pipe_cloexec()
             elif stderr == STDOUT:
-                errwrite = c2pwrite
+                if c2pwrite != -1:
+                    errwrite = c2pwrite
+                else: # child's stdout is not set, use parent's stdout
+                    errwrite = sys.__stdout__.fileno()
             elif stderr == _devnull:
                 errwrite = self._get_devnull()
             elif isinstance(stderr, int):
@@ -1077,41 +1213,74 @@ class Popen(object):
             self._set_cloexec_flag(w)
             return r, w
 
-        def _close_fds(self, keep):
+        _POSSIBLE_FD_DIRS = (
+            '/proc/self/fd', # Linux
+            '/dev/fd', # BSD, including macOS
+        )
+
+        @classmethod
+        def _close_fds(cls, keep, errpipe_write):
+            # From the C code:
+            # errpipe_write is part of keep. It must be closed at
+            # exec(), but kept open in the child process until exec() is
+            # called.
+            for path in cls._POSSIBLE_FD_DIRS:
+                if os.path.isdir(path):
+                    return cls._close_fds_from_path(path, keep, errpipe_write)
+            return cls._close_fds_brute_force(keep, errpipe_write)
+
+        @classmethod
+        def _close_fds_from_path(cls, path, keep, errpipe_write):
+            # path names a directory whose only entries have
+            # names that are ascii strings of integers in base10,
+            # corresponding to the fds the current process has open
+            try:
+                fds = [int(fname) for fname in os.listdir(path)]
+            except (ValueError, OSError):
+                cls._close_fds_brute_force(keep, errpipe_write)
+            else:
+                for i in keep:
+                    if i == errpipe_write:
+                        continue
+                    _set_inheritable(i, True)
+
+                for fd in fds:
+                    if fd in keep or fd < 3:
+                        continue
+                    try:
+                        os.close(fd)
+                    except:
+                        pass
+
+        @classmethod
+        def _close_fds_brute_force(cls, keep, errpipe_write):
             # `keep` is a set of fds, so we
             # use os.closerange from 3 to min(keep)
             # and then from max(keep + 1) to MAXFD and
             # loop through filling in the gaps.
+
             # Under new python versions, we need to explicitly set
             # passed fds to be inheritable or they will go away on exec
-            if hasattr(os, 'set_inheritable'):
-                set_inheritable = os.set_inheritable
-            else:
-                set_inheritable = lambda i, v: True
-            if hasattr(os, 'closerange'):
-                keep = sorted(keep)
-                min_keep = min(keep)
-                max_keep = max(keep)
-                os.closerange(3, min_keep)
-                os.closerange(max_keep + 1, MAXFD)
-                for i in xrange(min_keep, max_keep):
-                    if i in keep:
-                        set_inheritable(i, True)
-                        continue
 
-                    try:
-                        os.close(i)
-                    except:
-                        pass
-            else:
-                for i in xrange(3, MAXFD):
-                    if i in keep:
-                        set_inheritable(i, True)
-                        continue
-                    try:
-                        os.close(i)
-                    except:
-                        pass
+            # XXX: Bug: We implicitly rely on errpipe_write being the largest open
+            # FD so that we don't change its cloexec flag.
+
+            assert hasattr(os, 'closerange') # Added in 2.7
+            keep = sorted(keep)
+            min_keep = min(keep)
+            max_keep = max(keep)
+            os.closerange(3, min_keep)
+            os.closerange(max_keep + 1, MAXFD)
+
+            for i in xrange(min_keep, max_keep):
+                if i in keep:
+                    _set_inheritable(i, True)
+                    continue
+
+                try:
+                    os.close(i)
+                except:
+                    pass
 
         def _execute_child(self, args, executable, preexec_fn, close_fds,
                            pass_fds, cwd, env, universal_newlines,
@@ -1127,7 +1296,10 @@ class Popen(object):
             elif not PY3 and isinstance(args, string_types):
                 args = [args]
             else:
-                args = list(args)
+                try:
+                    args = list(args)
+                except TypeError:  # os.PathLike instead of a sequence?
+                    args = [fsencode(args)]  # os.PathLike -> [str]
 
             if shell:
                 args = ["/bin/sh", "-c"] + args
@@ -1164,13 +1336,20 @@ class Popen(object):
                         raise
                     if self.pid == 0:
                         # Child
+
+                        # XXX: Technically we're doing a lot of stuff here that
+                        # may not be safe to do before a exec(), depending on the OS.
+                        # CPython 3 goes to great lengths to precompute a lot
+                        # of this info before the fork and pass it all to C functions that
+                        # try hard not to call things like malloc(). (Of course,
+                        # CPython 2 pretty much did what we're doing.)
                         try:
                             # Close parent's pipe ends
-                            if p2cwrite is not None:
+                            if p2cwrite != -1:
                                 os.close(p2cwrite)
-                            if c2pread is not None:
+                            if c2pread != -1:
                                 os.close(c2pread)
-                            if errread is not None:
+                            if errread != -1:
                                 os.close(errread)
                             os.close(errpipe_read)
 
@@ -1179,19 +1358,25 @@ class Popen(object):
                             # is possible that it is overwritten (#12607).
                             if c2pwrite == 0:
                                 c2pwrite = os.dup(c2pwrite)
-                            if errwrite == 0 or errwrite == 1:
+                            while errwrite in (0, 1):
                                 errwrite = os.dup(errwrite)
 
                             # Dup fds for child
-                            def _dup2(a, b):
+                            def _dup2(existing, desired):
                                 # dup2() removes the CLOEXEC flag but
                                 # we must do it ourselves if dup2()
                                 # would be a no-op (issue #10806).
-                                if a == b:
-                                    self._set_cloexec_flag(a, False)
-                                elif a is not None:
-                                    os.dup2(a, b)
-                                self._remove_nonblock_flag(b)
+                                if existing == desired:
+                                    self._set_cloexec_flag(existing, False)
+                                elif existing != -1:
+                                    os.dup2(existing, desired)
+                                try:
+                                    self._remove_nonblock_flag(desired)
+                                except OSError:
+                                    # Ignore EBADF, it may not actually be
+                                    # open yet.
+                                    # Tested beginning in 3.7.0b3 test_subprocess.py
+                                    pass
                             _dup2(p2cread, 0)
                             _dup2(c2pwrite, 1)
                             _dup2(errwrite, 2)
@@ -1205,7 +1390,11 @@ class Popen(object):
                                     closed.add(fd)
 
                             if cwd is not None:
-                                os.chdir(cwd)
+                                try:
+                                    os.chdir(cwd)
+                                except OSError as e:
+                                    e._failed_chdir = True
+                                    raise
 
                             if preexec_fn:
                                 preexec_fn()
@@ -1215,21 +1404,7 @@ class Popen(object):
                             if close_fds:
                                 fds_to_keep = set(pass_fds)
                                 fds_to_keep.add(errpipe_write)
-                                self._close_fds(fds_to_keep)
-                            elif hasattr(os, 'get_inheritable'):
-                                # close_fds was false, and we're on
-                                # Python 3.4 or newer, so "all file
-                                # descriptors except standard streams
-                                # are closed, and inheritable handles
-                                # are only inherited if the close_fds
-                                # parameter is False."
-                                for i in xrange(3, MAXFD):
-                                    try:
-                                        if i == errpipe_write or os.get_inheritable(i):
-                                            continue
-                                        os.close(i)
-                                    except:
-                                        pass
+                                self._close_fds(fds_to_keep, errpipe_write)
 
                             if restore_signals:
                                 # restore the documented signals back to sig_dfl;
@@ -1283,11 +1458,11 @@ class Popen(object):
 
                 # self._devnull is not always defined.
                 devnull_fd = getattr(self, '_devnull', None)
-                if p2cread is not None and p2cwrite is not None and p2cread != devnull_fd:
+                if p2cread != -1 and p2cwrite != -1 and p2cread != devnull_fd:
                     os.close(p2cread)
-                if c2pwrite is not None and c2pread is not None and c2pwrite != devnull_fd:
+                if c2pwrite != -1 and c2pread != -1 and c2pwrite != devnull_fd:
                     os.close(c2pwrite)
-                if errwrite is not None and errread is not None and errwrite != devnull_fd:
+                if errwrite != -1 and errread != -1 and errwrite != devnull_fd:
                     os.close(errwrite)
                 if devnull_fd is not None:
                     os.close(devnull_fd)
@@ -1307,8 +1482,12 @@ class Popen(object):
                 self.wait()
                 child_exception = pickle.loads(data)
                 for fd in (p2cwrite, c2pread, errread):
-                    if fd is not None:
+                    if fd is not None and fd != -1:
                         os.close(fd)
+                if isinstance(child_exception, OSError):
+                    child_exception.filename = executable
+                    if hasattr(child_exception, '_failed_chdir'):
+                        child_exception.filename = cwd
                 raise child_exception
 
         def _handle_exitstatus(self, sts):
@@ -1452,15 +1631,28 @@ def run(*popenargs, **kwargs):
     .. versionadded:: 1.2a1
        This function first appeared in Python 3.5. It is available on all Python
        versions gevent supports.
+
+    .. versionchanged:: 1.3a2
+       Add the ``capture_output`` argument from Python 3.7. It automatically sets
+       ``stdout`` and ``stderr`` to ``PIPE``. It is an error to pass either
+       of those arguments along with ``capture_output``.
     """
     input = kwargs.pop('input', None)
     timeout = kwargs.pop('timeout', None)
     check = kwargs.pop('check', False)
+    capture_output = kwargs.pop('capture_output', False)
 
     if input is not None:
         if 'stdin' in kwargs:
             raise ValueError('stdin and input arguments may not both be used.')
         kwargs['stdin'] = PIPE
+
+    if capture_output:
+        if ('stdout' in kwargs) or ('stderr' in kwargs):
+            raise ValueError('stdout and stderr arguments may not be used '
+                             'with capture_output.')
+        kwargs['stdout'] = PIPE
+        kwargs['stderr'] = PIPE
 
     with Popen(*popenargs, **kwargs) as process:
         try:

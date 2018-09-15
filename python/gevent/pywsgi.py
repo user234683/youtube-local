@@ -1,5 +1,5 @@
 # Copyright (c) 2005-2009, eventlet contributors
-# Copyright (c) 2009-2015, gevent contributors
+# Copyright (c) 2009-2018, gevent contributors
 """
 A pure-Python, gevent-friendly WSGI server.
 
@@ -9,6 +9,8 @@ created for each request. The server can be customized to use
 different subclasses of :class:`WSGIHandler`.
 
 """
+from __future__ import absolute_import
+
 # FIXME: Can we refactor to make smallor?
 # pylint:disable=too-many-lines
 
@@ -517,20 +519,20 @@ class WSGIHandler(object):
         if len(words) == 3:
             self.command, self.path, self.request_version = words
             if not self._check_http_version():
-                raise _InvalidClientRequest('Invalid http version: %r', raw_requestline)
+                raise _InvalidClientRequest('Invalid http version: %r' % (raw_requestline,))
         elif len(words) == 2:
             self.command, self.path = words
             if self.command != "GET":
-                raise _InvalidClientRequest('Expected GET method: %r', raw_requestline)
+                raise _InvalidClientRequest('Expected GET method: %r' % (raw_requestline,))
             self.request_version = "HTTP/0.9"
             # QQQ I'm pretty sure we can drop support for HTTP/0.9
         else:
-            raise _InvalidClientRequest('Invalid HTTP method: %r', raw_requestline)
+            raise _InvalidClientRequest('Invalid HTTP method: %r' % (raw_requestline,))
 
         self.headers = self.MessageClass(self.rfile, 0)
 
         if self.headers.status:
-            raise _InvalidClientRequest('Invalid headers status: %r', self.headers.status)
+            raise _InvalidClientRequest('Invalid headers status: %r' % (self.headers.status,))
 
         if self.headers.get("transfer-encoding", "").lower() == "chunked":
             try:
@@ -542,7 +544,7 @@ class WSGIHandler(object):
         if content_length is not None:
             content_length = int(content_length)
             if content_length < 0:
-                raise _InvalidClientRequest('Invalid Content-Length: %r', content_length)
+                raise _InvalidClientRequest('Invalid Content-Length: %r' % (content_length,))
 
             if content_length and self.command in ('HEAD', ):
                 raise _InvalidClientRequest('Unexpected Content-Length')
@@ -706,7 +708,9 @@ class WSGIHandler(object):
             raise
         self.response_length += len(data)
 
-    def _write(self, data):
+    def _write(self, data,
+               _PY34_EXACTLY=(sys.version_info[:2] == (3, 4)),
+               _bytearray=bytearray):
         if not data:
             # The application/middleware are allowed to yield
             # empty bytestrings.
@@ -714,14 +718,25 @@ class WSGIHandler(object):
 
         if self.response_use_chunked:
             ## Write the chunked encoding
-            header = ("%x\r\n" % len(data)).encode('ascii')
-            # socket.sendall will slice these small strings, as [0:],
-            # but that's special cased to return the original string.
-            # They're small enough we probably expect them to go down to the network
-            # buffers in one go anyway.
-            self._sendall(header)
-            self._sendall(data)
-            self._sendall(b'\r\n') # trailer
+            # header
+            if _PY34_EXACTLY:
+                # This is the only version we support that doesn't
+                # allow % to be used with bytes. Passing a bytestring
+                # directly in to bytearray() is faster than passing a
+                # (unicode) str with encoding, which naturally is faster still
+                # than encoding first. Interestingly, byte formatting on Python 3
+                # is faster than str formatting.
+                header_str = '%x\r\n' % len(data)
+                towrite = _bytearray(header_str, 'ascii')
+            else:
+                header_str = b'%x\r\n' % len(data)
+                towrite = _bytearray(header_str)
+
+            # data
+            towrite += data
+            # trailer
+            towrite += b'\r\n'
+            self._sendall(towrite)
         else:
             self._sendall(data)
 
@@ -741,21 +756,20 @@ class WSGIHandler(object):
             self._write_with_headers(data)
 
     def _write_with_headers(self, data):
-        towrite = bytearray()
         self.headers_sent = True
         self.finalize_headers()
 
         # self.response_headers and self.status are already in latin-1, as encoded by self.start_response
-        towrite.extend(b'HTTP/1.1 ')
-        towrite.extend(self.status)
-        towrite.extend(b'\r\n')
+        towrite = bytearray(b'HTTP/1.1 ')
+        towrite += self.status
+        towrite += b'\r\n'
         for header, value in self.response_headers:
-            towrite.extend(header)
-            towrite.extend(b': ')
-            towrite.extend(value)
-            towrite.extend(b"\r\n")
+            towrite += header
+            towrite += b': '
+            towrite += value
+            towrite += b"\r\n"
 
-        towrite.extend(b'\r\n')
+        towrite += b'\r\n'
         self._sendall(towrite)
         # No need to copy the data into towrite; we may make an extra syscall
         # but the copy time could be substantial too, and it reduces the chances
@@ -788,7 +802,7 @@ class WSGIHandler(object):
         # "Servers should check for errors in the headers at the time
         # start_response is called, so that an error can be raised
         # while the application is still running." Here, we check the encoding.
-        # This aids debugging: headers especially are generated programatically
+        # This aids debugging: headers especially are generated programmatically
         # and an encoding error in a loop or list comprehension yields an opaque
         # UnicodeError without any clue which header was wrong.
         # Note that this results in copying the header list at this point, not modifying it,
@@ -899,8 +913,8 @@ class WSGIHandler(object):
             # Trigger the flush of the headers.
             self.write(b'')
         if self.response_use_chunked:
-            self.socket.sendall(b'0\r\n\r\n')
-            self.response_length += 5
+            self._sendall(b'0\r\n\r\n')
+
 
     def run_application(self):
         assert self.result is None
@@ -921,7 +935,33 @@ class WSGIHandler(object):
                 close = None
                 self.result = None
 
+    #: These errors are silently ignored by :meth:`handle_one_response` to avoid producing
+    #: excess log entries on normal operating conditions. They indicate
+    #: a remote client has disconnected and there is little or nothing
+    #: this process can be expected to do about it. You may change this
+    #: value in a subclass.
+    #:
+    #: The default value includes :data:`errno.EPIPE` and :data:`errno.ECONNRESET`.
+    #: On Windows this also includes :data:`errno.WSAECONNABORTED`.
+    #:
+    #: This is a provisional API, subject to change. See :pr:`377`, :pr:`999`
+    #: and :issue:`136`.
+    #:
+    #: .. versionadded:: 1.3
+    ignored_socket_errors = (errno.EPIPE, errno.ECONNRESET)
+    try:
+        ignored_socket_errors += (errno.WSAECONNABORTED,)
+    except AttributeError:
+        pass # Not windows
+
     def handle_one_response(self):
+        """
+        Invoke the application to produce one response.
+
+        This is called by :meth:`handle_one_request` after all the
+        state for the request has been established. It is responsible
+        for error handling.
+        """
         self.time_start = time.time()
         self.status = None
         self.headers_sent = False
@@ -946,12 +986,8 @@ class WSGIHandler(object):
         except _InvalidClientInput:
             self._send_error_response_if_possible(400)
         except socket.error as ex:
-            if ex.args[0] in (errno.EPIPE, errno.ECONNRESET):
-                # Broken pipe, connection reset by peer.
-                # Swallow these silently to avoid spewing
-                # useless info on normal operating conditions,
-                # bloating logfiles. See https://github.com/gevent/gevent/pull/377
-                # and https://github.com/gevent/gevent/issues/136.
+            if ex.args[0] in self.ignored_socket_errors:
+                # See description of self.ignored_socket_errors.
                 if not PY3:
                     sys.exc_clear()
                 self.close_connection = True

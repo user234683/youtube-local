@@ -6,7 +6,21 @@ Implementation of the standard :mod:`threading` using greenlets.
     This module is a helper for :mod:`gevent.monkey` and is not
     intended to be used directly. For spawning greenlets in your
     applications, prefer higher level constructs like
-    :class:`gevent.Greenlet` class or :func:`gevent.spawn`.
+    :class:`gevent.Greenlet` class or :func:`gevent.spawn`. Attributes
+    in this module like ``__threading__`` are implementation artifacts subject
+    to change at any time.
+
+.. versionchanged:: 1.2.3
+
+   Defer adjusting the stdlib's list of active threads until we are
+   monkey patched. Previously this was done at import time. We are
+   documented to only be used as a helper for monkey patching, so this should
+   functionally be the same, but some applications ignore the documentation and
+   directly import this module anyway.
+
+   A positive consequence is that ``import gevent.threading,
+   threading; threading.current_thread()`` will no longer return a DummyThread
+   before monkey-patching.
 """
 from __future__ import absolute_import
 
@@ -26,7 +40,6 @@ import threading as __threading__
 _DummyThread_ = __threading__._DummyThread
 from gevent.local import local
 from gevent.thread import start_new_thread as _start_new_thread, allocate_lock as _allocate_lock, get_ident as _get_ident
-from gevent._compat import PYPY
 from gevent.hub import sleep as _sleep, getcurrent
 
 # Exports, prevent unused import warnings
@@ -41,7 +54,7 @@ Lock = _allocate_lock
 
 
 def _cleanup(g):
-    __threading__._active.pop(id(g), None)
+    __threading__._active.pop(_get_ident(g), None)
 
 def _make_cleanup_id(gid):
     def _(_r):
@@ -74,6 +87,10 @@ class _DummyThread(_DummyThread_):
     # For the same reason, instances of this class will cleanup their own entry
     # in ``threading._active``
 
+    # This class also solves a problem forking process with subprocess: after forking,
+    # Thread.__stop is called, which throws an exception when __block doesn't
+    # exist.
+
     # Capture the static things as class vars to save on memory/
     # construction time.
     # In Py2, they're all private; in Py3, they become protected
@@ -88,16 +105,18 @@ class _DummyThread(_DummyThread_):
     _Thread__started.set()
     _tstate_lock = None
 
-    def __init__(self):
-        #_DummyThread_.__init__(self) # pylint:disable=super-init-not-called
+    def __init__(self): # pylint:disable=super-init-not-called
+        #_DummyThread_.__init__(self)
 
         # It'd be nice to use a pattern like "greenlet-%d", but maybe somebody out
         # there is checking thread names...
         self._name = self._Thread__name = __threading__._newname("DummyThread-%d")
+        # All dummy threads in the same native thread share the same ident
+        # (that of the native thread)
         self._set_ident()
 
         g = getcurrent()
-        gid = _get_ident(g) # same as id(g)
+        gid = _get_ident(g)
         __threading__._active[gid] = self
         rawlink = getattr(g, 'rawlink', None)
         if rawlink is not None:
@@ -126,45 +145,12 @@ if hasattr(__threading__, 'main_thread'): # py 3.4+
     def main_native_thread():
         return __threading__.main_thread() # pylint:disable=no-member
 else:
-    _main_threads = [(_k, _v) for _k, _v in __threading__._active.items()
-                     if isinstance(_v, __threading__._MainThread)]
-    assert len(_main_threads) == 1, "Too many main threads"
-
     def main_native_thread():
-        return _main_threads[0][1]
+        main_threads = [v for v in __threading__._active.values()
+                        if isinstance(v, __threading__._MainThread)]
+        assert len(main_threads) == 1, "Too many main threads"
 
-# Make sure the MainThread can be found by our current greenlet ID,
-# otherwise we get a new DummyThread, which cannot be joined.
-# Fixes tests in test_threading_2 under PyPy, and generally makes things nicer
-# when gevent.threading is imported before monkey patching or not at all
-# XXX: This assumes that the import is happening in the "main" greenlet/thread.
-# XXX: We should really only be doing this from gevent.monkey.
-if _get_ident() not in __threading__._active:
-    _v = main_native_thread()
-    _k = _v.ident
-    del __threading__._active[_k]
-    _v._ident = _v._Thread__ident = _get_ident()
-    __threading__._active[_get_ident()] = _v
-    del _k
-    del _v
-
-    # Avoid printing an error on shutdown trying to remove the thread entry
-    # we just replaced if we're not fully monkey patched in
-    # XXX: This causes a hang on PyPy for some unknown reason (as soon as class _active
-    # defines __delitem__, shutdown hangs. Maybe due to something with the GC?
-    # XXX: This may be fixed in 2.6.1+
-    if not PYPY:
-        # pylint:disable=no-member
-        _MAIN_THREAD = __threading__._get_ident() if hasattr(__threading__, '_get_ident') else __threading__.get_ident()
-
-        class _active(dict):
-            def __delitem__(self, k):
-                if k == _MAIN_THREAD and k not in self:
-                    return
-                dict.__delitem__(self, k)
-
-        __threading__._active = _active(__threading__._active)
-
+        return main_threads[0]
 
 import sys
 if sys.version_info[:2] >= (3, 4):
@@ -208,11 +194,13 @@ if sys.version_info[:2] >= (3, 4):
 
     __implements__.append('Thread')
 
-    # The main thread is patched up with more care in monkey.py
-    #t = __threading__.current_thread()
-    #if isinstance(t, __threading__.Thread):
-    #    t.__class__ = Thread
-    #    t._greenlet = getcurrent()
+    class Timer(Thread, __threading__.Timer): # pylint:disable=abstract-method,inherit-non-class
+        pass
+
+    __implements__.append('Timer')
+
+    # The main thread is patched up with more care
+    # in _gevent_will_monkey_patch
 
 if sys.version_info[:2] >= (3, 3):
     __implements__.remove('_get_ident')
@@ -229,3 +217,19 @@ if sys.version_info[:2] >= (3, 3):
     assert hasattr(__threading__, '_CRLock'), "Unsupported Python version"
     _CRLock = None
     __implements__.append('_CRLock')
+
+def _gevent_will_monkey_patch(native_module, items, warn): # pylint:disable=unused-argument
+    # Make sure the MainThread can be found by our current greenlet ID,
+    # otherwise we get a new DummyThread, which cannot be joined.
+    # Fixes tests in test_threading_2 under PyPy.
+    main_thread = main_native_thread()
+    if __threading__.current_thread() != main_thread:
+        warn("Monkey-patching outside the main native thread. Some APIs "
+             "will not be available. Expect a KeyError to be printed at shutdown.")
+        return
+
+    if _get_ident() not in __threading__._active:
+        main_id = main_thread.ident
+        del __threading__._active[main_id]
+        main_thread._ident = main_thread._Thread__ident = _get_ident()
+        __threading__._active[_get_ident()] = main_thread

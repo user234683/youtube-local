@@ -4,6 +4,9 @@ gevent is a coroutine-based Python networking library that uses greenlet
 to provide a high-level synchronous API on top of libev event loop.
 
 See http://www.gevent.org/ for the documentation.
+
+.. versionchanged:: 1.3a2
+   Add the `config` object.
 """
 
 from __future__ import absolute_import
@@ -15,31 +18,43 @@ _version_info = namedtuple('version_info',
 
 #: The programatic version identifier. The fields have (roughly) the
 #: same meaning as :data:`sys.version_info`
-#: Deprecated in 1.2.
-version_info = _version_info(1, 2, 2, 'dev', 0)
+#: .. deprecated:: 1.2
+#:  Use ``pkg_resources.parse_version(__version__)`` (or the equivalent
+#:  ``packaging.version.Version(__version__)``).
+version_info = _version_info(1, 3, 0, 'dev', 0)
 
-#: The human-readable PEP 440 version identifier
-__version__ = '1.2.2'
+#: The human-readable PEP 440 version identifier.
+#: Use ``pkg_resources.parse_version(__version__)`` or
+#: ``packaging.version.Version(__version__)`` to get a machine-usable
+#: value.
+__version__ = '1.3.6'
 
 
-__all__ = ['get_hub',
-           'Greenlet',
-           'GreenletExit',
-           'spawn',
-           'spawn_later',
-           'spawn_raw',
-           'iwait',
-           'wait',
-           'killall',
-           'Timeout',
-           'with_timeout',
-           'getcurrent',
-           'sleep',
-           'idle',
-           'kill',
-           'signal',
-           'fork',
-           'reinit']
+__all__ = [
+    'get_hub',
+    'Greenlet',
+    'GreenletExit',
+    'spawn',
+    'spawn_later',
+    'spawn_raw',
+    'iwait',
+    'wait',
+    'killall',
+    'Timeout',
+    'with_timeout',
+    'getcurrent',
+    'sleep',
+    'idle',
+    'kill',
+    'signal', # deprecated
+    'signal_handler',
+    'fork',
+    'reinit',
+    'getswitchinterval',
+    'setswitchinterval',
+    # Added in 1.3a2
+    'config',
+]
 
 
 import sys
@@ -48,11 +63,37 @@ if sys.platform == 'win32':
     import socket  # pylint:disable=unused-import,useless-suppression
     del socket
 
-from gevent.hub import get_hub, iwait, wait
+try:
+    # Floating point number, in number of seconds,
+    # like time.time
+    getswitchinterval = sys.getswitchinterval
+    setswitchinterval = sys.setswitchinterval
+except AttributeError:
+    # Running on Python 2
+    _switchinterval = 0.005
+
+    def getswitchinterval():
+        return _switchinterval
+
+    def setswitchinterval(interval):
+        # Weed out None and non-numbers. This is not
+        # exactly exception compatible with the Python 3
+        # versions.
+        if interval > 0:
+            global _switchinterval
+            _switchinterval = interval
+
+from gevent._config import config
+from gevent._hub_local import get_hub
+from gevent._hub_primitives import iwait_on_objects as iwait
+from gevent._hub_primitives import wait_on_objects as wait
+
 from gevent.greenlet import Greenlet, joinall, killall
 joinall = joinall # export for pylint
 spawn = Greenlet.spawn
 spawn_later = Greenlet.spawn_later
+#: The singleton configuration object for gevent.
+config = config
 
 from gevent.timeout import Timeout, with_timeout
 from gevent.hub import getcurrent, GreenletExit, spawn_raw, sleep, idle, kill, reinit
@@ -66,6 +107,7 @@ except ImportError:
 # to treat 'from gevent import signal' as a callable, to matter whether
 # the 'gevent.signal' module has been imported first
 from gevent.hub import signal as _signal_class
+signal_handler = _signal_class
 from gevent import signal as _signal_module
 
 # The object 'gevent.signal' must:

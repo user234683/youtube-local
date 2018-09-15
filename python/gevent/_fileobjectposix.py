@@ -26,31 +26,30 @@ class GreenFileDescriptorIO(RawIOBase):
 
     _read_event = None
     _write_event = None
+    _closed = False
+    _seekable = None
 
     def __init__(self, fileno, mode='r', closefd=True):
         RawIOBase.__init__(self) # Python 2: pylint:disable=no-member,non-parent-init-called
-        self._closed = False
         self._closefd = closefd
         self._fileno = fileno
         make_nonblocking(fileno)
-        self._readable = 'r' in mode
-        self._writable = 'w' in mode
+        readable = 'r' in mode
+        writable = 'w' in mode
         self.hub = get_hub()
 
         io_watcher = self.hub.loop.io
-        if self._readable:
+        if readable:
             self._read_event = io_watcher(fileno, 1)
 
-        if self._writable:
+        if writable:
             self._write_event = io_watcher(fileno, 2)
 
-        self._seekable = None
-
     def readable(self):
-        return self._readable
+        return self._read_event is not None
 
     def writable(self):
-        return self._writable
+        return self._write_event is not None
 
     def seekable(self):
         if self._seekable is None:
@@ -73,11 +72,18 @@ class GreenFileDescriptorIO(RawIOBase):
         if self._closed:
             return
         self.flush()
+        # TODO: Can we use 'read_event is not None and write_event is
+        # not None' to mean _closed?
         self._closed = True
-        if self._readable:
-            self.hub.cancel_wait(self._read_event, cancel_wait_ex)
-        if self._writable:
-            self.hub.cancel_wait(self._write_event, cancel_wait_ex)
+        read_event = self._read_event
+        write_event = self._write_event
+        self._read_event = self._write_event = None
+
+        if read_event is not None:
+            self.hub.cancel_wait(read_event, cancel_wait_ex, True)
+        if write_event is not None:
+            self.hub.cancel_wait(write_event, cancel_wait_ex, True)
+
         fileno = self._fileno
         if self._closefd:
             self._fileno = None
@@ -88,10 +94,10 @@ class GreenFileDescriptorIO(RawIOBase):
     # want to take advantage of this to avoid single byte reads when
     # possible. This is highlighted by a bug in BufferedIOReader that
     # calls read() in a loop when its readall() method is invoked;
-    # this was fixed in Python 3.3. See
+    # this was fixed in Python 3.3, but we still need our workaround for 2.7. See
     # https://github.com/gevent/gevent/issues/675)
     def __read(self, n):
-        if not self._readable:
+        if self._read_event is None:
             raise UnsupportedOperation('read')
         while True:
             try:
@@ -123,7 +129,7 @@ class GreenFileDescriptorIO(RawIOBase):
         return n
 
     def write(self, b):
-        if not self._writable:
+        if self._write_event is None:
             raise UnsupportedOperation('write')
         while True:
             try:
@@ -206,11 +212,19 @@ class FileObjectPosix(FileObjectBase):
             put in non-blocking mode using :func:`gevent.os.make_nonblocking`.
         :keyword str mode: The manner of access to the file, one of "rb", "rU" or "wb"
             (where the "b" or "U" can be omitted).
-            If "U" is part of the mode, IO will be done on text, otherwise bytes.
+            If "U" is part of the mode, universal newlines will be used. On Python 2,
+            if 't' is not in the mode, this will result in returning byte (native) strings;
+            putting 't'  in the mode will return text strings. This may cause
+            :exc:`UnicodeDecodeError` to be raised.
         :keyword int bufsize: If given, the size of the buffer to use. The default
             value means to use a platform-specific default
             Other values are interpreted as for the :mod:`io` package.
             Buffering is ignored in text mode.
+
+        .. versionchanged:: 1.3a1
+
+           On Python 2, enabling universal newlines no longer forces unicode
+           IO.
 
         .. versionchanged:: 1.2a1
 
@@ -234,9 +248,30 @@ class FileObjectPosix(FileObjectBase):
         mode = (mode or 'rb').replace('b', '')
         if 'U' in mode:
             self._translate = True
+            if bytes is str and 't' not in mode:
+                # We're going to be producing unicode objects, but
+                # universal newlines doesn't do that in the stdlib,
+                # so fix that to return str objects. The fix is two parts:
+                # first, set an encoding on the stream that can round-trip
+                # all bytes, and second, decode all bytes once they've been read.
+                self._translate_encoding = 'latin-1'
+                import functools
+
+                def wrap_method(m):
+                    if m.__name__.startswith("read"):
+                        @functools.wraps(m)
+                        def wrapped(*args, **kwargs):
+                            result = m(*args, **kwargs)
+                            assert isinstance(result, unicode) # pylint:disable=undefined-variable
+                            return result.encode('latin-1')
+                        return wrapped
+                    return m
+                self._wrap_method = wrap_method
             mode = mode.replace('U', '')
         else:
             self._translate = False
+
+        mode = mode.replace('t', '')
 
         if len(mode) != 1 and mode not in 'rw': # pragma: no cover
             # Python 3 builtin `open` raises a ValueError for invalid modes;

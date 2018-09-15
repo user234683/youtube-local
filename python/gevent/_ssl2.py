@@ -1,10 +1,15 @@
 # Wrapper module for _ssl. Written by Bill Janssen.
 # Ported to gevent by Denis Bilenko.
-"""SSL wrapper for socket objects on Python 2.7.8 and below.
+"""
+SSL wrapper for socket objects on Python 2.7.8 and below.
 
 For the documentation, refer to :mod:`ssl` module manual.
 
 This module implements cooperative SSL socket wrappers.
+
+.. deprecated:: 1.3
+   This module is not secure. Support for Python versions
+   with only this level of SSL will be dropped in gevent 1.4.
 """
 
 from __future__ import absolute_import
@@ -25,10 +30,12 @@ from gevent._compat import PYPY
 from gevent._util import copy_globals
 
 
-__implements__ = ['SSLSocket',
-                  'wrap_socket',
-                  'get_server_certificate',
-                  'sslwrap_simple']
+__implements__ = [
+    'SSLSocket',
+    'wrap_socket',
+    'get_server_certificate',
+    'sslwrap_simple',
+]
 
 # Import all symbols from Python's ssl.py, except those that we are implementing
 # and "private" symbols.
@@ -102,7 +109,7 @@ class SSLSocket(socket):
             except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     return ''
-                elif ex.args[0] == SSL_ERROR_WANT_READ:
+                if ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise
                     sys.exc_clear()
@@ -204,8 +211,7 @@ class SSLSocket(socket):
                     self.__class__)
             # QQQ Shouldn't we wrap the SSL_WANT_READ errors as socket.timeout errors to match socket.recv's behavior?
             return self.read(buflen)
-        else:
-            return socket.recv(self, buflen, flags)
+        return socket.recv(self, buflen, flags)
 
     def recv_into(self, buffer, nbytes=None, flags=0):
         if buffer and (nbytes is None):
@@ -261,7 +267,7 @@ class SSLSocket(socket):
             except SSLError as ex:
                 if ex.args[0] == SSL_ERROR_EOF and self.suppress_ragged_eofs:
                     return ''
-                elif ex.args[0] == SSL_ERROR_WANT_READ:
+                if ex.args[0] == SSL_ERROR_WANT_READ:
                     if self.timeout == 0.0:
                         raise
                     sys.exc_clear()
@@ -275,12 +281,11 @@ class SSLSocket(socket):
                     raise
 
     def unwrap(self):
-        if self._sslobj:
-            s = self._sslobj_shutdown()
-            self._sslobj = None
-            return socket(_sock=s)
-        else:
+        if not self._sslobj:
             raise ValueError("No SSL wrapper around " + str(self))
+        s = self._sslobj_shutdown()
+        self._sslobj = None
+        return socket(_sock=s)
 
     def shutdown(self, how):
         self._sslobj = None
@@ -431,6 +436,6 @@ def get_server_certificate(addr, ssl_version=PROTOCOL_SSLv23, ca_certs=None):
 
 def sslwrap_simple(sock, keyfile=None, certfile=None):
     """A replacement for the old socket.ssl function.  Designed
-    for compatability with Python 2.5 and earlier.  Will disappear in
+    for compatibility with Python 2.5 and earlier.  Will disappear in
     Python 3.0."""
     return SSLSocket(sock, keyfile, certfile)
