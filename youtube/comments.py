@@ -118,9 +118,9 @@ def request_comments(ctoken, replies=False):
     else:
         base_url = "https://m.youtube.com/watch_comment?action_get_comments=1&ctoken="
     url = base_url + ctoken.replace("=", "%3D") + "&pbj=1"
-    print("Sending comments ajax request")
+
     for i in range(0,8):    # don't retry more than 8 times
-        content = fetch_url(url, headers=mobile_headers)
+        content = fetch_url(url, headers=mobile_headers, report_text="Retrieved comments")
         if content[0:4] == b")]}'":             # random closing characters included at beginning of response for some reason
             content = content[4:]
         elif content[0:10] == b'\n<!DOCTYPE':   # occasionally returns html instead of json for no reason
@@ -170,8 +170,7 @@ def parse_comments_ajax(content, replies=False):
         print('Error parsing comments: ' + str(e))
         comments = ()
         ctoken = ''
-    else:
-        print("Finished getting and parsing comments")
+
     return {'ctoken': ctoken, 'comments': comments}
 
 reply_count_regex = re.compile(r'(\d+)')
@@ -234,8 +233,7 @@ def parse_comments_polymer(content, replies=False):
         print('Error parsing comments: ' + str(e))
         comments = ()
         ctoken = ''
-    else:
-        print("Finished getting and parsing comments")
+
     return {'ctoken': ctoken, 'comments': comments, 'video_title': video_title}
 
 
