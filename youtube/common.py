@@ -137,6 +137,16 @@ medium_channel_item_template = Template('''
                 </div>
 ''')
 
+def decode_content(content, encoding_header):
+    encodings = encoding_header.replace(' ', '').split(',')
+    for encoding in reversed(encodings):
+        if encoding == 'identity':
+            continue
+        if encoding == 'br':
+            content = brotli.decompress(content)
+        elif encoding == 'gzip':
+            content = gzip.decompress(content)
+    return content
 
 def fetch_url(url, headers=(), timeout=15, report_text=None):
     if isinstance(headers, list):
@@ -159,14 +169,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None):
     read_finish = time.time()
     if report_text:
         print(report_text, '    Latency:', response_time - start_time, '    Read time:', read_finish - response_time)
-    encodings = response.getheader('Content-Encoding', default='identity').replace(' ', '').split(',')
-    for encoding in reversed(encodings):
-        if encoding == 'identity':
-            continue
-        if encoding == 'br':
-            content = brotli.decompress(content)
-        elif encoding == 'gzip':
-            content = gzip.decompress(content)
+    content = decode_content(content, response.getheader('Content-Encoding', default='identity'))
     return content
 
 mobile_user_agent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1'

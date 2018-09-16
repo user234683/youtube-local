@@ -1,8 +1,11 @@
 # Contains functions having to do with logging in or requiring that one is logged in
+
 import urllib
 import json
 from youtube import common, proto, comments
 import re
+import traceback
+
 def _post_comment(text, video_id, session_token, cookie):
     headers = {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
@@ -30,6 +33,10 @@ def _post_comment(text, video_id, session_token, cookie):
     req = urllib.request.Request("https://m.youtube.com/service_ajax?name=createCommentEndpoint", headers=headers, data=data)
     response = urllib.request.urlopen(req, timeout = 5)
     content = response.read()
+    content = common.decode_content(content, response.getheader('Content-Encoding', default='identity'))
+    code = json.loads(content)['code']
+    print("Comment posting code: " + code)
+    return code
     '''with open('debug/post_comment_response', 'wb') as f:
         f.write(content)'''
 
@@ -61,6 +68,10 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
     req = urllib.request.Request("https://m.youtube.com/service_ajax?name=createCommentReplyEndpoint", headers=headers, data=data)
     response = urllib.request.urlopen(req, timeout = 5)
     content = response.read()
+    content = common.decode_content(content, response.getheader('Content-Encoding', default='identity'))
+    code = json.loads(content)['code']
+    print("Comment posting code: " + code)
+    return code
     '''with open('debug/post_comment_response', 'wb') as f:
         f.write(content)'''
 
@@ -115,11 +126,27 @@ def post_comment(query_string, fields):
         raise Exception("Couldn't find xsrf_token")
 
     if 'parent_id' in parameters:
-        _post_comment_reply(fields['comment_text'][0], parameters['video_id'][0], parameters['parent_id'][0], token, cookie_data)
-        return comments.get_comments_page(query_string)
+        code = _post_comment_reply(fields['comment_text'][0], parameters['video_id'][0], parameters['parent_id'][0], token, cookie_data)
+        try:
+            response = comments.get_comments_page(query_string)
+        except socket.error as e:
+            traceback.print_tb(e.__traceback__)
+            return b'Refreshing comment page yielded error 502 Bad Gateway.\nPost comment status code: ' + code.encode('ascii')
+        except Exception as e:
+            traceback.print_tb(e.__traceback__)
+            return b'Refreshing comment page yielded error 500 Internal Server Error.\nPost comment status code: ' + code.encode('ascii')
+        return response
     else:
-        _post_comment(fields['comment_text'][0], fields['video_id'][0], token, cookie_data)
-        return comments.get_comments_page('ctoken=' + comments.make_comment_ctoken(video_id, sort=1))
+        code = _post_comment(fields['comment_text'][0], fields['video_id'][0], token, cookie_data)
+        try:
+            response = comments.get_comments_page('ctoken=' + comments.make_comment_ctoken(video_id, sort=1))
+        except socket.error as e:
+            traceback.print_tb(e.__traceback__)
+            return b'Refreshing comment page yielded error 502 Bad Gateway.\nPost comment status code: ' + code.encode('ascii')
+        except Exception as e:
+            traceback.print_tb(e.__traceback__)
+            return b'Refreshing comment page yielded error 500 Internal Server Error.\nPost comment status code: ' + code.encode('ascii')
+        return response
 
 
 
