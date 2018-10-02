@@ -46,9 +46,9 @@ headers_1 = (
     ('X-YouTube-Client-Version', '2.20180614'),
 )
 
-def playlist_first_page(playlist_id):
+def playlist_first_page(playlist_id, report_text = "Retrieved playlist"):
     url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&ajax=1&disable_polymer=true'
-    content = common.fetch_url(url, common.mobile_ua + headers_1)
+    content = common.fetch_url(url, common.mobile_ua + headers_1, report_text=report_text)
     if content[0:4] == b")]}'":
         content = content[4:]
     content = json.loads(common.uppercase_escape(content.decode('utf-8')))
@@ -66,12 +66,11 @@ def get_videos_ajax(playlist_id, page):
         'X-YouTube-Client-Name': '2',
         'X-YouTube-Client-Version': '1.20180508',
     }
-    print("Sending playlist ajax request")
-    content = common.fetch_url(url, headers)
+
+    content = common.fetch_url(url, headers, report_text="Retrieved playlist")
     '''with open('debug/playlist_debug', 'wb') as f:
         f.write(content)'''
     content = content[4:]
-    print("Finished recieving playlist response")
 
     info = json.loads(common.uppercase_escape(content.decode('utf-8')))
     return info
@@ -88,7 +87,7 @@ def get_playlist_page(query_string):
         this_page_json = first_page_json
     else:
         tasks = (
-            gevent.spawn(playlist_first_page, playlist_id ), 
+            gevent.spawn(playlist_first_page, playlist_id, report_text="Retrieved playlist info" ), 
             gevent.spawn(get_videos_ajax, playlist_id, page)
         )
         gevent.joinall(tasks)

@@ -168,7 +168,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None):
     content = response.read()
     read_finish = time.time()
     if report_text:
-        print(report_text, '    Latency:', response_time - start_time, '    Read time:', read_finish - response_time)
+        print(report_text, '    Latency:', round(response_time - start_time,3), '    Read time:', round(read_finish - response_time,3))
     content = decode_content(content, response.getheader('Content-Encoding', default='identity'))
     return content
 
