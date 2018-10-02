@@ -223,10 +223,12 @@ music_list_table_row = Template('''<tr>
     <td>$value</td>
 ''')
 def get_watch_page(query_string):
-        id = urllib.parse.parse_qs(query_string)['v'][0]
+        parsed_qs = urllib.parse.parse_qs(query_string)
+        id = parsed_qs['v'][0]
+        lc = common.default_multi_get(parsed_qs, 'lc', 0, default='')
         downloader = YoutubeDL(params={'youtube_include_dash_manifest':False})
         tasks = (
-            gevent.spawn(comments.video_comments, id, int(settings.default_comment_sorting) ), 
+            gevent.spawn(comments.video_comments, id, int(settings.default_comment_sorting), lc=lc ), 
             gevent.spawn(extract_info, downloader, "https://www.youtube.com/watch?v=" + id, download=False)
         )
         gevent.joinall(tasks)

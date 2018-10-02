@@ -59,7 +59,7 @@ with open("yt_comments_template.html", "r") as file:
 # *Old ASJN's continue to work, and start at the same comment even if new comments have been posted since
 # *The ASJN has no relation with any of the data in the response it came from
 
-def make_comment_ctoken(video_id, sort=0, offset=0, secret_key=''):
+def make_comment_ctoken(video_id, sort=0, offset=0, lc='', secret_key=''):
     video_id = proto.as_bytes(video_id)
     secret_key = proto.as_bytes(secret_key)
     
@@ -68,8 +68,12 @@ def make_comment_ctoken(video_id, sort=0, offset=0, secret_key=''):
     offset_information = proto.nested(4, page_info) + proto.uint(5, offset)
     if secret_key:
         offset_information = proto.string(1, secret_key) + offset_information
-    
-    result = proto.nested(2, proto.string(2, video_id)) + proto.uint(3,6) + proto.nested(6, offset_information)
+
+    page_params = proto.string(2, video_id)
+    if lc:
+        page_params += proto.string(6, proto.percent_b64encode(proto.string(15, lc)))
+
+    result = proto.nested(2, page_params) + proto.uint(3,6) + proto.nested(6, offset_information)
     return base64.urlsafe_b64encode(result).decode('ascii')
 
 def comment_replies_ctoken(video_id, comment_id, max_results=500):  
@@ -264,12 +268,12 @@ def get_comments_html(comments):
         )
     return html_result
     
-def video_comments(video_id, sort=0, offset=0, secret_key=''):
+def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
     if settings.enable_comments:
         post_comment_url = common.URL_ORIGIN + "/post_comment?video_id=" + video_id
         post_comment_link = '''<a class="post-comment-link" href="''' + post_comment_url + '''">Post comment</a>'''
 
-        other_sort_url = common.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(video_id, sort=1 - sort)
+        other_sort_url = common.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(video_id, sort=1 - sort, lc=lc)
         other_sort_name = 'newest' if sort == 0 else 'top'
         other_sort_link = '''<a href="''' + other_sort_url + '''">Sort by ''' + other_sort_name + '''</a>'''
 
@@ -277,7 +281,7 @@ def video_comments(video_id, sort=0, offset=0, secret_key=''):
         comment_links += other_sort_link + '\n' + post_comment_link + '\n'
         comment_links += '''</div>'''
         
-        comment_info = parse_comments_polymer(request_comments(make_comment_ctoken(video_id, sort, offset, secret_key)))
+        comment_info = parse_comments_polymer(request_comments(make_comment_ctoken(video_id, sort, offset, lc, secret_key)))
         ctoken = comment_info['ctoken']
 
         if ctoken == '':
