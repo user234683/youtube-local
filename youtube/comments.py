@@ -205,10 +205,12 @@ def parse_comments_polymer(content, replies=False):
             else:
                 if 'commentTargetTitle' in comment_raw:
                     video_title = comment_raw['commentTargetTitle']['runs'][0]['text']
+
+                parent_id = comment_raw['comment']['commentRenderer']['commentId']
                 if 'replies' in comment_raw:
                     #reply_ctoken = comment_raw['replies']['commentRepliesRenderer']['continuations'][0]['nextContinuationData']['continuation']
                     #comment_id, video_id = get_ids(reply_ctoken)
-                   # replies_url = URL_ORIGIN + '/comments?parent_id=' + comment_id + "&video_id=" + video_id
+                    replies_url = URL_ORIGIN + '/comments?parent_id=' + parent_id + "&video_id=" + video_id
                     view_replies_text = common.get_plain_text(comment_raw['replies']['commentRepliesRenderer']['moreText'])
                     match = reply_count_regex.search(view_replies_text)
                     if match is None:
@@ -217,8 +219,7 @@ def parse_comments_polymer(content, replies=False):
                         view_replies_text = match.group(1) + " replies"
                 elif not replies:
                     view_replies_text = "Reply"
-                parent_id = comment_raw['comment']['commentRenderer']['commentId']
-                replies_url = URL_ORIGIN + '/post_comment?parent_id=' + parent_id + "&video_id=" + video_id
+                    replies_url = URL_ORIGIN + '/post_comment?parent_id=' + parent_id + "&video_id=" + video_id
                 comment_raw = comment_raw['comment']
             
             comment_raw = comment_raw['commentRenderer']
