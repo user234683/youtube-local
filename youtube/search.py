@@ -38,13 +38,14 @@ features = {
     'location': 23,
 }
 
-def page_number_to_sp_parameter(page, autocorrect=1, sort = 0):
+def page_number_to_sp_parameter(page, autocorrect, sort, filters):
     offset = (int(page) - 1)*20    # 20 results per page
     autocorrect = proto.nested(8, proto.uint(1, 1 - int(autocorrect) ))
-    result = proto.uint(1, sort) + proto.uint(9, offset) + proto.string(61, b'') + autocorrect
+    filters_enc = proto.nested(2, proto.uint(1, filters['time']) + proto.uint(2, filters['type']) + proto.uint(3, filters['duration']))
+    result = proto.uint(1, sort) + filters_enc + autocorrect + proto.uint(9, offset) + proto.string(61, b'')
     return base64.urlsafe_b64encode(result).decode('ascii')
 
-def get_search_json(query, page, autocorrect, sort):
+def get_search_json(query, page, autocorrect, sort, filters):
     url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote_plus(query)
     headers = {
         'Host': 'www.youtube.com',
@@ -54,7 +55,7 @@ def get_search_json(query, page, autocorrect, sort):
         'X-YouTube-Client-Name': '1',
         'X-YouTube-Client-Version': '2.20180418',
     }
-    url += "&pbj=1&sp=" + page_number_to_sp_parameter(page, autocorrect, sort).replace("=", "%3D")
+    url += "&pbj=1&sp=" + page_number_to_sp_parameter(page, autocorrect, sort, filters).replace("=", "%3D")
     content = common.fetch_url(url, headers=headers, report_text="Got search results")
     info = json.loads(content)
     return info
@@ -90,7 +91,11 @@ def get_search_page(query_string, parameters=()):
     page = qs_query.get("page", "1")[0]
     autocorrect = int(qs_query.get("autocorrect", "1")[0])
     sort = int(qs_query.get("sort", "0")[0])
-    info = get_search_json(query, page, autocorrect, sort)
+    filters = {}
+    filters['time'] = int(qs_query.get("time", "0")[0])
+    filters['type'] = int(qs_query.get("type", "0")[0])
+    filters['duration'] = int(qs_query.get("duration", "0")[0])
+    info = get_search_json(query, page, autocorrect, sort, filters)
     
     estimated_results = int(info[1]['response']['estimatedResults'])
     estimated_pages = ceil(estimated_results/20)

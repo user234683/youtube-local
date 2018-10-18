@@ -317,6 +317,57 @@ header_template = Template('''
 
                                 <input type="radio" id="sort_rating" name="sort" value="1">
                                 <label for="sort_rating">Rating</label>
+
+
+                                <h3>Upload date</h3>
+                                <input type="radio" id="time_any" name="time" value="0">
+                                <label for="time_any">Any</label>
+
+                                <input type="radio" id="time_last_hour" name="time" value="1">
+                                <label for="time_last_hour">Last hour</label>
+
+                                <input type="radio" id="time_today" name="time" value="2">
+                                <label for="time_today">Today</label>
+
+                                <input type="radio" id="time_this_week" name="time" value="3">
+                                <label for="time_this_week">This week</label>
+
+                                <input type="radio" id="time_this_month" name="time" value="4">
+                                <label for="time_this_month">This month</label>
+
+                                <input type="radio" id="time_this_year" name="time" value="5">
+                                <label for="time_this_year">This year</label>
+
+                                <h3>Type</h3>
+                                <input type="radio" id="type_any" name="type" value="0">
+                                <label for="type_any">Any</label>
+
+                                <input type="radio" id="type_video" name="type" value="1">
+                                <label for="type_video">Video</label>
+
+                                <input type="radio" id="type_channel" name="type" value="2">
+                                <label for="type_channel">Channel</label>
+
+                                <input type="radio" id="type_playlist" name="type" value="3">
+                                <label for="type_playlist">Playlist</label>
+
+                                <input type="radio" id="type_movie" name="type" value="4">
+                                <label for="type_movie">Movie</label>
+
+                                <input type="radio" id="type_show" name="type" value="5">
+                                <label for="type_show">Show</label>
+
+
+                                <h3>Duration</h3>
+                                <input type="radio" id="duration_any" name="duration" value="0">
+                                <label for="duration_any">Any</label>
+
+                                <input type="radio" id="duration_short" name="duration" value="1">
+                                <label for="duration_short">Short (< 4 minutes)</label>
+
+                                <input type="radio" id="duration_long" name="duration" value="2">
+                                <label for="duration_long">Long (> 20 minutes)</label>
+
                             </div>
                         </div>
                     </div>
