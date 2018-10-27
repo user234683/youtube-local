@@ -620,13 +620,10 @@ def playlist_item_html(item, template, html_exclude=set()):
 
 
 
-def make_query_string(query_string):
-    return '&'.join(key + '=' + ','.join(values) for key,values in query_string.items())
-
 def update_query_string(query_string, items):
     parameters = urllib.parse.parse_qs(query_string)
     parameters.update(items)
-    return make_query_string(parameters)
+    return urllib.parse.urlencode(parameters, doseq=True)
 
 page_button_template = Template('''<a class="page-button" href="$href">$page</a>''')
 current_page_button_template = Template('''<div class="page-button">$page</div>''')

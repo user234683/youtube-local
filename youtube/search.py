@@ -10,8 +10,6 @@ from youtube import common, proto
 with open("yt_search_results_template.html", "r") as file:
     yt_search_results_template = file.read()
 
-page_button_template = Template('''<a class="page-button" href="$href">$page</a>''')
-current_page_button_template = Template('''<div class="page-button">$page</div>''')
 
 # Sort: 1
     # Upload date: 2
@@ -60,16 +58,6 @@ def get_search_json(query, page, autocorrect, sort, filters):
     info = json.loads(content)
     return info
     
-
-def page_buttons_html(page_start, page_end, current_page, query):
-    result = ""
-    for page in range(page_start, page_end+1):
-        if page == current_page:
-            template = current_page_button_template
-        else:
-            template = page_button_template
-        result += template.substitute(page=page, href=URL_ORIGIN + "/search?query=" + urllib.parse.quote_plus(query) + "&page=" + str(page))
-    return result
 
 showing_results_for = Template('''
                 <div>Showing results for <a>$corrected_query</a></div>
@@ -146,7 +134,7 @@ def get_search_page(query_string, parameters=()):
         search_box_value    = html.escape(query),
         number_of_results   = '{:,}'.format(estimated_results),
         number_of_pages     = '{:,}'.format(estimated_pages),
-        page_buttons        = page_buttons_html(page_start, page_end, page, query),
+        page_buttons        = common.page_buttons_html(page, estimated_pages, URL_ORIGIN + "/search", query_string),
         corrections         = corrections
         )
     return result
