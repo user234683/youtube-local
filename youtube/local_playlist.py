@@ -8,12 +8,22 @@ playlists_directory = os.path.normpath("data/playlists")
 with open('yt_local_playlist_template.html', 'r', encoding='utf-8') as file:
     local_playlist_template = Template(file.read())
 
+def video_ids_in_playlist(name):
+    try:
+        with open(os.path.join(playlists_directory, name + ".txt"), 'r', encoding='utf-8') as file:
+            videos = file.read()
+        return set(json.loads(video)['id'] for video in videos.splitlines())
+    except FileNotFoundError:
+        return set()
+
 def add_to_playlist(name, video_info_list):
     if not os.path.exists(playlists_directory):
         os.makedirs(playlists_directory)
+    ids = video_ids_in_playlist(name)
     with open(os.path.join(playlists_directory, name + ".txt"), "a", encoding='utf-8') as file:
         for info in video_info_list:
-            file.write(info + "\n")
+            if json.loads(info)['id'] not in ids:
+                file.write(info + "\n")
         
         
 def get_local_playlist_page(name):
