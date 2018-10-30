@@ -99,7 +99,7 @@ def get_search_page(query_string, parameters=()):
             renderer = renderer[type]
             corrected_query_string = urllib.parse.parse_qs(query_string)
             corrected_query_string['query'] = [renderer['correctedQueryEndpoint']['searchEndpoint']['query']]
-            corrected_query_url = URL_ORIGIN + '/search?' + common.make_query_string(corrected_query_string)
+            corrected_query_url = URL_ORIGIN + '/search?' + urllib.parse.urlencode(corrected_query_string, doseq=True)
             corrections = did_you_mean.substitute(
                 corrected_query_url = corrected_query_url,
                 corrected_query = common.format_text_runs(renderer['correctedQuery']['runs']),
@@ -109,7 +109,7 @@ def get_search_page(query_string, parameters=()):
             renderer = renderer[type]
             no_autocorrect_query_string = urllib.parse.parse_qs(query_string)
             no_autocorrect_query_string['autocorrect'] = ['0']
-            no_autocorrect_query_url = URL_ORIGIN + '/search?' + common.make_query_string(no_autocorrect_query_string)
+            no_autocorrect_query_url = URL_ORIGIN + '/search?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
             corrections = showing_results_for.substitute(
                 corrected_query = common.format_text_runs(renderer['correctedQuery']['runs']),
                 original_query_url = no_autocorrect_query_url,
