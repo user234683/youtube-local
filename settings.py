@@ -1,3 +1,4 @@
+import ast
 default_settings = '''route_tor = False
 port_number = 80
 allow_foreign_addresses = False
@@ -22,9 +23,45 @@ default_comment_sorting = 0
 gather_googlevideo_domains = False
 '''
 exec(default_settings)
+allowed_targets = set(("route_tor", "port_number", "allow_foreign_addresses", "subtitles_mode", "subtitles_language", "enable_related_videos", "enable_comments", "enable_comment_avatars", "default_comment_sorting", "gather_googlevideo_domains"))
+
+def log_ignored_line(line_number, message):
+    print("settings.txt: Ignoring line " + str(node.lineno) + " (" + message + ")")
+
 try:
     with open('settings.txt', 'r', encoding='utf-8') as file:
-        exec(file.read())
+        settings_text = file.read()
 except FileNotFoundError:
     with open('settings.txt', 'a', encoding='utf-8') as file:
         file.write(default_settings)
+else:
+    attributes = {
+        ast.NameConstant: 'value',
+        ast.Num: 'n',
+        ast.Str: 's',
+    }
+    module_node = ast.parse(settings_text)
+    for node in module_node.body:
+        if type(node) != ast.Assign:
+            log_ignored_line(node.lineno, "only assignments are allowed")
+            continue
+        
+        if len(node.targets) > 1:
+            log_ignored_line(node.lineno, "only simple single-variable assignments allowed")
+            continue
+
+        target = node.targets[0]
+        if type(target) != ast.Name:
+            log_ignored_line(node.lineno, "only simple single-variable assignments allowed")
+            continue
+        
+        if target.id not in allowed_targets:
+            log_ignored_line(node.lineno, "target is not a valid setting")
+            continue
+        
+        if type(node.value) not in (ast.NameConstant, ast.Num, ast.Str):
+            log_ignored_line(node.lineno, "only literals allowed for values")
+            continue
+
+        locals()[target.id] = node.value.__getattribute__(attributes[type(node.value)])
+        
