@@ -1,9 +1,9 @@
 import mimetypes
 import urllib.parse
 from youtube import local_playlist, watch, search, playlist, channel, comments, common, account_functions
+import settings
 YOUTUBE_FILES = (
     "/shared.css",
-    "/opensearch.xml",
     '/comments.css',
     '/favicon.ico',
 )
@@ -47,14 +47,23 @@ def youtube(env, start_response):
         elif path.startswith("/playlists"):
             start_response('200 OK',  (('Content-type','text/html'),) )
             return local_playlist.get_playlist_page(path[10:], query_string=query_string).encode()
+
         elif path.startswith("/api/"):
             start_response('200 OK',  () )
             result = common.fetch_url('https://www.youtube.com' + path + ('?' + query_string if query_string else ''))
             result = result.replace(b"align:start position:0%", b"")
             return result
+
         elif path == "/post_comment":
             start_response('200 OK',  () )
             return account_functions.get_post_comment_page(query_string).encode()
+
+        elif path == "/opensearch.xml":
+            with open("youtube" + path, 'rb') as f:
+                mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
+                start_response('200 OK',  (('Content-type',mime_type),) )
+                return f.read().replace(b'$port_number', str(settings.port_number).encode())
+
         else:
             start_response('404 Not Found',  () )
             return b'404 Not Found'

@@ -7,5 +7,5 @@
 <Url type="text/html" method="GET" template="http://localhost/youtube.com/search">
   <Param name="query" value="{searchTerms}"/>
 </Url>
-<SearchForm>http://localhost/youtube.com/search</SearchForm>
+<SearchForm>http://localhost:$port_number/youtube.com/search</SearchForm>
 </SearchPlugin>
