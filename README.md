@@ -26,7 +26,7 @@ Download the tarball under the Releases page and extract it.
 ## Usage
 
 On windows, open run.bat. On Linux/MacOS, run `python3 server.py`.
-**Note**: On Linux/MacOS, you may need root in order for it to listen for http connections (as it is an http server that listens only for connections from your machine)
+**Note**: On Linux/MacOS, you may need root in order for it to listen for http connections on port 80 (as it is an http server that listens only for connections from your machine). This is not recommended, as this program isn't safe from exploits which can coerce it to run arbitrary code as root. Instead, you should change `port_number = 80` in settings.txt to a port higher than 1024 (such as 8080). See [here](https://serverfault.com/questions/112795/how-to-run-a-server-on-port-80-as-a-normal-user-on-linux) for more information. You'll also need to use that port number when accessing the webpage from the browser.
 
 Access youtube URLs by prefixing them with `localhost/`, For instance, `http://localhost/https://www.youtube.com/watch?v=vBgulDeV2RU`
 You can use an addon such as [Redirector](https://addons.mozilla.org/en-US/firefox/addon/redirector/) to automatically redirect Youtube URLs to youtube-local. I use the include pattern `^(https?://(?:[a-zA-Z0-9_-]*\.)?(?:youtube\.com|youtu\.be)/.*)` and the redirect pattern `http://localhost/$1`. I also exlude `^https?://(?:[a-zA-Z0-9_-]*\.)?youtube\.com/feed/subscriptions` for subscriptions.
