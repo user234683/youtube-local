@@ -48,6 +48,11 @@ def youtube(env, start_response):
             start_response('200 OK',  (('Content-type','text/html'),) )
             return local_playlist.get_playlist_page(path[10:], query_string=query_string).encode()
 
+        elif path.startswith("/data/playlist_thumbnails/"):
+            with open(path[1:], 'rb') as f:
+                start_response('200 OK',  (('Content-type', "image/jpeg"),) )
+                return f.read()
+
         elif path.startswith("/api/"):
             start_response('200 OK',  () )
             result = common.fetch_url('https://www.youtube.com' + path + ('?' + query_string if query_string else ''))
