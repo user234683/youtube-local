@@ -244,8 +244,13 @@ def channel_about_page(polymer_json):
     channel_metadata = tab_with_content(polymer_json[1]['response']['contents']['twoColumnBrowseResultsRenderer']['tabs'])['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['channelAboutFullMetadataRenderer']
     channel_links = ''
     for link_json in channel_metadata.get('primaryLinks', ()):
+        url = link_json['navigationEndpoint']['urlEndpoint']['url']
+        if url.startswith("/redirect"):
+            query_string = url[url.find('?')+1: ]
+            url = urllib.parse.parse_qs(query_string)['q'][0]
+
         channel_links += channel_link_template.substitute(
-            url     = html.escape(link_json['navigationEndpoint']['urlEndpoint']['url']),
+            url     = html.escape(url),
             text    = common.get_plain_text(link_json['title']),
         )
 
