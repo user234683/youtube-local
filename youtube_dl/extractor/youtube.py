@@ -1724,7 +1724,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                     unavailable_message = extract_unavailable_message()
                     if unavailable_message:
                         reason = unavailable_message
-                raise ExtractorError(
+                raise YoutubeError(
                     'YouTube said: %s' % reason,
                     expected=True, video_id=video_id)
             else:
@@ -1976,11 +1976,13 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 a_format.setdefault('http_headers', {})['Youtubedl-no-compression'] = 'True'
                 formats.append(a_format)
         else:
-            error_message = clean_html(video_info.get('reason', [None])[0])
+            error_message = extract_unavailable_message()
+            alt_error_message = clean_html(video_info.get('reason', [None])[0])
+            print(alt_error_message)
             if not error_message:
-                error_message = extract_unavailable_message()
+                error_message = alt_error_message
             if error_message:
-                raise ExtractorError(error_message, expected=True)
+                raise YoutubeError(error_message)
             raise ExtractorError('no conn, hlsvp or url_encoded_fmt_stream_map information found in video info')
 
         # uploader
