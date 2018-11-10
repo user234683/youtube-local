@@ -1,4 +1,7 @@
 import ast
+import re
+import os
+
 default_settings = '''route_tor = False
 port_number = 80
 allow_foreign_addresses = False
@@ -28,40 +31,58 @@ allowed_targets = set(("route_tor", "port_number", "allow_foreign_addresses", "s
 def log_ignored_line(line_number, message):
     print("settings.txt: Ignoring line " + str(node.lineno) + " (" + message + ")")
 
+
+if os.path.isfile("settings.txt"):
+    print("Running in portable mode")
+    settings_dir = os.path.normpath('./')
+    data_dir = os.path.normpath('./data')
+else:
+    print("Running in non-portable mode")
+    settings_dir = os.path.expanduser(os.path.normpath("~/.youtube-local"))
+    data_dir = os.path.expanduser(os.path.normpath("~/.youtube-local/data"))
+    if not os.path.exists(settings_dir):
+        os.makedirs(settings_dir)
+
+
+
 try:
-    with open('settings.txt', 'r', encoding='utf-8') as file:
+    with open(os.path.join(settings_dir, 'settings.txt'), 'r', encoding='utf-8') as file:
         settings_text = file.read()
 except FileNotFoundError:
-    with open('settings.txt', 'a', encoding='utf-8') as file:
+    with open(os.path.join(settings_dir, 'settings.txt'), 'a', encoding='utf-8') as file:
         file.write(default_settings)
 else:
-    attributes = {
-        ast.NameConstant: 'value',
-        ast.Num: 'n',
-        ast.Str: 's',
-    }
-    module_node = ast.parse(settings_text)
-    for node in module_node.body:
-        if type(node) != ast.Assign:
-            log_ignored_line(node.lineno, "only assignments are allowed")
-            continue
-        
-        if len(node.targets) > 1:
-            log_ignored_line(node.lineno, "only simple single-variable assignments allowed")
-            continue
+    if re.fullmatch(r'\s*', settings_text):     # blank file
+        with open(os.path.join(settings_dir, 'settings.txt'), 'a', encoding='utf-8') as file:
+            file.write(default_settings)
+    else:
+        attributes = {
+            ast.NameConstant: 'value',
+            ast.Num: 'n',
+            ast.Str: 's',
+        }
+        module_node = ast.parse(settings_text)
+        for node in module_node.body:
+            if type(node) != ast.Assign:
+                log_ignored_line(node.lineno, "only assignments are allowed")
+                continue
+            
+            if len(node.targets) > 1:
+                log_ignored_line(node.lineno, "only simple single-variable assignments allowed")
+                continue
 
-        target = node.targets[0]
-        if type(target) != ast.Name:
-            log_ignored_line(node.lineno, "only simple single-variable assignments allowed")
-            continue
-        
-        if target.id not in allowed_targets:
-            log_ignored_line(node.lineno, "target is not a valid setting")
-            continue
-        
-        if type(node.value) not in (ast.NameConstant, ast.Num, ast.Str):
-            log_ignored_line(node.lineno, "only literals allowed for values")
-            continue
+            target = node.targets[0]
+            if type(target) != ast.Name:
+                log_ignored_line(node.lineno, "only simple single-variable assignments allowed")
+                continue
+            
+            if target.id not in allowed_targets:
+                log_ignored_line(node.lineno, "target is not a valid setting")
+                continue
+            
+            if type(node.value) not in (ast.NameConstant, ast.Num, ast.Str):
+                log_ignored_line(node.lineno, "only literals allowed for values")
+                continue
 
-        locals()[target.id] = node.value.__getattribute__(attributes[type(node.value)])
+            locals()[target.id] = node.value.__getattribute__(attributes[type(node.value)])
         

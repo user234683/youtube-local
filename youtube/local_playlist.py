@@ -5,9 +5,11 @@ from youtube import common
 import html
 import gevent
 import urllib
+import settings
 
-playlists_directory = os.path.normpath("data/playlists")
-thumbnails_directory = os.path.normpath("data/playlist_thumbnails")
+playlists_directory = os.path.join(settings.data_dir, "playlists")
+thumbnails_directory = os.path.join(settings.data_dir, "playlist_thumbnails")
+
 with open('yt_local_playlist_template.html', 'r', encoding='utf-8') as file:
     local_playlist_template = Template(file.read())
 

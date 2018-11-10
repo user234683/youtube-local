@@ -1,5 +1,6 @@
 import mimetypes
 import urllib.parse
+import os
 from youtube import local_playlist, watch, search, playlist, channel, comments, common, account_functions
 import settings
 YOUTUBE_FILES = (
@@ -49,7 +50,7 @@ def youtube(env, start_response):
             return local_playlist.get_playlist_page(path[10:], query_string=query_string).encode()
 
         elif path.startswith("/data/playlist_thumbnails/"):
-            with open(path[1:], 'rb') as f:
+            with open(os.path.join(settings.data_dir, os.path.normpath(path[6:])), 'rb') as f:
                 start_response('200 OK',  (('Content-type', "image/jpeg"),) )
                 return f.read()
 

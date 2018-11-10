@@ -9,6 +9,7 @@ from youtube.common import default_multi_get, get_thumbnail_url, video_id, URL_O
 import youtube.comments as comments
 import gevent
 import settings
+import os
 
 video_height_priority = (360, 480, 240, 720, 1080)
 
@@ -305,7 +306,7 @@ def get_watch_page(query_string):
                 music_list_html += '''</tr>\n'''
             music_list_html += '''</table>\n'''
         if settings.gather_googlevideo_domains:
-            with open('data/googlevideo-domains.txt', 'a+', encoding='utf-8') as f:
+            with open(os.path.join(settings.data_dir, 'googlevideo-domains.txt'), 'a+', encoding='utf-8') as f:
                 url = info['formats'][0]['url']
                 subdomain = url[0:url.find(".googlevideo.com")]
                 f.write(subdomain + "\n")

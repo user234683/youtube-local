@@ -5,6 +5,8 @@ import json
 from youtube import common, proto, comments
 import re
 import traceback
+import settings
+import os
 
 def _post_comment(text, video_id, session_token, cookie):
     headers = {
@@ -103,7 +105,7 @@ def delete_comment(video_id, comment_id, author_id, session_token, cookie):
 
 xsrf_token_regex = re.compile(r'''XSRF_TOKEN"\s*:\s*"([\w-]*(?:=|%3D){0,2})"''')
 def post_comment(query_string, fields):
-    with open('data/cookie.txt', 'r', encoding='utf-8') as f:
+    with open(os.path.join(settings.data_dir, 'cookie.txt'), 'r', encoding='utf-8') as f:
         cookie_data = f.read()
 
     parameters = urllib.parse.parse_qs(query_string)

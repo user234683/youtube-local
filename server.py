@@ -82,7 +82,7 @@ def site_dispatch(env, start_response):
             yield error_code('403 Forbidden', start_response)
             return
         if "phpmyadmin" in path or (path == "/" and method == "HEAD"):
-            ban_address(client_address)
+            #ban_address(client_address)
             start_response('403 Fuck Off', ())
             yield b'403 Fuck Off'
             return
