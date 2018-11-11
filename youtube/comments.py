@@ -348,7 +348,7 @@ def get_comments_page(query_string):
             thumbnail = '/i.ytimg.com/vi/'+ metadata['video_id'] + '/mqdefault.jpg',
         )
         comment_box = comment_box_template.substitute(
-            form_action= common.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(metadata['video_id'], sort=1).replace("=", "%3D"),
+            form_action= common.URL_ORIGIN + '/post_comment',
             video_id_input='''<input type="hidden" name="video_id" value="''' + metadata['video_id'] + '''">''',
             post_text='Post comment'
         )

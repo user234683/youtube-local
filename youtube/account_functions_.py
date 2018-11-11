@@ -6,7 +6,6 @@ from youtube import common, proto, comments
 import re
 import traceback
 import settings
-import os
 
 def _post_comment(text, video_id, session_token, cookie):
     headers = {
@@ -104,11 +103,11 @@ def delete_comment(video_id, comment_id, author_id, session_token, cookie):
     content = response.read()
 
 xsrf_token_regex = re.compile(r'''XSRF_TOKEN"\s*:\s*"([\w-]*(?:=|%3D){0,2})"''')
-def post_comment(parameters, fields):
+def post_comment(query_string, fields):
     with open(os.path.join(settings.data_dir, 'cookie.txt'), 'r', encoding='utf-8') as f:
         cookie_data = f.read()
 
-    #parameters = urllib.parse.parse_qs(query_string)
+    parameters = urllib.parse.parse_qs(query_string)
     try:
         video_id = fields['video_id'][0]
     except KeyError:
@@ -129,7 +128,7 @@ def post_comment(parameters, fields):
 
     if 'parent_id' in parameters:
         code = _post_comment_reply(fields['comment_text'][0], parameters['video_id'][0], parameters['parent_id'][0], token, cookie_data)
-        '''try:
+        try:
             response = comments.get_comments_page(query_string)
         except socket.error as e:
             traceback.print_tb(e.__traceback__)
@@ -137,11 +136,10 @@ def post_comment(parameters, fields):
         except Exception as e:
             traceback.print_tb(e.__traceback__)
             return b'Refreshing comment page yielded error 500 Internal Server Error.\nPost comment status code: ' + code.encode('ascii')
-        return response'''
+        return response
     else:
         code = _post_comment(fields['comment_text'][0], fields['video_id'][0], token, cookie_data)
-        
-        '''try:
+        try:
             response = comments.get_comments_page('ctoken=' + comments.make_comment_ctoken(video_id, sort=1))
         except socket.error as e:
             traceback.print_tb(e.__traceback__)
@@ -149,8 +147,189 @@ def post_comment(parameters, fields):
         except Exception as e:
             traceback.print_tb(e.__traceback__)
             return b'Refreshing comment page yielded error 500 Internal Server Error.\nPost comment status code: ' + code.encode('ascii')
-        return response'''
-    return code
+        return response
+
+
+_LOGIN_URL = 'https://accounts.google.com/ServiceLogin'
+_TWOFACTOR_URL = 'https://accounts.google.com/signin/challenge'
+
+_LOOKUP_URL = 'https://accounts.google.com/_/signin/sl/lookup'
+_CHALLENGE_URL = 'https://accounts.google.com/_/signin/sl/challenge'
+_TFA_URL = 'https://accounts.google.com/_/signin/challenge?hl=en&TL={0}'
+def _login(username, password):
+    """
+    Attempt to log in to YouTube.
+    True is returned if successful or skipped.
+    False is returned if login failed.
+
+    Taken from youtube-dl
+    """
+
+    login_page = self._download_webpage(
+        _LOGIN_URL, None,
+        note='Downloading login page',
+        errnote='unable to fetch login page', fatal=False)
+    if login_page is False:
+        return
+
+    login_form = self._hidden_inputs(login_page)
+
+    def req(url, f_req, note, errnote):
+        data = login_form.copy()
+        data.update({
+            'pstMsg': 1,
+            'checkConnection': 'youtube',
+            'checkedDomains': 'youtube',
+            'hl': 'en',
+            'deviceinfo': '[null,null,null,[],null,"US",null,null,[],"GlifWebSignIn",null,[null,null,[]]]',
+            'f.req': json.dumps(f_req),
+            'flowName': 'GlifWebSignIn',
+            'flowEntry': 'ServiceLogin',
+        })
+        return self._download_json(
+            url, None, note=note, errnote=errnote,
+            transform_source=lambda s: re.sub(r'^[^[]*', '', s),
+            fatal=False,
+            data=urlencode_postdata(data), headers={
+                'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+                'Google-Accounts-XSRF': 1,
+            })
+
+    def warn(message):
+        print("Login: " + message)
+
+    lookup_req = [
+        username,
+        None, [], None, 'US', None, None, 2, False, True,
+        [
+            None, None,
+            [2, 1, None, 1,
+             'https://accounts.google.com/ServiceLogin?passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Fnext%3D%252F%26action_handle_signin%3Dtrue%26hl%3Den%26app%3Ddesktop%26feature%3Dsign_in_button&hl=en&service=youtube&uilel=3&requestPath=%2FServiceLogin&Page=PasswordSeparationSignIn',
+             None, [], 4],
+            1, [None, None, []], None, None, None, True
+        ],
+        username,
+    ]
+
+    lookup_results = req(
+        _LOOKUP_URL, lookup_req,
+        'Looking up account info', 'Unable to look up account info')
+
+    if lookup_results is False:
+        return False
+
+    user_hash = try_get(lookup_results, lambda x: x[0][2], compat_str)
+    if not user_hash:
+        warn('Unable to extract user hash')
+        return False
+
+    challenge_req = [
+        user_hash,
+        None, 1, None, [1, None, None, None, [password, None, True]],
+        [
+            None, None, [2, 1, None, 1, 'https://accounts.google.com/ServiceLogin?passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Fnext%3D%252F%26action_handle_signin%3Dtrue%26hl%3Den%26app%3Ddesktop%26feature%3Dsign_in_button&hl=en&service=youtube&uilel=3&requestPath=%2FServiceLogin&Page=PasswordSeparationSignIn', None, [], 4],
+            1, [None, None, []], None, None, None, True
+        ]]
+
+    challenge_results = req(
+        _CHALLENGE_URL, challenge_req,
+        'Logging in', 'Unable to log in')
+
+    if challenge_results is False:
+        return
+
+    login_res = try_get(challenge_results, lambda x: x[0][5], list)
+    if login_res:
+        login_msg = try_get(login_res, lambda x: x[5], compat_str)
+        warn(
+            'Unable to login: %s' % 'Invalid password'
+            if login_msg == 'INCORRECT_ANSWER_ENTERED' else login_msg)
+        return False
+
+    res = try_get(challenge_results, lambda x: x[0][-1], list)
+    if not res:
+        warn('Unable to extract result entry')
+        return False
+
+    login_challenge = try_get(res, lambda x: x[0][0], list)
+    if login_challenge:
+        challenge_str = try_get(login_challenge, lambda x: x[2], compat_str)
+        if challenge_str == 'TWO_STEP_VERIFICATION':
+            # SEND_SUCCESS - TFA code has been successfully sent to phone
+            # QUOTA_EXCEEDED - reached the limit of TFA codes
+            status = try_get(login_challenge, lambda x: x[5], compat_str)
+            if status == 'QUOTA_EXCEEDED':
+                warn('Exceeded the limit of TFA codes, try later')
+                return False
+
+            tl = try_get(challenge_results, lambda x: x[1][2], compat_str)
+            if not tl:
+                warn('Unable to extract TL')
+                return False
+
+            tfa_code = self._get_tfa_info('2-step verification code')
+
+            if not tfa_code:
+                warn(
+                    'Two-factor authentication required. Provide it either interactively or with --twofactor <code>'
+                    '(Note that only TOTP (Google Authenticator App) codes work at this time.)')
+                return False
+
+            tfa_code = remove_start(tfa_code, 'G-')
+
+            tfa_req = [
+                user_hash, None, 2, None,
+                [
+                    9, None, None, None, None, None, None, None,
+                    [None, tfa_code, True, 2]
+                ]]
+
+            tfa_results = req(
+                _TFA_URL.format(tl), tfa_req,
+                'Submitting TFA code', 'Unable to submit TFA code')
+
+            if tfa_results is False:
+                return False
+
+            tfa_res = try_get(tfa_results, lambda x: x[0][5], list)
+            if tfa_res:
+                tfa_msg = try_get(tfa_res, lambda x: x[5], compat_str)
+                warn(
+                    'Unable to finish TFA: %s' % 'Invalid TFA code'
+                    if tfa_msg == 'INCORRECT_ANSWER_ENTERED' else tfa_msg)
+                return False
+
+            check_cookie_url = try_get(
+                tfa_results, lambda x: x[0][-1][2], compat_str)
+        else:
+            CHALLENGES = {
+                'LOGIN_CHALLENGE': "This device isn't recognized. For your security, Google wants to make sure it's really you.",
+                'USERNAME_RECOVERY': 'Please provide additional information to aid in the recovery process.',
+                'REAUTH': "There is something unusual about your activity. For your security, Google wants to make sure it's really you.",
+            }
+            challenge = CHALLENGES.get(
+                challenge_str,
+                '%s returned error %s.' % (IE_NAME, challenge_str))
+            warn('%s\nGo to https://accounts.google.com/, login and solve a challenge.' % challenge)
+            return False
+    else:
+        check_cookie_url = try_get(res, lambda x: x[2], compat_str)
+
+    if not check_cookie_url:
+        warn('Unable to extract CheckCookie URL')
+        return False
+
+    check_cookie_results = self._download_webpage(
+        check_cookie_url, None, 'Checking cookie', fatal=False)
+
+    if check_cookie_results is False:
+        return False
+
+    if 'https://myaccount.google.com/' not in check_cookie_results:
+        warn('Unable to log in')
+        return False
+
+    return True
 
 
 def get_post_comment_page(query_string):
@@ -181,7 +360,7 @@ textarea{
         )
     else:
         comment_box = comments.comment_box_template.substitute(
-            form_action = common.URL_ORIGIN + '/post_comment',
+            form_action = common.URL_ORIGIN + '/comments?ctoken=' + comments.make_comment_ctoken(video_id, sort=1).replace("=", "%3D"),
             video_id_input = '''<input type="hidden" name="video_id" value="''' + video_id + '''">''',
             post_text = "Post comment",
         )
