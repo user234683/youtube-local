@@ -88,10 +88,9 @@ def youtube(env, start_response):
             if fields['action'][0] == 'remove':
                 playlist_name = path[11:]
                 local_playlist.remove_from_playlist(playlist_name, fields['video_info_list'])
-                start_response('200 OK', ())
+                start_response('303 See Other', (('Location', common.URL_ORIGIN + path),) )
                 return local_playlist.get_playlist_page(playlist_name).encode() 
-                start_response('200 OK',  (('Content-type','text/html'),) )
-                return local_playlist.get_playlist_page(path[10:], query_string=query_string).encode()
+
             else:
                 start_response('400 Bad Request', ())
                 return b'400 Bad Request'
