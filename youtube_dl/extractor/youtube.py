@@ -2107,8 +2107,8 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 'view count', default=None))
 
         # subtitles
-        video_subtitles = self.extract_subtitles(video_id, video_webpage)
-        automatic_captions = self.extract_automatic_captions(video_id, video_webpage)
+        video_subtitles = self._get_subtitles(video_id, video_webpage)
+        automatic_captions = self._get_automatic_captions(video_id, video_webpage)
 
         video_duration = try_get(
             video_info, lambda x: int_or_none(x['length_seconds'][0]))
