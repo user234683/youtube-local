@@ -43,11 +43,6 @@
         grid-column-gap: 10px;
         justify-content:start;
     }
-        .comment-links a{
-            background-color: #d0d0d0;
-            padding: 2px;
-            justify-self:start;
-        }
 
 .comments{
     margin-top:10px;

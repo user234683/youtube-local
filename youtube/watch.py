@@ -325,9 +325,6 @@ def get_watch_page(query_string):
                 note        = html.escape(downloader._format_note(format)),
             )
 
-        post_comment_url = common.URL_ORIGIN + "/post_comment?v=" + id
-        post_comment_link = '''<a class="post-comment-link" href="''' + post_comment_url + '''">Post comment</a>'''
-
 
         page = yt_watch_template.substitute(
             video_title             = html.escape(info["title"]),

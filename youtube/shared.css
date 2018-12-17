@@ -365,3 +365,8 @@ address{
         font-weight: bold;
         text-align: center;
     }
+.sort-button{
+    background-color: #d0d0d0;
+    padding: 2px;
+    justify-self: start;
+}

@@ -9,8 +9,8 @@
         <style type="text/css">
             main{
                 display:grid;
-                grid-template-rows: 0fr 0fr 0fr;
-                grid-template-columns: 0fr 1fr;
+                grid-template-rows: repeat(5, 0fr);
+                grid-template-columns: auto 1fr;
             }
                 main .avatar{
                     grid-row:1;
@@ -33,6 +33,20 @@
                     background-color: #aaaaaa;
                     padding: 3px;
                 }
+                #links-metadata{
+                    display: grid;
+                    grid-auto-flow: column;
+                    grid-column-gap: 10px;
+                    grid-column: 1/span 2;
+                    justify-content: start;
+                    padding-top: 8px;
+                    padding-bottom: 8px;
+                    background-color: #bababa;
+                    margin-bottom: 10px;
+                }
+                    #number-of-results{
+                        font-weight:bold;
+                    }
                 .item-grid{
                     grid-row:4;
                     grid-column: 1 / span 2;
@@ -43,10 +57,7 @@
                 .tab{
                     padding: 5px 75px;
                 }
-            #number_of_results{
-                font-weight:bold;
-                grid-row:3;
-            }
+
         </style>
     </head>
     <body>
@@ -57,7 +68,10 @@ $header
             <nav class="channel-tabs">
 $channel_tabs
             </nav>
-            <div id="number-of-results">$number_of_results</div>
+            <div id="links-metadata">
+                <div id="number-of-results">$number_of_results</div>
+$sort_buttons
+            </div>
 $items
             <nav class="page-button-row">
 $page_buttons

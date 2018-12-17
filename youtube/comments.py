@@ -272,11 +272,11 @@ def get_comments_html(comments):
 def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
     if settings.enable_comments:
         post_comment_url = common.URL_ORIGIN + "/post_comment?video_id=" + video_id
-        post_comment_link = '''<a class="post-comment-link" href="''' + post_comment_url + '''">Post comment</a>'''
+        post_comment_link = '''<a class="sort-button" href="''' + post_comment_url + '''">Post comment</a>'''
 
         other_sort_url = common.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(video_id, sort=1 - sort, lc=lc)
         other_sort_name = 'newest' if sort == 0 else 'top'
-        other_sort_link = '''<a href="''' + other_sort_url + '''">Sort by ''' + other_sort_name + '''</a>'''
+        other_sort_link = '''<a class="sort-button" href="''' + other_sort_url + '''">Sort by ''' + other_sort_name + '''</a>'''
 
         comment_links = '''<div class="comment-links">\n'''
         comment_links += other_sort_link + '\n' + post_comment_link + '\n'
@@ -355,7 +355,7 @@ def get_comments_page(query_string):
 
         other_sort_url = common.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(metadata['video_id'], sort=1 - metadata['sort'])
         other_sort_name = 'newest' if metadata['sort'] == 0 else 'top'
-        other_sort_link = '''<a href="''' + other_sort_url + '''">Sort by ''' + other_sort_name + '''</a>'''
+        other_sort_link = '''<a class="sort-button" href="''' + other_sort_url + '''">Sort by ''' + other_sort_name + '''</a>'''
 
 
         comment_links = '''<div class="comment-links">\n'''
