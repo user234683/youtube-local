@@ -180,18 +180,23 @@ subtitles_tag_template = Template('''
 def subtitles_html(info):
     result = ''
     default_found = False
+    default = ''
     for language, formats in info['subtitles'].items():
         for format in formats:
             if format['ext'] == 'vtt':
-                if language == settings.subtitles_language:
-                    default_found = True
-                result += subtitles_tag_template.substitute(
+                append = subtitles_tag_template.substitute(
                     src = html.escape('/' + format['url']),
                     label = html.escape(language),
                     srclang = html.escape(language),
                     default = 'default' if language == settings.subtitles_language and settings.subtitles_mode > 0 else '',
                 )
+                if language == settings.subtitles_language:
+                    default_found = True
+                    default = append
+                else:
+                    result += append
                 break
+    result += default
     try:
         formats = info['automatic_captions'][settings.subtitles_language]
     except KeyError:
