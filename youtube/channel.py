@@ -358,24 +358,33 @@ def get_channel_page(url, query_string=''):
         return channel_search_page(polymer_json, query, page_number, number_of_videos, query_string)
     else:
         raise ValueError('Unknown channel tab: ' + tab)
-    
-def get_user_page(url, query_string=''):
+
+# youtube.com/user/[username]/[page]
+# youtube.com/c/[custom]/[page]
+# youtube.com/[custom]/[page]
+def get_channel_page_general_url(url, query_string=''):
     path_components = url.rstrip('/').lstrip('/').split('/')
-    username = path_components[0]
-    try:
-        page = path_components[1]
-    except IndexError:
+    is_toplevel = not path_components[0] in ('user', 'c')
+
+    if len(path_components) + int(is_toplevel) == 3:       # has /[page] after it
+        page = path_components[2]
+        base_url = 'https://www.youtube.com/' + '/'.join(path_components[0:-1])
+    elif len(path_components) + int(is_toplevel) == 2:     # does not have /[page] after it, use /videos by default
         page = 'videos'
+        base_url = 'https://www.youtube.com/' + '/'.join(path_components)
+    else:
+        raise ValueError()
+
     if page == 'videos':
-        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/videos?pbj=1&view=0', common.desktop_ua + headers_1)
+        polymer_json = common.fetch_url(base_url + '/videos?pbj=1&view=0', common.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_videos_html(polymer_json)
     elif page == 'about':
-        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/about?pbj=1', common.desktop_ua + headers_1)
+        polymer_json = common.fetch_url(base_url + '/about?pbj=1', common.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_about_page(polymer_json)
     elif page == 'playlists':
-        polymer_json = common.fetch_url('https://www.youtube.com/user/' + username + '/playlists?pbj=1&view=1', common.desktop_ua + headers_1)
+        polymer_json = common.fetch_url(base_url+ '/playlists?pbj=1&view=1', common.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_playlists_html(polymer_json)
     elif page == 'search':

@@ -41,9 +41,9 @@ def youtube(env, start_response):
             start_response('200 OK',  (('Content-type','text/html'),) )
             return channel.get_channel_page(path[9:], query_string=query_string).encode()
 
-        elif path.startswith("/user/"):
+        elif path.startswith("/user/") or path.startswith("/c/"):
             start_response('200 OK',  (('Content-type','text/html'),) )
-            return channel.get_user_page(path[6:], query_string=query_string).encode()
+            return channel.get_channel_page_general_url(path, query_string=query_string).encode()
 
         elif path.startswith("/playlists"):
             start_response('200 OK',  (('Content-type','text/html'),) )
@@ -71,8 +71,8 @@ def youtube(env, start_response):
                 return f.read().replace(b'$port_number', str(settings.port_number).encode())
 
         else:
-            start_response('404 Not Found',  () )
-            return b'404 Not Found'
+            start_response('200 OK',  (('Content-type','text/html'),) )
+            return channel.get_channel_page_general_url(path, query_string=query_string).encode()
 
     elif method == "POST":
         fields = urllib.parse.parse_qs(env['wsgi.input'].read().decode())
