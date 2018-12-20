@@ -181,13 +181,25 @@ def channel_sort_buttons_html(channel_id, tab, current_sort):
     return result
 
 def channel_videos_html(polymer_json, current_page=1, current_sort=3, number_of_videos = 1000, current_query_string=''):
-    microformat = polymer_json[1]['response']['microformat']['microformatDataRenderer']
+    response = polymer_json[1]['response']
+    try:
+        microformat = response['microformat']['microformatDataRenderer']
+
+    # channel doesn't exist or was terminated
+    # example terminated channel: https://www.youtube.com/channel/UCnKJeK_r90jDdIuzHXC0Org
+    except KeyError:
+        if 'alerts' in response and len(response['alerts']) > 0:
+            result = ''
+            for alert in response['alerts']:
+                result += alert['alertRenderer']['text']['simpleText'] + '\n'
+            return result
+        else:
+            raise
     channel_url = microformat['urlCanonical'].rstrip('/')
     channel_id = channel_url[channel_url.rfind('/')+1:]
     try:
-        items = polymer_json[1]['response']['continuationContents']['gridContinuation']['items']
+        items = response['continuationContents']['gridContinuation']['items']
     except KeyError:
-        response = polymer_json[1]['response']
         try:
             contents = response['contents']
         except KeyError:
