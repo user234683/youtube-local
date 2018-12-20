@@ -26,6 +26,10 @@ def youtube(env, start_response):
             return comments.get_comments_page(query_string).encode()
 
         elif path == "/watch":
+            video_id = urllib.parse.parse_qs(query_string)['v'][0]
+            if len(video_id) < 11:
+                start_response('404 Not Found', ())
+                return b'Incomplete video id (too short): ' + video_id.encode('ascii')
             start_response('200 OK',  (('Content-type','text/html'),) )
             return watch.get_watch_page(query_string).encode()
         
