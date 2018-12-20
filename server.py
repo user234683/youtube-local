@@ -4,6 +4,7 @@ import gevent.socket
 
 from gevent.pywsgi import WSGIServer
 from youtube.youtube import youtube
+import http_errors
 import urllib
 import socket
 import socks
@@ -114,7 +115,10 @@ def site_dispatch(env, start_response):
             yield error_code('404 Not Found', start_response)
             return
 
-    
+    except http_errors.Error404 as e:
+        start_response('404 Not Found', ())
+        yield str(e).encode('utf-8')
+
     except socket.error as e:
         start_response('502 Bad Gateway', ())
         print(str(e))

@@ -1,6 +1,7 @@
 import base64
 import youtube.common as common
 from youtube.common import default_multi_get, URL_ORIGIN, get_thumbnail_url, video_id
+import http_errors
 import urllib
 import json
 from string import Template
@@ -193,6 +194,11 @@ def channel_videos_html(polymer_json, current_page=1, current_sort=3, number_of_
             for alert in response['alerts']:
                 result += alert['alertRenderer']['text']['simpleText'] + '\n'
             return result
+        elif 'errors' in response['responseContext']:
+            for error in response['responseContext']['errors']['error']:
+                if error['code'] == 'INVALID_VALUE' and error['location'] == 'browse_id':
+                    raise http_errors.Error404('This channel does not exist')
+            raise
         else:
             raise
     channel_url = microformat['urlCanonical'].rstrip('/')
