@@ -52,9 +52,14 @@ headers_1 = (
 # grid view: 4qmFsgJAEhhVQzdVY3M0MkZaeTN1WXpqcnF6T0lIc3caJEVnWjJhV1JsYjNNZ0FEZ0JZQUZxQUhvQk1yZ0JBQSUzRCUzRA
 # list view: 4qmFsgJCEhhVQzdVY3M0MkZaeTN1WXpqcnF6T0lIc3caJkVnWjJhV1JsYjNNWUF5QUFNQUk0QVdBQmFnQjZBVEs0QVFBJTNE
 # SORT:
-# Popular - 1
-# Oldest - 2
-# Newest - 3
+# videos:
+#    Popular - 1
+#    Oldest - 2
+#    Newest - 3
+# playlists:
+#    Oldest - 2
+#    Newest - 3
+#    Last video added - 4
 
 # view:
 # grid: 0 or 1
@@ -156,20 +161,22 @@ def channel_tabs_html(channel_id, current_tab, search_box_value=''):
     return result
 
 channel_sort_button_template = Template('''\n<a class="sort-button"$href_attribute>$text</a>''')
-sorts = {1: 'views', 2: 'oldest', 3: 'newest'}
-def channel_sort_buttons_html(channel_id, current_sort):
+sorts = {
+    "videos": (('1', 'views'), ('2', 'oldest'), ('3', 'newest'),),
+    "playlists": (('2', 'oldest'), ('3', 'newest'), ('4', 'last video added'),),
+}
+def channel_sort_buttons_html(channel_id, tab, current_sort):
     result = ''
-    current_sort = int(current_sort)
-    for i in range(1,4):
-        if i == current_sort:
+    for sort_number, sort_name in sorts[tab]:
+        if sort_number == str(current_sort):
             result += channel_sort_button_template.substitute(
                 href_attribute='',
-                text = 'Sorted by ' + sorts[current_sort]
+                text = 'Sorted by ' + sort_name
             )
         else:
             result += channel_sort_button_template.substitute(
-                href_attribute=' href="' + URL_ORIGIN + '/channel/' + channel_id + '/videos?sort=' + str(i) + '"',
-                text = 'Sort by ' + sorts[i]
+                href_attribute=' href="' + URL_ORIGIN + '/channel/' + channel_id + '/' + tab + '?sort=' + sort_number + '"',
+                text = 'Sort by ' + sort_name
             )
     return result
 
@@ -193,7 +200,7 @@ def channel_videos_html(polymer_json, current_page=1, current_sort=3, number_of_
         header              = common.get_header(),
         channel_title       = microformat['title'],
         channel_tabs        = channel_tabs_html(channel_id, 'Videos'),
-        sort_buttons        = channel_sort_buttons_html(channel_id, current_sort),
+        sort_buttons        = channel_sort_buttons_html(channel_id, 'videos', current_sort),
         avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
         page_title          = microformat['title'] + ' - Channel',
         items               = items_html,
@@ -201,7 +208,7 @@ def channel_videos_html(polymer_json, current_page=1, current_sort=3, number_of_
         number_of_results   = '{:,}'.format(number_of_videos) + " videos",
     )
 
-def channel_playlists_html(polymer_json):
+def channel_playlists_html(polymer_json, current_sort=3):
     microformat = polymer_json[1]['response']['microformat']['microformatDataRenderer']
     channel_url = microformat['urlCanonical'].rstrip('/')
     channel_id = channel_url[channel_url.rfind('/')+1:]
@@ -229,12 +236,12 @@ def channel_playlists_html(polymer_json):
         header              = common.get_header(),
         channel_title       = microformat['title'],
         channel_tabs        = channel_tabs_html(channel_id, 'Playlists'),
+        sort_buttons        = channel_sort_buttons_html(channel_id, 'playlists', current_sort),
         avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
         page_title          = microformat['title'] + ' - Channel',
         items               = items_html,
         page_buttons        = '',
         number_of_results   = '',
-        sort_buttons        = '',
     )
 
 # Example channel where tabs do not have definite index: https://www.youtube.com/channel/UC4gQ8i3FD7YbhOgqUkeQEJg
@@ -331,7 +338,7 @@ def get_channel_search_json(channel_id, query, page):
 
     return polymer_json
     
-
+playlist_sort_codes = {'2': "da", '3': "dd", '4': "lad"}
 def get_channel_page(url, query_string=''):
     path_components = url.rstrip('/').lstrip('/').split('/')
     channel_id = path_components[0]
@@ -360,11 +367,11 @@ def get_channel_page(url, query_string=''):
         polymer_json = json.loads(polymer_json)
         return channel_about_page(polymer_json)
     elif tab == 'playlists':
-        polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1&view=1', common.desktop_ua + headers_1)
+        polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], common.desktop_ua + headers_1)
         '''with open('debug/channel_playlists_debug', 'wb') as f:
             f.write(polymer_json)'''
         polymer_json = json.loads(polymer_json)
-        return channel_playlists_html(polymer_json)
+        return channel_playlists_html(polymer_json, sort)
     elif tab == 'search':
         tasks = (
             gevent.spawn(get_number_of_videos, channel_id ), 
