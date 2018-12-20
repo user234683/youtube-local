@@ -234,6 +234,7 @@ def channel_playlists_html(polymer_json):
         items               = items_html,
         page_buttons        = '',
         number_of_results   = '',
+        sort_buttons        = '',
     )
 
 # Example channel where tabs do not have definite index: https://www.youtube.com/channel/UC4gQ8i3FD7YbhOgqUkeQEJg
@@ -315,6 +316,7 @@ def channel_search_page(polymer_json, query, current_page=1, number_of_videos = 
         items               = items_html,
         page_buttons        = common.page_buttons_html(current_page, math.ceil(number_of_videos/29), URL_ORIGIN + "/channel/" + channel_id + "/search", current_query_string),
         number_of_results   = '',
+        sort_buttons        = '',
     )
 def get_channel_search_json(channel_id, query, page):
     params = proto.string(2, 'search') + proto.string(15, str(page))
