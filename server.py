@@ -119,6 +119,10 @@ def site_dispatch(env, start_response):
         start_response('404 Not Found', ())
         yield str(e).encode('utf-8')
 
+    except urllib.error.HTTPError as e:
+        start_response(str(e.code) + ' ' + e.reason, ())
+        yield b'While fetching url, the following error occured:\n' + str(e).encode('utf-8')
+
     except socket.error as e:
         start_response('502 Bad Gateway', ())
         print(str(e))
