@@ -181,6 +181,26 @@ def channel_sort_buttons_html(channel_id, tab, current_sort):
             )
     return result
 
+# example channel with no videos: https://www.youtube.com/user/jungleace
+def get_grid_items(response):
+    try:
+        return response['continuationContents']['gridContinuation']['items']
+    except KeyError:
+        try:
+            contents = response['contents']
+        except KeyError:
+            return []
+
+        item_section = tab_with_content(contents['twoColumnBrowseResultsRenderer']['tabs'])['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]
+        try:
+            return item_section['gridRenderer']['items']
+        except KeyError:
+            if "messageRenderer" in item_section:
+                return []
+            else:
+                raise
+
+
 def channel_videos_html(polymer_json, current_page=1, current_sort=3, number_of_videos = 1000, current_query_string=''):
     response = polymer_json[1]['response']
     try:
@@ -203,15 +223,7 @@ def channel_videos_html(polymer_json, current_page=1, current_sort=3, number_of_
             raise
     channel_url = microformat['urlCanonical'].rstrip('/')
     channel_id = channel_url[channel_url.rfind('/')+1:]
-    try:
-        items = response['continuationContents']['gridContinuation']['items']
-    except KeyError:
-        try:
-            contents = response['contents']
-        except KeyError:
-            items = []
-        else:
-            items = tab_with_content(contents['twoColumnBrowseResultsRenderer']['tabs'])['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['gridRenderer']['items']
+    items = get_grid_items(response)
     items_html = grid_items_html(items, {'author': microformat['title']})
     
     return yt_channel_items_template.substitute(
@@ -227,27 +239,12 @@ def channel_videos_html(polymer_json, current_page=1, current_sort=3, number_of_
     )
 
 def channel_playlists_html(polymer_json, current_sort=3):
-    microformat = polymer_json[1]['response']['microformat']['microformatDataRenderer']
+    response = polymer_json[1]['response']
+    microformat = response['microformat']['microformatDataRenderer']
     channel_url = microformat['urlCanonical'].rstrip('/')
     channel_id = channel_url[channel_url.rfind('/')+1:]
-    try:
-        items = polymer_json[1]['response']['continuationContents']['gridContinuation']['items']
-    except KeyError:
-        response = polymer_json[1]['response']
-        try:
-            contents = response['contents']
-        except KeyError:
-            items = []
-        else:
-            item_section = tab_with_content(contents['twoColumnBrowseResultsRenderer']['tabs'])['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]
-            try:
-                items = item_section['gridRenderer']['items']
-            except KeyError:
-                if "messageRenderer" in item_section:
-                    items = []
-                else:
-                    raise
 
+    items = get_grid_items(response)
     items_html = grid_items_html(items, {'author': microformat['title']})
     
     return yt_channel_items_template.substitute(
@@ -420,6 +417,8 @@ def get_channel_page_general_url(url, query_string=''):
 
     if page == 'videos':
         polymer_json = common.fetch_url(base_url + '/videos?pbj=1&view=0', common.desktop_ua + headers_1)
+        '''with open('debug/user_page_videos', 'wb') as f:
+            f.write(polymer_json)'''
         polymer_json = json.loads(polymer_json)
         return channel_videos_html(polymer_json)
     elif page == 'about':
