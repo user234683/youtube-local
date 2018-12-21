@@ -402,7 +402,7 @@ def get_channel_page(url, query_string=''):
 
         return channel_search_page(polymer_json, query, page_number, number_of_videos, query_string)
     else:
-        raise ValueError('Unknown channel tab: ' + tab)
+        raise http_errors.Error404('Unknown channel tab: ' + tab)
 
 # youtube.com/user/[username]/[page]
 # youtube.com/c/[custom]/[page]
@@ -418,7 +418,7 @@ def get_channel_page_general_url(url, query_string=''):
         page = 'videos'
         base_url = 'https://www.youtube.com/' + '/'.join(path_components)
     else:
-        raise ValueError()
+        raise http_errors.Error404('Invalid channel url')
 
     if page == 'videos':
         polymer_json = common.fetch_url(base_url + '/videos?pbj=1&view=0', common.desktop_ua + headers_1)
@@ -440,4 +440,4 @@ def get_channel_page_general_url(url, query_string=''):
         polymer_json = json.loads(polymer_json)
         return channel_search_page('''
     else:
-        raise ValueError('Unknown channel page: ' + page)
+        raise http_errors.Error404('Unknown channel page: ' + page)
