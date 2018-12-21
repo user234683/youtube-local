@@ -181,6 +181,25 @@ def channel_sort_buttons_html(channel_id, tab, current_sort):
             )
     return result
 
+
+def get_microformat(response):
+    try:
+        return response['microformat']['microformatDataRenderer']
+
+    # channel doesn't exist or was terminated
+    # example terminated channel: https://www.youtube.com/channel/UCnKJeK_r90jDdIuzHXC0Org
+    except KeyError:
+        if 'alerts' in response and len(response['alerts']) > 0:
+            result = ''
+            for alert in response['alerts']:
+                result += alert['alertRenderer']['text']['simpleText'] + '\n'
+            raise http_errors.Code200(result)
+        elif 'errors' in response['responseContext']:
+            for error in response['responseContext']['errors']['error']:
+                if error['code'] == 'INVALID_VALUE' and error['location'] == 'browse_id':
+                    raise http_errors.Error404('This channel does not exist')
+        raise
+
 # example channel with no videos: https://www.youtube.com/user/jungleace
 def get_grid_items(response):
     try:
@@ -203,26 +222,10 @@ def get_grid_items(response):
 
 def channel_videos_html(polymer_json, current_page=1, current_sort=3, number_of_videos = 1000, current_query_string=''):
     response = polymer_json[1]['response']
-    try:
-        microformat = response['microformat']['microformatDataRenderer']
-
-    # channel doesn't exist or was terminated
-    # example terminated channel: https://www.youtube.com/channel/UCnKJeK_r90jDdIuzHXC0Org
-    except KeyError:
-        if 'alerts' in response and len(response['alerts']) > 0:
-            result = ''
-            for alert in response['alerts']:
-                result += alert['alertRenderer']['text']['simpleText'] + '\n'
-            return result
-        elif 'errors' in response['responseContext']:
-            for error in response['responseContext']['errors']['error']:
-                if error['code'] == 'INVALID_VALUE' and error['location'] == 'browse_id':
-                    raise http_errors.Error404('This channel does not exist')
-            raise
-        else:
-            raise
+    microformat = get_microformat(response)
     channel_url = microformat['urlCanonical'].rstrip('/')
     channel_id = channel_url[channel_url.rfind('/')+1:]
+
     items = get_grid_items(response)
     items_html = grid_items_html(items, {'author': microformat['title']})
     
@@ -240,7 +243,7 @@ def channel_videos_html(polymer_json, current_page=1, current_sort=3, number_of_
 
 def channel_playlists_html(polymer_json, current_sort=3):
     response = polymer_json[1]['response']
-    microformat = response['microformat']['microformatDataRenderer']
+    microformat = get_microformat(response)
     channel_url = microformat['urlCanonical'].rstrip('/')
     channel_id = channel_url[channel_url.rfind('/')+1:]
 
@@ -278,7 +281,8 @@ channel_link_template = Template('''
 stat_template = Template('''
 <li>$stat_value</li>''')
 def channel_about_page(polymer_json):
-    avatar = '/' + polymer_json[1]['response']['microformat']['microformatDataRenderer']['thumbnail']['thumbnails'][0]['url']
+    microformat = get_microformat(polymer_json[1]['response'])
+    avatar = '/' + microformat['thumbnail']['thumbnails'][0]['url']
     # my goodness...
     channel_metadata = tab_with_content(polymer_json[1]['response']['contents']['twoColumnBrowseResultsRenderer']['tabs'])['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['channelAboutFullMetadataRenderer']
     channel_links = ''
@@ -317,11 +321,12 @@ def channel_about_page(polymer_json):
     )
 
 def channel_search_page(polymer_json, query, current_page=1, number_of_videos = 1000, current_query_string=''):
-    microformat = polymer_json[1]['response']['microformat']['microformatDataRenderer']
+    response = polymer_json[1]['response']
+    microformat = get_microformat(response)
     channel_url = microformat['urlCanonical'].rstrip('/')
     channel_id = channel_url[channel_url.rfind('/')+1:]
 
-    response = polymer_json[1]['response']
+    
     try:
         items = tab_with_content(response['contents']['twoColumnBrowseResultsRenderer']['tabs'])['sectionListRenderer']['contents']
     except KeyError:
