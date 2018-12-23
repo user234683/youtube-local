@@ -148,20 +148,19 @@ def decode_content(content, encoding_header):
             content = gzip.decompress(content)
     return content
 
-def fetch_url(url, headers=(), timeout=15, report_text=None):
-    if isinstance(headers, list):
-        headers +=  [('Accept-Encoding', 'gzip, br')]
-        headers = dict(headers)
-    elif isinstance(headers, tuple):
-        headers += (('Accept-Encoding', 'gzip, br'),)
-        headers = dict(headers)
-    else:
-        headers = headers.copy()
-        headers['Accept-Encoding'] = 'gzip, br'
+def fetch_url(url, headers=(), timeout=15, report_text=None, data=None):
+    headers = dict(headers)     # Note: Calling dict() on a dict will make a copy
+    headers['Accept-Encoding'] = 'gzip, br'
     
+    if data is not None:
+        if isinstance(data, str):
+            data = data.encode('ascii')
+        elif not isinstance(data, bytes):
+            data = urllib.parse.urlencode(data).encode('ascii')
+
     start_time = time.time()
 
-    req = urllib.request.Request(url, headers=headers)
+    req = urllib.request.Request(url, data=data, headers=headers)
     response = urllib.request.urlopen(req, timeout=timeout)
     response_time = time.time()
 
