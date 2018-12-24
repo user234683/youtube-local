@@ -148,7 +148,15 @@ def decode_content(content, encoding_header):
             content = gzip.decompress(content)
     return content
 
-def fetch_url(url, headers=(), timeout=15, report_text=None, data=None):
+def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookie_jar_send=None, cookie_jar_receive=None):
+    '''
+    When cookie_jar_send is set to a CookieJar object,
+     those cookies will be sent in the request (but cookies in response will not be merged into it)
+    When cookie_jar_receive is set to a CookieJar object,
+     cookies received in the response will be merged into the object (nothing will be sent from it)
+    When both are set to the same object, cookies will be sent from the object,
+     and response cookies will be merged into it.
+    '''
     headers = dict(headers)     # Note: Calling dict() on a dict will make a copy
     headers['Accept-Encoding'] = 'gzip, br'
     
@@ -161,8 +169,13 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None):
     start_time = time.time()
 
     req = urllib.request.Request(url, data=data, headers=headers)
+    if cookie_jar_send:
+        cookie_jar_send.add_cookie_header(req)
     response = urllib.request.urlopen(req, timeout=timeout)
     response_time = time.time()
+
+    if cookie_jar_receive:
+        cookie_jar_receive.extract_cookies(response, req)
 
     content = response.read()
     read_finish = time.time()
