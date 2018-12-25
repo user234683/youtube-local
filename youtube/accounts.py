@@ -20,6 +20,16 @@ def save_accounts():
     with open(os.path.join(settings.data_dir, 'accounts.txt'), 'w', encoding='utf-8') as f:
         f.write(json.dumps(to_save))
 
+def add_account(username, password, save):
+    cookie_jar = http.cookiejar.LWPCookieJar()
+    _login(username, password, cookie_jar)
+    accounts.append({
+        "username": username,
+        "save":save,
+        "cookies":cookie_jar.as_lwp_str(ignore_discard=False, ignore_expires=False),
+    })
+
+
 # ---------------------------------
 # Code ported from youtube-dl
 # ---------------------------------
