@@ -35,6 +35,9 @@ def cookie_jar_from_lwp_str(lwp_str):
     cookie_jar._really_load(self, io.StringIO(lwp_str), "", False, False)
     return cookie_jar
 
+def account_cookie_jar(username):
+    return cookie_jar_from_lwp_str(accounts[username]['cookies'])
+
 # ---------------------------------
 # Code ported from youtube-dl
 # ---------------------------------

@@ -2,13 +2,13 @@
 
 import urllib
 import json
-from youtube import common, proto, comments
+from youtube import common, proto, comments, accounts
 import re
 import traceback
 import settings
 import os
 
-def _post_comment(text, video_id, session_token, cookie):
+def _post_comment(text, video_id, session_token, cookie_jar):
     headers = {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
         'Accept': '*/*',
@@ -17,7 +17,6 @@ def _post_comment(text, video_id, session_token, cookie):
         'X-YouTube-Client-Name': '2',
         'X-YouTube-Client-Version': '2.20180823',
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': cookie,
     }
 
     comment_params = proto.string(2, video_id) + proto.nested(5, proto.uint(1, 0)) + proto.uint(10, 1)
@@ -33,6 +32,7 @@ def _post_comment(text, video_id, session_token, cookie):
     data = urllib.parse.urlencode(data_dict).encode()
 
     req = urllib.request.Request("https://m.youtube.com/service_ajax?name=createCommentEndpoint", headers=headers, data=data)
+    cookie_jar.add_cookie_header(req)
     response = urllib.request.urlopen(req, timeout = 5)
     content = response.read()
     content = common.decode_content(content, response.getheader('Content-Encoding', default='identity'))
@@ -43,7 +43,7 @@ def _post_comment(text, video_id, session_token, cookie):
         f.write(content)'''
 
 
-def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie):
+def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie_jar):
     headers = {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
         'Accept': '*/*',
@@ -52,7 +52,6 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
         'X-YouTube-Client-Name': '2',
         'X-YouTube-Client-Version': '2.20180823',
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': cookie,
     }
 
     comment_params = proto.string(2, video_id) + proto.string(4, parent_comment_id) + proto.nested(5, proto.uint(1, 0)) + proto.uint(6,0) + proto.uint(10, 1)
@@ -68,6 +67,7 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
     data = urllib.parse.urlencode(data_dict).encode()
 
     req = urllib.request.Request("https://m.youtube.com/service_ajax?name=createCommentReplyEndpoint", headers=headers, data=data)
+    cookie_jar.add_cookie_header(req)
     response = urllib.request.urlopen(req, timeout = 5)
     content = response.read()
     content = common.decode_content(content, response.getheader('Content-Encoding', default='identity'))
@@ -77,7 +77,7 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
     '''with open('debug/post_comment_response', 'wb') as f:
         f.write(content)'''
 
-def delete_comment(video_id, comment_id, author_id, session_token, cookie):
+def delete_comment(video_id, comment_id, author_id, session_token, cookie_jar):
     headers = {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
         'Accept': '*/*',
@@ -86,7 +86,6 @@ def delete_comment(video_id, comment_id, author_id, session_token, cookie):
         'X-YouTube-Client-Name': '2',
         'X-YouTube-Client-Version': '2.20180823',
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': cookie,
     }
     action = proto.uint(1,6) + proto.string(3, comment_id) + proto.string(5, video_id) + proto.string(9, author_id)
     action = proto.percent_b64encode(action).decode('ascii')
@@ -100,13 +99,14 @@ def delete_comment(video_id, comment_id, author_id, session_token, cookie):
     data = urllib.parse.urlencode(data_dict).encode()
 
     req = urllib.request.Request("https://m.youtube.com/service_ajax?name=performCommentActionEndpoint", headers=headers, data=data)
+    cookie_jar.add_cookie_header(req)
     response = urllib.request.urlopen(req, timeout = 5)
     content = response.read()
 
 xsrf_token_regex = re.compile(r'''XSRF_TOKEN"\s*:\s*"([\w-]*(?:=|%3D){0,2})"''')
 def post_comment(parameters, fields):
-    with open(os.path.join(settings.data_dir, 'cookie.txt'), 'r', encoding='utf-8') as f:
-        cookie_data = f.read()
+    username = parameters['username']
+    cookie_jar = accounts.account_cookie_jar(username)
 
     #parameters = urllib.parse.parse_qs(query_string)
     try:
@@ -118,9 +118,8 @@ def post_comment(parameters, fields):
     # youtube-dl uses disable_polymer=1 which uses a different request format which has an obfuscated javascript algorithm to generate a parameter called "bgr"
     # Tokens retrieved from disable_polymer pages only work with that format. Tokens retrieved on mobile only work using mobile requests
     # Additionally, tokens retrieved without sending the same cookie won't work. So this is necessary even if the bgr and stuff was reverse engineered.
-    headers = {'User-Agent': common.mobile_user_agent,
-    'Cookie': cookie_data,}
-    mobile_page = common.fetch_url('https://m.youtube.com/watch?v=' + video_id, headers, report_text="Retrieved session token for comment").decode()
+    headers = {'User-Agent': common.mobile_user_agent}
+    mobile_page = common.fetch_url('https://m.youtube.com/watch?v=' + video_id, headers, report_text="Retrieved session token for comment", cookie_jar_send=cookie_jar).decode()
     match = xsrf_token_regex.search(mobile_page)
     if match:
         token = match.group(1).replace("%3D", "=")
