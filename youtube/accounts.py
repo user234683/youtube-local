@@ -6,7 +6,7 @@ from youtube import common
 import re
 import settings
 import http.cookiejar
-
+import io
 
 try:
     with open(os.path.join(settings.data_dir, 'accounts.txt'), 'r', encoding='utf-8') as f:
@@ -28,6 +28,12 @@ def add_account(username, password, save):
         "cookies":cookie_jar.as_lwp_str(ignore_discard=False, ignore_expires=False),
     }
 
+def cookie_jar_from_lwp_str(lwp_str):
+    cookie_jar = http.cookiejar.LWPCookieJar()
+    # HACK: cookiejar module insists on using filenames and reading files for you,
+    #  so present a StringIO to this internal method which takes a filelike object
+    cookie_jar._really_load(self, io.StringIO(lwp_str), "", False, False)
+    return cookie_jar
 
 # ---------------------------------
 # Code ported from youtube-dl
