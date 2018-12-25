@@ -1,7 +1,7 @@
 import mimetypes
 import urllib.parse
 import os
-from youtube import local_playlist, watch, search, playlist, channel, comments, common, account_functions
+from youtube import local_playlist, watch, search, playlist, channel, comments, common, post_comment
 import settings
 YOUTUBE_FILES = (
     "/shared.css",
@@ -66,7 +66,7 @@ def youtube(env, start_response):
 
         elif path == "/post_comment":
             start_response('200 OK',  () )
-            return account_functions.get_post_comment_page(query_string).encode()
+            return post_comment.get_post_comment_page(query_string).encode()
 
         elif path == "/opensearch.xml":
             with open("youtube" + path, 'rb') as f:
@@ -101,7 +101,7 @@ def youtube(env, start_response):
 
         elif path in ("/post_comment", "/comments"):
             parameters = urllib.parse.parse_qs(query_string)
-            account_functions.post_comment(parameters, fields)
+            post_comment.post_comment(parameters, fields)
             if 'parent_id' in parameters:
                 start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comments?' + query_string),) )
             else:

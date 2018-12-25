@@ -1,4 +1,4 @@
-# Contains functions having to do with logging in or requiring that one is logged in
+# Contains functions having to do with posting/editing/deleting comments
 
 import urllib
 import json
