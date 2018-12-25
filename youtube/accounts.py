@@ -13,21 +13,20 @@ try:
         accounts = json.loads(f.read())
 except FileNotFoundError:
     # global var for temporary storage of account info
-    accounts = []
+    accounts = {}
 
 def save_accounts():
-    to_save = list(account for account in accounts if account['save'])
+    to_save = {username: account for username, account in accounts.items() if account['save']}
     with open(os.path.join(settings.data_dir, 'accounts.txt'), 'w', encoding='utf-8') as f:
         f.write(json.dumps(to_save))
 
 def add_account(username, password, save):
     cookie_jar = http.cookiejar.LWPCookieJar()
     _login(username, password, cookie_jar)
-    accounts.append({
-        "username": username,
+    accounts[username] = {
         "save":save,
         "cookies":cookie_jar.as_lwp_str(ignore_discard=False, ignore_expires=False),
-    })
+    }
 
 
 # ---------------------------------
