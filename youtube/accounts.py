@@ -7,6 +7,7 @@ import re
 import settings
 import http.cookiejar
 import io
+import os
 
 try:
     with open(os.path.join(settings.data_dir, 'accounts.txt'), 'r', encoding='utf-8') as f:
@@ -37,6 +38,58 @@ def cookie_jar_from_lwp_str(lwp_str):
 
 def account_cookie_jar(username):
     return cookie_jar_from_lwp_str(accounts[username]['cookies'])
+
+def get_account_login_page(query_string):
+    style = ''' 
+    main{
+        display: grid;
+        grid-template-columns: minmax(0px, 3fr) 640px 40px 500px minmax(0px,2fr);
+    }
+
+    main form{
+        margin-top:20px;
+        grid-column:2;
+        display:grid;
+        justify-items: start;
+        align-content: start;
+        grid-row-gap: 10px;
+    }
+
+    #username, #password{
+        grid-column:2;
+        width: 250px;
+    }
+    #add-account-button{
+        margin-top:20px;
+    }
+    '''
+
+    page = '''
+    <form action="''' + common.URL_ORIGIN + '''/login" method="POST">
+        <div class="form-field">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username">
+        </div>
+        <div class="form-field">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password">
+        </div>
+        <div id="save-account-checkbox">
+            <input type="checkbox" id="save-account" name="save" checked>
+            <label for="save-account">Save account info to disk (password will not be saved, only the login cookie)</label>
+        </div>
+        <input type="submit" value="Add account" id="add-account-button">
+    </form>
+    '''
+
+    return common.yt_basic_template.substitute(
+        page_title = "Login",
+        style = style,
+        header = common.get_header(),
+        page = page,
+    )
+
+
 
 # ---------------------------------
 # Code ported from youtube-dl
@@ -271,7 +324,7 @@ def _login(username, password, cookie_jar):
         return False
 
     try:
-        check_cookie_results = common.fetch_url(check_cookie_url, report-text="Checked cookie", cookie_jar_send=cookie_jar, cookie_jar_receive=cookie_jar).decode('utf-8')
+        check_cookie_results = common.fetch_url(check_cookie_url, report_text="Checked cookie", cookie_jar_send=cookie_jar, cookie_jar_receive=cookie_jar).decode('utf-8')
     except (urllib.error.URLError, compat_http_client.HTTPException, socket.error) as err:
         return False
 

@@ -1,7 +1,7 @@
 import mimetypes
 import urllib.parse
 import os
-from youtube import local_playlist, watch, search, playlist, channel, comments, common, post_comment
+from youtube import local_playlist, watch, search, playlist, channel, comments, common, post_comment, accounts
 import settings
 YOUTUBE_FILES = (
     "/shared.css",
@@ -73,6 +73,10 @@ def youtube(env, start_response):
                 mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
                 start_response('200 OK',  (('Content-type',mime_type),) )
                 return f.read().replace(b'$port_number', str(settings.port_number).encode())
+
+        elif path == "/login":
+            start_response('200 OK',  (('Content-type','text/html'),) )
+            return accounts.get_account_login_page(query_string=query_string).encode()
 
         else:
             start_response('200 OK',  (('Content-type','text/html'),) )
