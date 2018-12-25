@@ -8,6 +8,14 @@ import traceback
 import settings
 import http.cookiejar
 
+
+try:
+    with open(os.path.join(settings.data_dir, 'accounts.txt'), 'r', encoding='utf-8') as f:
+        accounts = json.loads(f.read())
+except FileNotFoundError:
+    # global var for temporary storage of account info
+    accounts = []
+
 def _post_comment(text, video_id, session_token, cookie):
     headers = {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
@@ -191,7 +199,10 @@ textarea{
         page = page,
     )
 
-
+def save_accounts():
+    to_save = list(account for account in accounts if account['save'])
+    with open(os.path.join(settings.data_dir, 'accounts.txt'), 'w', encoding='utf-8') as f:
+        f.write(json.dumps(to_save))
 
 # ---------------------------------
 # Code ported from youtube-dl
