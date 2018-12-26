@@ -158,6 +158,13 @@ def try_get(src, getter, expected_type=None):
 def remove_start(s, start):
     return s[len(start):] if s is not None and s.startswith(start) else s
 
+
+yt_dl_headers = {
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:59.0) Gecko/20100101 Firefox/59.0 (Chrome)',
+    'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-us,en;q=0.5',
+}
 _LOGIN_URL = 'https://accounts.google.com/ServiceLogin'
 _TWOFACTOR_URL = 'https://accounts.google.com/signin/challenge'
 
@@ -172,8 +179,10 @@ def _login(username, password, cookie_jar):
 
     Taken from youtube-dl
     """
-    login_page = common.fetch_url(_LOGIN_URL, report_text='Downloaded login page', cookie_jar_receive=cookie_jar).decode('utf-8')
-
+    login_page = common.fetch_url(_LOGIN_URL, yt_dl_headers, report_text='Downloaded login page', cookie_jar_receive=cookie_jar).decode('utf-8')
+    '''with open('debug/login_page', 'w', encoding='utf-8') as f:
+        f.write(login_page)'''
+    #print(cookie_jar.as_lwp_str())
     if login_page is False:
         return
 
@@ -195,7 +204,11 @@ def _login(username, password, cookie_jar):
             'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
             'Google-Accounts-XSRF': 1,
         }
-        result = common.fetch_url(url, headers, report_text=note, data=data, cookie_jar_send=cookie_jar, cookie_jar_receive=cookie_jar)
+        headers.update(yt_dl_headers)
+        result = common.fetch_url(url, headers, report_text=note, data=data, cookie_jar_send=cookie_jar, cookie_jar_receive=cookie_jar).decode('utf-8')
+        #print(cookie_jar.as_lwp_str())
+        '''with open('debug/' + note, 'w', encoding='utf-8') as f:
+            f.write(result)'''
         result = re.sub(r'^[^\[]*', '', result)
         return json.loads(result)
 
@@ -324,7 +337,7 @@ def _login(username, password, cookie_jar):
         return False
 
     try:
-        check_cookie_results = common.fetch_url(check_cookie_url, report_text="Checked cookie", cookie_jar_send=cookie_jar, cookie_jar_receive=cookie_jar).decode('utf-8')
+        check_cookie_results = common.fetch_url(check_cookie_url, headers=yt_dl_headers, report_text="Checked cookie", cookie_jar_send=cookie_jar, cookie_jar_receive=cookie_jar).decode('utf-8')
     except (urllib.error.URLError, compat_http_client.HTTPException, socket.error) as err:
         return False
 
