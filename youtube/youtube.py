@@ -116,6 +116,19 @@ def youtube(env, start_response):
                 start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comments?ctoken=' + comments.make_comment_ctoken(video_id, sort=1)),) )
             return ''
 
+        elif path == "/login":
+            if 'save' in fields and fields['save'][0] == "on":
+                save_account = True
+            else:
+                save_account = False
+
+            if accounts.add_account(fields['username'][0], fields['password'][0], save_account ):
+                start_response('200 OK',  () )
+                return b'Account successfully added'
+            else:
+                start_response('200 OK',  () )
+                return b'Failed to add account'
+
         else:
             start_response('404 Not Found', ())
             return b'404 Not Found' 
