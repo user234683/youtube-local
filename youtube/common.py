@@ -169,12 +169,12 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookie_j
     start_time = time.time()
 
     req = urllib.request.Request(url, data=data, headers=headers)
-    if cookie_jar_send:
+    if cookie_jar_send is not None:
         cookie_jar_send.add_cookie_header(req)
     response = urllib.request.urlopen(req, timeout=timeout)
     response_time = time.time()
 
-    if cookie_jar_receive:
+    if cookie_jar_receive is not None:
         cookie_jar_receive.extract_cookies(response, req)
 
     content = response.read()
