@@ -171,11 +171,11 @@ def decode_content(content, encoding_header):
             content = gzip.decompress(content)
     return content
 
-def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookie_jar_send=None, cookie_jar_receive=None, use_tor=True):
+def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookiejar_send=None, cookiejar_receive=None, use_tor=True):
     '''
-    When cookie_jar_send is set to a CookieJar object,
+    When cookiejar_send is set to a CookieJar object,
      those cookies will be sent in the request (but cookies in response will not be merged into it)
-    When cookie_jar_receive is set to a CookieJar object,
+    When cookiejar_receive is set to a CookieJar object,
      cookies received in the response will be merged into the object (nothing will be sent from it)
     When both are set to the same object, cookies will be sent from the object,
      and response cookies will be merged into it.
@@ -194,7 +194,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookie_j
 
     req = urllib.request.Request(url, data=data, headers=headers)
 
-    cookie_processor = HTTPAsymmetricCookieProcessor(cookiejar_send=cookie_jar_send, cookiejar_receive=cookie_jar_receive)
+    cookie_processor = HTTPAsymmetricCookieProcessor(cookiejar_send=cookiejar_send, cookiejar_receive=cookiejar_receive)
 
     if use_tor and settings.route_tor:
         opener = urllib.request.build_opener(sockshandler.SocksiPyHandler(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 9150), cookie_processor)

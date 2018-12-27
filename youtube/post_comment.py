@@ -8,7 +8,7 @@ import traceback
 import settings
 import os
 
-def _post_comment(text, video_id, session_token, cookie_jar):
+def _post_comment(text, video_id, session_token, cookiejar):
     headers = {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
         'Accept': '*/*',
@@ -31,7 +31,7 @@ def _post_comment(text, video_id, session_token, cookie_jar):
     data = urllib.parse.urlencode(data_dict).encode()
 
 
-    content = common.fetch_url("https://m.youtube.com/service_ajax?name=createCommentEndpoint", headers=headers, data=data, cookie_jar_send=cookie_jar)
+    content = common.fetch_url("https://m.youtube.com/service_ajax?name=createCommentEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
 
     code = json.loads(content)['code']
     print("Comment posting code: " + code)
@@ -40,7 +40,7 @@ def _post_comment(text, video_id, session_token, cookie_jar):
         f.write(content)'''
 
 
-def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie_jar):
+def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookiejar):
     headers = {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
         'Accept': '*/*',
@@ -62,7 +62,7 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
     }
     data = urllib.parse.urlencode(data_dict).encode()
 
-    content = common.fetch_url("https://m.youtube.com/service_ajax?name=createCommentReplyEndpoint", headers=headers, data=data, cookie_jar_send=cookie_jar)
+    content = common.fetch_url("https://m.youtube.com/service_ajax?name=createCommentReplyEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
 
     code = json.loads(content)['code']
     print("Comment posting code: " + code)
@@ -70,7 +70,7 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
     '''with open('debug/post_comment_response', 'wb') as f:
         f.write(content)'''
 
-def delete_comment(video_id, comment_id, author_id, session_token, cookie_jar):
+def delete_comment(video_id, comment_id, author_id, session_token, cookiejar):
     headers = {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
         'Accept': '*/*',
@@ -90,12 +90,12 @@ def delete_comment(video_id, comment_id, author_id, session_token, cookie_jar):
     }
     data = urllib.parse.urlencode(data_dict).encode()
 
-    content = common.fetch_url("https://m.youtube.com/service_ajax?name=performCommentActionEndpoint", headers=headers, data=data, cookie_jar_send=cookie_jar)
+    content = common.fetch_url("https://m.youtube.com/service_ajax?name=performCommentActionEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
 
 xsrf_token_regex = re.compile(r'''XSRF_TOKEN"\s*:\s*"([\w-]*(?:=|%3D){0,2})"''')
 def post_comment(parameters, fields):
     username = parameters['username']
-    cookie_jar = accounts.account_cookie_jar(username)
+    cookiejar = accounts.account_cookiejar(username)
 
     #parameters = urllib.parse.parse_qs(query_string)
     try:
@@ -108,7 +108,7 @@ def post_comment(parameters, fields):
     # Tokens retrieved from disable_polymer pages only work with that format. Tokens retrieved on mobile only work using mobile requests
     # Additionally, tokens retrieved without sending the same cookie won't work. So this is necessary even if the bgr and stuff was reverse engineered.
     headers = {'User-Agent': common.mobile_user_agent}
-    mobile_page = common.fetch_url('https://m.youtube.com/watch?v=' + video_id, headers, report_text="Retrieved session token for comment", cookie_jar_send=cookie_jar).decode()
+    mobile_page = common.fetch_url('https://m.youtube.com/watch?v=' + video_id, headers, report_text="Retrieved session token for comment", cookiejar_send=cookiejar).decode()
     match = xsrf_token_regex.search(mobile_page)
     if match:
         token = match.group(1).replace("%3D", "=")

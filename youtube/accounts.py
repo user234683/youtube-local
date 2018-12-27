@@ -22,23 +22,23 @@ def save_accounts():
         f.write(json.dumps(to_save))
 
 def add_account(username, password, save):
-    cookie_jar = http.cookiejar.LWPCookieJar()
-    condition = _login(username, password, cookie_jar)
+    cookiejar = http.cookiejar.LWPCookieJar()
+    condition = _login(username, password, cookiejar)
     accounts[username] = {
         "save":save,
-        "cookies":cookie_jar.as_lwp_str(ignore_discard=False, ignore_expires=False),
+        "cookies":cookiejar.as_lwp_str(ignore_discard=False, ignore_expires=False),
     }
     return condition
 
-def cookie_jar_from_lwp_str(lwp_str):
-    cookie_jar = http.cookiejar.LWPCookieJar()
+def cookiejar_from_lwp_str(lwp_str):
+    cookiejar = http.cookiejar.LWPCookieJar()
     # HACK: cookiejar module insists on using filenames and reading files for you,
     #  so present a StringIO to this internal method which takes a filelike object
-    cookie_jar._really_load(self, io.StringIO(lwp_str), "", False, False)
-    return cookie_jar
+    cookiejar._really_load(self, io.StringIO(lwp_str), "", False, False)
+    return cookiejar
 
-def account_cookie_jar(username):
-    return cookie_jar_from_lwp_str(accounts[username]['cookies'])
+def account_cookiejar(username):
+    return cookiejar_from_lwp_str(accounts[username]['cookies'])
 
 def get_account_login_page(query_string):
     style = ''' 
@@ -172,7 +172,7 @@ _TWOFACTOR_URL = 'https://accounts.google.com/signin/challenge'
 _LOOKUP_URL = 'https://accounts.google.com/_/signin/sl/lookup'
 _CHALLENGE_URL = 'https://accounts.google.com/_/signin/sl/challenge'
 _TFA_URL = 'https://accounts.google.com/_/signin/challenge?hl=en&TL={0}'
-def _login(username, password, cookie_jar):
+def _login(username, password, cookiejar):
     """
     Attempt to log in to YouTube.
     True is returned if successful or skipped.
@@ -181,10 +181,10 @@ def _login(username, password, cookie_jar):
     Taken from youtube-dl
     """
 
-    login_page = common.fetch_url(_LOGIN_URL, yt_dl_headers, report_text='Downloaded login page', cookie_jar_receive=cookie_jar, use_tor=False).decode('utf-8')
+    login_page = common.fetch_url(_LOGIN_URL, yt_dl_headers, report_text='Downloaded login page', cookiejar_receive=cookiejar, use_tor=False).decode('utf-8')
     '''with open('debug/login_page', 'w', encoding='utf-8') as f:
         f.write(login_page)'''
-    #print(cookie_jar.as_lwp_str())
+    #print(cookiejar.as_lwp_str())
     if login_page is False:
         return
 
@@ -207,8 +207,8 @@ def _login(username, password, cookie_jar):
             'Google-Accounts-XSRF': 1,
         }
         headers.update(yt_dl_headers)
-        result = common.fetch_url(url, headers, report_text=note, data=data, cookie_jar_send=cookie_jar, cookie_jar_receive=cookie_jar, use_tor=False).decode('utf-8')
-        #print(cookie_jar.as_lwp_str())
+        result = common.fetch_url(url, headers, report_text=note, data=data, cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=False).decode('utf-8')
+        #print(cookiejar.as_lwp_str())
         '''with open('debug/' + note, 'w', encoding='utf-8') as f:
             f.write(result)'''
         result = re.sub(r'^[^\[]*', '', result)
@@ -339,7 +339,7 @@ def _login(username, password, cookie_jar):
         return False
 
     try:
-        check_cookie_results = common.fetch_url(check_cookie_url, headers=yt_dl_headers, report_text="Checked cookie", cookie_jar_send=cookie_jar, cookie_jar_receive=cookie_jar, use_tor=False).decode('utf-8')
+        check_cookie_results = common.fetch_url(check_cookie_url, headers=yt_dl_headers, report_text="Checked cookie", cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=False).decode('utf-8')
     except (urllib.error.URLError, compat_http_client.HTTPException, socket.error) as err:
         return False
 
