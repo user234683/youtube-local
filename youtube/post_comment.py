@@ -108,7 +108,7 @@ def post_comment(parameters, fields):
     # Tokens retrieved from disable_polymer pages only work with that format. Tokens retrieved on mobile only work using mobile requests
     # Additionally, tokens retrieved without sending the same cookie won't work. So this is necessary even if the bgr and stuff was reverse engineered.
     headers = {'User-Agent': common.mobile_user_agent}
-    mobile_page = common.fetch_url('https://m.youtube.com/watch?v=' + video_id, headers, report_text="Retrieved session token for comment", cookiejar_send=cookiejar).decode()
+    mobile_page = common.fetch_url('https://m.youtube.com/watch?v=' + video_id, headers, report_text="Retrieved session token for comment", cookiejar_send=cookiejar, cookiejar_receive=cookiejar).decode()
     match = xsrf_token_regex.search(mobile_page)
     if match:
         token = match.group(1).replace("%3D", "=")
