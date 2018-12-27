@@ -16,6 +16,9 @@ except FileNotFoundError:
     # global var for temporary storage of account info
     accounts = {}
 
+def username_list():
+    return accounts.keys()
+
 def save_accounts():
     to_save = {username: account for username, account in accounts.items() if account['save']}
     with open(os.path.join(settings.data_dir, 'accounts.txt'), 'w', encoding='utf-8') as f:

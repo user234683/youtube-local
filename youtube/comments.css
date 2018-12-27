@@ -23,15 +23,29 @@
         width: 100%;
     }
 
+.comment-form{
+    display: grid;
+    align-content: start;
+    justify-items: start;
+    align-items: start;
+}
+    #comment-account-options{
+        display:grid;
+        grid-auto-flow: column;
+        grid-column-gap: 10px;
+        margin-top:10px;
+        margin-bottom:10px;
+    }
+        #comment-account-options a{
+            margin-left:10px;
+        }
+
 .comments-area{
     display:grid;
 }
-    .comment-form{
-        display:contents;
-    }
     .comments-area textarea{
         resize: vertical;
-        margin-top:10px;
+        justify-self:stretch;
     }
     .post-comment-button{
         margin-top:10px;

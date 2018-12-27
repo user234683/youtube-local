@@ -1,5 +1,5 @@
 import json
-from youtube import proto, common
+from youtube import proto, common, accounts
 import base64
 from youtube.common import uppercase_escape, default_multi_get, format_text_runs, URL_ORIGIN, fetch_url
 from string import Template
@@ -311,8 +311,21 @@ video_metadata_template = Template('''<section class="video-metadata">
     <span>Sorted by $sort</span>
 </section>
 ''')
+account_option_template = Template('''
+            <option value="$username">$username</option>''')
+
+def comment_box_account_options():
+    return ''.join(account_option_template.substitute(username=username) for username in accounts.username_list())
+
 comment_box_template = Template('''
 <form action="$form_action" method="post" class="comment-form">
+    <div id="comment-account-options">
+        <label for="username-selection">Account:</label>
+        <select id="username-selection">
+$options
+        </select>
+        <a href="''' + common.URL_ORIGIN + '''/login" target="_blank">Add account</a>
+    </div>
     <textarea name="comment_text"></textarea>
     $video_id_input
     <button type="submit" class="post-comment-button">$post_text</button>
@@ -334,7 +347,7 @@ def get_comments_page(query_string):
     if replies:
         page_title = 'Replies'
         video_metadata = ''
-        comment_box = comment_box_template.substitute(form_action='', video_id_input='', post_text='Post reply')
+        comment_box = comment_box_template.substitute(form_action='', video_id_input='', post_text='Post reply', options=comment_box_account_options())
         comment_links = ''
     else:
         page_number = str(int(metadata['offset']/20) + 1)
@@ -350,7 +363,8 @@ def get_comments_page(query_string):
         comment_box = comment_box_template.substitute(
             form_action= common.URL_ORIGIN + '/post_comment',
             video_id_input='''<input type="hidden" name="video_id" value="''' + metadata['video_id'] + '''">''',
-            post_text='Post comment'
+            post_text='Post comment',
+            options=comment_box_account_options(),
         )
 
         other_sort_url = common.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(metadata['video_id'], sort=1 - metadata['sort'])

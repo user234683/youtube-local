@@ -160,18 +160,21 @@ textarea{
 }
 .comment-form{
     grid-column:2;
+    justify-content:start;
 }'''
     if parent_id:   # comment reply
         comment_box = comments.comment_box_template.substitute(
             form_action = common.URL_ORIGIN + '/comments?parent_id=' + parent_id + "&video_id=" + video_id,
             video_id_input = '',
             post_text = "Post reply",
+            options=comments.comment_box_account_options(),
         )
     else:
         comment_box = comments.comment_box_template.substitute(
             form_action = common.URL_ORIGIN + '/post_comment',
             video_id_input = '''<input type="hidden" name="video_id" value="''' + video_id + '''">''',
             post_text = "Post comment",
+            options=comments.comment_box_account_options(),
         )
         
     page = '''<div class="left">\n''' + comment_box + '''</div>\n'''
