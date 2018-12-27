@@ -138,6 +138,28 @@ medium_channel_item_template = Template('''
                 </div>
 ''')
 
+
+class HTTPAsymmetricCookieProcessor(urllib.request.BaseHandler):
+    '''Separate cookiejars for receiving and sending'''
+    def __init__(self, cookiejar_send=None, cookiejar_receive=None):
+        import http.cookiejar
+        self.cookiejar_send = cookiejar_send
+        self.cookiejar_receive = cookiejar_receive
+
+    def http_request(self, request):
+        if self.cookiejar_send is not None:
+            self.cookiejar_send.add_cookie_header(request)
+        return request
+
+    def http_response(self, request, response):
+        if self.cookiejar_receive is not None:
+            self.cookiejar_receive.extract_cookies(response, request)
+        return response
+
+    https_request = http_request
+    https_response = http_response
+
+
 def decode_content(content, encoding_header):
     encodings = encoding_header.replace(' ', '').split(',')
     for encoding in reversed(encodings):
@@ -171,18 +193,17 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookie_j
 
 
     req = urllib.request.Request(url, data=data, headers=headers)
-    if cookie_jar_send is not None:
-        cookie_jar_send.add_cookie_header(req)
+
+    cookie_processor = HTTPAsymmetricCookieProcessor(cookiejar_send=cookie_jar_send, cookiejar_receive=cookie_jar_receive)
 
     if use_tor and settings.route_tor:
-        opener = urllib.request.build_opener(sockshandler.SocksiPyHandler(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 9150))
-        response = opener.open(req, timeout=timeout)
+        opener = urllib.request.build_opener(sockshandler.SocksiPyHandler(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 9150), cookie_processor)
     else:
-        response = urllib.request.urlopen(req, timeout=timeout)
+        opener = urllib.request.build_opener(cookie_processor)
+
+    response = opener.open(req, timeout=timeout)
     response_time = time.time()
 
-    if cookie_jar_receive is not None:
-        cookie_jar_receive.extract_cookies(response, req)
 
     content = response.read()
     read_finish = time.time()
