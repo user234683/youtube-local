@@ -232,7 +232,11 @@ def get_watch_page(query_string):
         parsed_qs = urllib.parse.parse_qs(query_string)
         id = parsed_qs['v'][0]
         lc = common.default_multi_get(parsed_qs, 'lc', 0, default='')
-        downloader = YoutubeDL(params={'youtube_include_dash_manifest':False})
+        if settings.route_tor:
+            proxy = 'socks5://127.0.0.1:9150/'
+        else:
+            proxy = ''
+        downloader = YoutubeDL(params={'youtube_include_dash_manifest':False, 'proxy':proxy})
         tasks = (
             gevent.spawn(comments.video_comments, id, int(settings.default_comment_sorting), lc=lc ), 
             gevent.spawn(extract_info, downloader, "https://www.youtube.com/watch?v=" + id, download=False)

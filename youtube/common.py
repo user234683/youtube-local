@@ -1,5 +1,6 @@
 from youtube.template import Template
 from youtube import local_playlist
+import settings
 import html
 import json
 import re
@@ -7,7 +8,7 @@ import urllib.parse
 import gzip
 import brotli
 import time
-
+import socks, sockshandler
 
 URL_ORIGIN = "/https://www.youtube.com"
 
@@ -148,7 +149,7 @@ def decode_content(content, encoding_header):
             content = gzip.decompress(content)
     return content
 
-def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookie_jar_send=None, cookie_jar_receive=None):
+def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookie_jar_send=None, cookie_jar_receive=None, use_tor=True):
     '''
     When cookie_jar_send is set to a CookieJar object,
      those cookies will be sent in the request (but cookies in response will not be merged into it)
@@ -168,10 +169,16 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookie_j
 
     start_time = time.time()
 
+
     req = urllib.request.Request(url, data=data, headers=headers)
     if cookie_jar_send is not None:
         cookie_jar_send.add_cookie_header(req)
-    response = urllib.request.urlopen(req, timeout=timeout)
+
+    if use_tor and settings.route_tor:
+        opener = urllib.request.build_opener(sockshandler.SocksiPyHandler(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 9150))
+        response = opener.open(req, timeout=timeout)
+    else:
+        response = urllib.request.urlopen(req, timeout=timeout)
     response_time = time.time()
 
     if cookie_jar_receive is not None:

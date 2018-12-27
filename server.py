@@ -7,7 +7,7 @@ from youtube.youtube import youtube
 import http_errors
 import urllib
 import socket
-import socks
+import socks, sockshandler
 import subprocess
 import re
 
@@ -41,8 +41,15 @@ def proxy_site(env, start_response):
     url = "https://" + env['SERVER_NAME'] + env['PATH_INFO']
     if env['QUERY_STRING']:
         url += '?' + env['QUERY_STRING']
+
+
     req = urllib.request.Request(url, headers=headers)
-    response = urllib.request.urlopen(req, timeout = 10)
+    if settings.route_tor:
+        opener = urllib.request.build_opener(sockshandler.SocksiPyHandler(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 9150))
+        response = opener.open(req, timeout=10)
+    else:
+        response = urllib.request.urlopen(req, timeout=10)
+
     start_response('200 OK', response.getheaders() )
     return response.read()
 
@@ -141,11 +148,6 @@ def site_dispatch(env, start_response):
 
 
 
-if settings.route_tor:
-    #subprocess.Popen(TOR_PATH)
-    socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5, '127.0.0.1', 9150)
-    socket.socket = socks.socksocket
-    gevent.socket.socket = socks.socksocket
 
 if settings.allow_foreign_addresses:
     server = WSGIServer(('0.0.0.0', settings.port_number), site_dispatch)

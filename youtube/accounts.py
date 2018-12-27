@@ -180,7 +180,8 @@ def _login(username, password, cookie_jar):
 
     Taken from youtube-dl
     """
-    login_page = common.fetch_url(_LOGIN_URL, yt_dl_headers, report_text='Downloaded login page', cookie_jar_receive=cookie_jar).decode('utf-8')
+
+    login_page = common.fetch_url(_LOGIN_URL, yt_dl_headers, report_text='Downloaded login page', cookie_jar_receive=cookie_jar, use_tor=False).decode('utf-8')
     '''with open('debug/login_page', 'w', encoding='utf-8') as f:
         f.write(login_page)'''
     #print(cookie_jar.as_lwp_str())
@@ -206,7 +207,7 @@ def _login(username, password, cookie_jar):
             'Google-Accounts-XSRF': 1,
         }
         headers.update(yt_dl_headers)
-        result = common.fetch_url(url, headers, report_text=note, data=data, cookie_jar_send=cookie_jar, cookie_jar_receive=cookie_jar).decode('utf-8')
+        result = common.fetch_url(url, headers, report_text=note, data=data, cookie_jar_send=cookie_jar, cookie_jar_receive=cookie_jar, use_tor=False).decode('utf-8')
         #print(cookie_jar.as_lwp_str())
         '''with open('debug/' + note, 'w', encoding='utf-8') as f:
             f.write(result)'''
@@ -338,9 +339,12 @@ def _login(username, password, cookie_jar):
         return False
 
     try:
-        check_cookie_results = common.fetch_url(check_cookie_url, headers=yt_dl_headers, report_text="Checked cookie", cookie_jar_send=cookie_jar, cookie_jar_receive=cookie_jar).decode('utf-8')
+        check_cookie_results = common.fetch_url(check_cookie_url, headers=yt_dl_headers, report_text="Checked cookie", cookie_jar_send=cookie_jar, cookie_jar_receive=cookie_jar, use_tor=False).decode('utf-8')
     except (urllib.error.URLError, compat_http_client.HTTPException, socket.error) as err:
         return False
+
+    '''with open('debug/check_cookie_results', 'w', encoding='utf-8') as f:
+        f.write(check_cookie_results)'''
 
     if 'https://myaccount.google.com/' not in check_cookie_results:
         warn('Unable to log in')

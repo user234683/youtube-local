@@ -13,7 +13,6 @@ def _post_comment(text, video_id, session_token, cookie_jar):
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
         'Accept': '*/*',
         'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
         'X-YouTube-Client-Name': '2',
         'X-YouTube-Client-Version': '2.20180823',
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -31,11 +30,9 @@ def _post_comment(text, video_id, session_token, cookie_jar):
     }
     data = urllib.parse.urlencode(data_dict).encode()
 
-    req = urllib.request.Request("https://m.youtube.com/service_ajax?name=createCommentEndpoint", headers=headers, data=data)
-    cookie_jar.add_cookie_header(req)
-    response = urllib.request.urlopen(req, timeout = 5)
-    content = response.read()
-    content = common.decode_content(content, response.getheader('Content-Encoding', default='identity'))
+
+    content = common.fetch_url("https://m.youtube.com/service_ajax?name=createCommentEndpoint", headers=headers, data=data, cookie_jar_send=cookie_jar)
+
     code = json.loads(content)['code']
     print("Comment posting code: " + code)
     return code
@@ -48,7 +45,6 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
         'Accept': '*/*',
         'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
         'X-YouTube-Client-Name': '2',
         'X-YouTube-Client-Version': '2.20180823',
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -66,11 +62,8 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
     }
     data = urllib.parse.urlencode(data_dict).encode()
 
-    req = urllib.request.Request("https://m.youtube.com/service_ajax?name=createCommentReplyEndpoint", headers=headers, data=data)
-    cookie_jar.add_cookie_header(req)
-    response = urllib.request.urlopen(req, timeout = 5)
-    content = response.read()
-    content = common.decode_content(content, response.getheader('Content-Encoding', default='identity'))
+    content = common.fetch_url("https://m.youtube.com/service_ajax?name=createCommentReplyEndpoint", headers=headers, data=data, cookie_jar_send=cookie_jar)
+
     code = json.loads(content)['code']
     print("Comment posting code: " + code)
     return code
@@ -82,7 +75,6 @@ def delete_comment(video_id, comment_id, author_id, session_token, cookie_jar):
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
         'Accept': '*/*',
         'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
         'X-YouTube-Client-Name': '2',
         'X-YouTube-Client-Version': '2.20180823',
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -98,10 +90,7 @@ def delete_comment(video_id, comment_id, author_id, session_token, cookie_jar):
     }
     data = urllib.parse.urlencode(data_dict).encode()
 
-    req = urllib.request.Request("https://m.youtube.com/service_ajax?name=performCommentActionEndpoint", headers=headers, data=data)
-    cookie_jar.add_cookie_header(req)
-    response = urllib.request.urlopen(req, timeout = 5)
-    content = response.read()
+    content = common.fetch_url("https://m.youtube.com/service_ajax?name=performCommentActionEndpoint", headers=headers, data=data, cookie_jar_send=cookie_jar)
 
 xsrf_token_regex = re.compile(r'''XSRF_TOKEN"\s*:\s*"([\w-]*(?:=|%3D){0,2})"''')
 def post_comment(parameters, fields):
