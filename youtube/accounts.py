@@ -23,12 +23,15 @@ def save_accounts():
 
 def add_account(username, password, save):
     cookiejar = http.cookiejar.LWPCookieJar()
-    condition = _login(username, password, cookiejar)
-    accounts[username] = {
-        "save":save,
-        "cookies":cookiejar.as_lwp_str(ignore_discard=False, ignore_expires=False),
-    }
-    return condition
+    successful = _login(username, password, cookiejar)
+    if successful:
+        accounts[username] = {
+            "save":save,
+            "cookies":cookiejar.as_lwp_str(ignore_discard=False, ignore_expires=False),
+        }
+        if save:
+            save_accounts()
+    return successful
 
 def cookiejar_from_lwp_str(lwp_str):
     cookiejar = http.cookiejar.LWPCookieJar()
