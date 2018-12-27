@@ -94,7 +94,7 @@ def delete_comment(video_id, comment_id, author_id, session_token, cookiejar):
 
 xsrf_token_regex = re.compile(r'''XSRF_TOKEN"\s*:\s*"([\w-]*(?:=|%3D){0,2})"''')
 def post_comment(parameters, fields):
-    username = parameters['username']
+    username = fields['username'][0]
     cookiejar = accounts.account_cookiejar(username)
 
     #parameters = urllib.parse.parse_qs(query_string)
@@ -116,7 +116,7 @@ def post_comment(parameters, fields):
         raise Exception("Couldn't find xsrf_token")
 
     if 'parent_id' in parameters:
-        code = _post_comment_reply(fields['comment_text'][0], parameters['video_id'][0], parameters['parent_id'][0], token, cookie_data)
+        code = _post_comment_reply(fields['comment_text'][0], parameters['video_id'][0], parameters['parent_id'][0], token, cookiejar)
         '''try:
             response = comments.get_comments_page(query_string)
         except socket.error as e:
@@ -127,7 +127,7 @@ def post_comment(parameters, fields):
             return b'Refreshing comment page yielded error 500 Internal Server Error.\nPost comment status code: ' + code.encode('ascii')
         return response'''
     else:
-        code = _post_comment(fields['comment_text'][0], fields['video_id'][0], token, cookie_data)
+        code = _post_comment(fields['comment_text'][0], fields['video_id'][0], token, cookiejar)
         
         '''try:
             response = comments.get_comments_page('ctoken=' + comments.make_comment_ctoken(video_id, sort=1))
