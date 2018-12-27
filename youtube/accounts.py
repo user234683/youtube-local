@@ -19,7 +19,7 @@ except FileNotFoundError:
 def save_accounts():
     to_save = {username: account for username, account in accounts.items() if account['save']}
     with open(os.path.join(settings.data_dir, 'accounts.txt'), 'w', encoding='utf-8') as f:
-        f.write(json.dumps(to_save))
+        f.write(json.dumps(to_save, indent=4))
 
 def add_account(username, password, save):
     cookiejar = http.cookiejar.LWPCookieJar()
@@ -27,7 +27,7 @@ def add_account(username, password, save):
     if successful:
         accounts[username] = {
             "save":save,
-            "cookies":cookiejar.as_lwp_str(ignore_discard=False, ignore_expires=False),
+            "cookies":cookiejar.as_lwp_str(ignore_discard=False, ignore_expires=False).split('\n'),
         }
         if save:
             save_accounts()
@@ -41,7 +41,7 @@ def cookiejar_from_lwp_str(lwp_str):
     return cookiejar
 
 def account_cookiejar(username):
-    return cookiejar_from_lwp_str(accounts[username]['cookies'])
+    return cookiejar_from_lwp_str('\n'.join(accounts[username]['cookies']))
 
 def get_account_login_page(query_string):
     style = ''' 
