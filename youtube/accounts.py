@@ -37,10 +37,11 @@ def add_account(username, password, save):
     return successful
 
 def cookiejar_from_lwp_str(lwp_str):
+    lwp_str = "#LWP-Cookies-2.0\n" + lwp_str    # header required by _really_load for reading from "file"
     cookiejar = http.cookiejar.LWPCookieJar()
     # HACK: cookiejar module insists on using filenames and reading files for you,
     #  so present a StringIO to this internal method which takes a filelike object
-    cookiejar._really_load(self, io.StringIO(lwp_str), "", False, False)
+    cookiejar._really_load(io.StringIO(lwp_str), "", False, False)
     return cookiejar
 
 def account_cookiejar(username):
