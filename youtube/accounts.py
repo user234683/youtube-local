@@ -26,15 +26,17 @@ def save_accounts():
 
 def add_account(username, password, save, use_tor):
     cookiejar = http.cookiejar.LWPCookieJar()
-    successful = _login(username, password, cookiejar, use_tor)
-    if successful:
+    result = _login(username, password, cookiejar, use_tor)
+    if isinstance(result, dict):
         accounts[username] = {
             "save":save,
+            "channel_id": result["channel_id"],
             "cookies":cookiejar.as_lwp_str(ignore_discard=False, ignore_expires=False).split('\n'),
         }
         if save:
             save_accounts()
-    return successful
+        return True
+    return False
 
 def cookiejar_from_lwp_str(lwp_str):
     lwp_str = "#LWP-Cookies-2.0\n" + lwp_str    # header required by _really_load for reading from "file"
@@ -194,6 +196,7 @@ _TWOFACTOR_URL = 'https://accounts.google.com/signin/challenge'
 _LOOKUP_URL = 'https://accounts.google.com/_/signin/sl/lookup'
 _CHALLENGE_URL = 'https://accounts.google.com/_/signin/sl/challenge'
 _TFA_URL = 'https://accounts.google.com/_/signin/challenge?hl=en&TL={0}'
+_CHANNEL_ID_RE = re.compile(r'"channelUrl"\s*:\s*"\\/channel\\/(UC[\w-]{22})"')
 def _login(username, password, cookiejar, use_tor):
     """
     Attempt to log in to YouTube.
@@ -372,4 +375,12 @@ def _login(username, password, cookiejar, use_tor):
         warn('Unable to log in')
         return False
 
-    return True
+    select_site_page = common.fetch_url('https://m.youtube.com/select_site', headers=common.mobile_ua, report_text="Retrieved page for channel id", cookiejar_send=cookiejar, use_tor=use_tor).decode('utf-8')
+    match = _CHANNEL_ID_RE.search(select_site_page)
+    if match is None:
+        warn('Failed to find channel id')
+        return False
+
+    channel_id = match.group(1)
+
+    return {'channel_id': channel_id}
