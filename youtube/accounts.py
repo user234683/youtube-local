@@ -24,9 +24,9 @@ def save_accounts():
     with open(os.path.join(settings.data_dir, 'accounts.txt'), 'w', encoding='utf-8') as f:
         f.write(json.dumps(to_save, indent=4))
 
-def add_account(username, password, save):
+def add_account(username, password, save, use_tor):
     cookiejar = http.cookiejar.LWPCookieJar()
-    successful = _login(username, password, cookiejar)
+    successful = _login(username, password, cookiejar, use_tor)
     if successful:
         accounts[username] = {
             "save":save,
@@ -52,6 +52,8 @@ def get_account_login_page(query_string):
     main{
         display: grid;
         grid-template-columns: minmax(0px, 3fr) 640px 40px 500px minmax(0px,2fr);
+        align-content: start;
+        grid-row-gap: 40px;
     }
 
     main form{
@@ -70,6 +72,12 @@ def get_account_login_page(query_string):
     #add-account-button{
         margin-top:20px;
     }
+    #tor-note{
+        grid-row:2;
+        grid-column:2;
+        background-color: #dddddd;
+        padding: 10px;
+    }
     '''
 
     page = '''
@@ -86,8 +94,15 @@ def get_account_login_page(query_string):
             <input type="checkbox" id="save-account" name="save" checked>
             <label for="save-account">Save account info to disk (password will not be saved, only the login cookie)</label>
         </div>
+        <div>
+            <input type="checkbox" id="use-tor" name="use_tor">
+            <label for="use-tor">Use Tor when logging in (WARNING: This will lock your Google account under normal circumstances, see note below)</label>
+        </div>
         <input type="submit" value="Add account" id="add-account-button">
     </form>
+    <div id="tor-note"><b>Note on using Tor to log in</b><br>
+Using Tor to log in should only be done if the account was created using a proxy/VPN/Tor to begin with and hasn't been logged in using your IP. Otherwise, it's pointless since Google already knows who the account belongs to. When logging into a google account, it must be logged in using an IP address geographically close to the area where the account was created or where it is logged into regularly. If the account was created using an IP address in America and is logged into from an IP in Russia, Google will block the Russian IP from logging in, assume someone knows your password, lock the account, and make you change your password. If creating an account using Tor, you must remember the IP (or geographic region) it was created in, and only log in using that geographic region for the exit node. This can be accomplished by <a href="https://tor.stackexchange.com/questions/733/can-i-exit-from-a-specific-country-or-node">putting the desired IP in the torrc file</a> to force Tor to use that exit node. Using the login cookie to post comments through Tor is perfectly safe, however.
+    </div>
     '''
 
     return common.yt_basic_template.substitute(
@@ -179,7 +194,7 @@ _TWOFACTOR_URL = 'https://accounts.google.com/signin/challenge'
 _LOOKUP_URL = 'https://accounts.google.com/_/signin/sl/lookup'
 _CHALLENGE_URL = 'https://accounts.google.com/_/signin/sl/challenge'
 _TFA_URL = 'https://accounts.google.com/_/signin/challenge?hl=en&TL={0}'
-def _login(username, password, cookiejar):
+def _login(username, password, cookiejar, use_tor):
     """
     Attempt to log in to YouTube.
     True is returned if successful or skipped.
@@ -188,7 +203,7 @@ def _login(username, password, cookiejar):
     Taken from youtube-dl
     """
 
-    login_page = common.fetch_url(_LOGIN_URL, yt_dl_headers, report_text='Downloaded login page', cookiejar_receive=cookiejar, use_tor=False).decode('utf-8')
+    login_page = common.fetch_url(_LOGIN_URL, yt_dl_headers, report_text='Downloaded login page', cookiejar_receive=cookiejar, use_tor=use_tor).decode('utf-8')
     '''with open('debug/login_page', 'w', encoding='utf-8') as f:
         f.write(login_page)'''
     #print(cookiejar.as_lwp_str())
@@ -214,7 +229,7 @@ def _login(username, password, cookiejar):
             'Google-Accounts-XSRF': 1,
         }
         headers.update(yt_dl_headers)
-        result = common.fetch_url(url, headers, report_text=note, data=data, cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=False).decode('utf-8')
+        result = common.fetch_url(url, headers, report_text=note, data=data, cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=use_tor).decode('utf-8')
         #print(cookiejar.as_lwp_str())
         '''with open('debug/' + note, 'w', encoding='utf-8') as f:
             f.write(result)'''
@@ -346,7 +361,7 @@ def _login(username, password, cookiejar):
         return False
 
     try:
-        check_cookie_results = common.fetch_url(check_cookie_url, headers=yt_dl_headers, report_text="Checked cookie", cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=False).decode('utf-8')
+        check_cookie_results = common.fetch_url(check_cookie_url, headers=yt_dl_headers, report_text="Checked cookie", cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=use_tor).decode('utf-8')
     except (urllib.error.URLError, compat_http_client.HTTPException, socket.error) as err:
         return False
 

@@ -122,7 +122,12 @@ def youtube(env, start_response):
             else:
                 save_account = False
 
-            if accounts.add_account(fields['username'][0], fields['password'][0], save_account ):
+            if 'use_tor' in fields and fields['use_tor'][0] == "on":
+                use_tor = True
+            else:
+                use_tor = False
+
+            if accounts.add_account(fields['username'][0], fields['password'][0], save_account, use_tor ):
                 start_response('200 OK',  () )
                 return b'Account successfully added'
             else:
