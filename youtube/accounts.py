@@ -16,11 +16,12 @@ except FileNotFoundError:
     # global var for temporary storage of account info
     accounts = {}
 
-def username_list():
-    return accounts.keys()
+def account_list_data():
+    '''Returns iterable of (channel_id, account_display_name)'''
+    return ( (channel_id, account['display_name']) for channel_id, account in accounts.items() )
 
 def save_accounts():
-    to_save = {username: account for username, account in accounts.items() if account['save']}
+    to_save = {channel_id: account for channel_id, account in accounts.items() if account['save']}
     with open(os.path.join(settings.data_dir, 'accounts.txt'), 'w', encoding='utf-8') as f:
         f.write(json.dumps(to_save, indent=4))
 
@@ -28,9 +29,10 @@ def add_account(username, password, save, use_tor):
     cookiejar = http.cookiejar.LWPCookieJar()
     result = _login(username, password, cookiejar, use_tor)
     if isinstance(result, dict):
-        accounts[username] = {
+        accounts[result["channel_id"]] = {
             "save":save,
-            "channel_id": result["channel_id"],
+            "username": username,
+            "display_name": username,
             "cookies":cookiejar.as_lwp_str(ignore_discard=False, ignore_expires=False).split('\n'),
         }
         if save:
@@ -46,8 +48,8 @@ def cookiejar_from_lwp_str(lwp_str):
     cookiejar._really_load(io.StringIO(lwp_str), "", False, False)
     return cookiejar
 
-def account_cookiejar(username):
-    return cookiejar_from_lwp_str('\n'.join(accounts[username]['cookies']))
+def account_cookiejar(channel_id):
+    return cookiejar_from_lwp_str('\n'.join(accounts[channel_id]['cookies']))
 
 def get_account_login_page(query_string):
     style = ''' 

@@ -312,10 +312,10 @@ video_metadata_template = Template('''<section class="video-metadata">
 </section>
 ''')
 account_option_template = Template('''
-            <option value="$username">$username</option>''')
+            <option value="$channel_id">$display_name</option>''')
 
 def comment_box_account_options():
-    return ''.join(account_option_template.substitute(username=username) for username in accounts.username_list())
+    return ''.join(account_option_template.substitute(channel_id=channel_id, display_name=display_name) for channel_id, display_name in accounts.account_list_data())
 
 comment_box_template = Template('''
 <form action="$form_action" method="post" class="comment-form">
