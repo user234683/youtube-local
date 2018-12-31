@@ -92,7 +92,21 @@ def delete_comment(video_id, comment_id, author_id, session_token, cookiejar):
 
     content = common.fetch_url("https://m.youtube.com/service_ajax?name=performCommentActionEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
 
+
 xsrf_token_regex = re.compile(r'''XSRF_TOKEN"\s*:\s*"([\w-]*(?:=|%3D){0,2})"''')
+def get_session_token(video_id, cookiejar):
+    ''' Get session token for a video. This is required in order to post/edit/delete comments. This will modify cookiejar with cookies from youtube required for commenting'''
+    # youtube-dl uses disable_polymer=1 which uses a different request format which has an obfuscated javascript algorithm to generate a parameter called "bgr"
+    # Tokens retrieved from disable_polymer pages only work with that format. Tokens retrieved on mobile only work using mobile requests
+    # Additionally, tokens retrieved without sending the same cookie won't work. So this is necessary even if the bgr and stuff was reverse engineered.
+    headers = {'User-Agent': common.mobile_user_agent}
+    mobile_page = common.fetch_url('https://m.youtube.com/watch?v=' + video_id, headers, report_text="Retrieved session token for comment", cookiejar_send=cookiejar, cookiejar_receive=cookiejar).decode()
+    match = xsrf_token_regex.search(mobile_page)
+    if match:
+        return match.group(1).replace("%3D", "=")
+    else:
+        raise Exception("Couldn't find xsrf_token")
+
 def post_comment(parameters, fields):
     username = fields['username'][0]
     cookiejar = accounts.account_cookiejar(username)
@@ -103,17 +117,7 @@ def post_comment(parameters, fields):
     except KeyError:
         video_id = parameters['video_id'][0]
 
-    # Get session token for mobile
-    # youtube-dl uses disable_polymer=1 which uses a different request format which has an obfuscated javascript algorithm to generate a parameter called "bgr"
-    # Tokens retrieved from disable_polymer pages only work with that format. Tokens retrieved on mobile only work using mobile requests
-    # Additionally, tokens retrieved without sending the same cookie won't work. So this is necessary even if the bgr and stuff was reverse engineered.
-    headers = {'User-Agent': common.mobile_user_agent}
-    mobile_page = common.fetch_url('https://m.youtube.com/watch?v=' + video_id, headers, report_text="Retrieved session token for comment", cookiejar_send=cookiejar, cookiejar_receive=cookiejar).decode()
-    match = xsrf_token_regex.search(mobile_page)
-    if match:
-        token = match.group(1).replace("%3D", "=")
-    else:
-        raise Exception("Couldn't find xsrf_token")
+    token = get_session_token(video_id, cookiejar)
 
     if 'parent_id' in parameters:
         code = _post_comment_reply(fields['comment_text'][0], parameters['video_id'][0], parameters['parent_id'][0], token, cookiejar)
