@@ -3,7 +3,7 @@ import re
 import os
 
 default_settings = '''route_tor = False
-port_number = 80
+port_number = 8080
 allow_foreign_addresses = False
 
 # 0 - off by default
