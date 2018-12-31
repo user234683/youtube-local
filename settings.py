@@ -44,7 +44,6 @@ else:
         os.makedirs(settings_dir)
 
 
-
 try:
     with open(os.path.join(settings_dir, 'settings.txt'), 'r', encoding='utf-8') as file:
         settings_text = file.read()
@@ -85,4 +84,8 @@ else:
                 continue
 
             locals()[target.id] = node.value.__getattribute__(attributes[type(node.value)])
-        
+
+if route_tor:
+    print("Tor routing is ON")
+else:
+    print("Tor routing is OFF - your Youtube activity is NOT anonymous")
