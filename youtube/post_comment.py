@@ -70,7 +70,7 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
     '''with open('debug/post_comment_response', 'wb') as f:
         f.write(content)'''
 
-def delete_comment(video_id, comment_id, author_id, session_token, cookiejar):
+def _delete_comment(video_id, comment_id, author_id, session_token, cookiejar):
     headers = {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
         'Accept': '*/*',
@@ -91,7 +91,9 @@ def delete_comment(video_id, comment_id, author_id, session_token, cookiejar):
     data = urllib.parse.urlencode(data_dict).encode()
 
     content = common.fetch_url("https://m.youtube.com/service_ajax?name=performCommentActionEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
-
+    code = json.loads(content)['code']
+    print("Comment deletion code: " + code)
+    return code
 
 xsrf_token_regex = re.compile(r'''XSRF_TOKEN"\s*:\s*"([\w-]*(?:=|%3D){0,2})"''')
 def get_session_token(video_id, cookiejar):
@@ -106,6 +108,12 @@ def get_session_token(video_id, cookiejar):
         return match.group(1).replace("%3D", "=")
     else:
         raise Exception("Couldn't find xsrf_token")
+
+def delete_comment(parameters, fields):
+    video_id = fields['video_id'][0]
+    cookiejar = accounts.account_cookiejar(fields['channel_id'][0])
+    token = get_session_token(video_id, cookiejar)
+    return _delete_comment(video_id, fields['comment_id'][0], fields['author_id'][0], token, cookiejar)
 
 def post_comment(parameters, fields):
     channel_id = fields['channel_id'][0]
@@ -144,6 +152,35 @@ def post_comment(parameters, fields):
         return response'''
     return code
 
+def get_delete_comment_page(query_string):
+    parameters = urllib.parse.parse_qs(query_string)
+
+    style = '''
+    main{
+        display: grid;
+        grid-template-columns: minmax(0px, 3fr) 640px 40px 500px minmax(0px,2fr);
+        align-content: start;
+    }
+    main > div, main > form{
+        margin-top:20px;
+        grid-column:2;
+    }
+    '''
+
+    page = '''
+    <div>Are you sure you want to delete this comment?</div>
+    <form action="" method="POST">'''
+    for parameter in ('video_id', 'channel_id', 'author_id', 'comment_id'):
+        page += '''\n        <input type="hidden" name="''' + parameter + '''" value="''' + parameters[parameter][0] + '''">'''
+    page += '''
+        <input type="submit" value="Yes, delete it">
+    </form>'''
+    return common.yt_basic_template.substitute(
+        page_title = "Delete comment?",
+        style = style,
+        header = common.get_header(),
+        page = page,
+    )
 
 def get_post_comment_page(query_string):
     parameters = urllib.parse.parse_qs(query_string)

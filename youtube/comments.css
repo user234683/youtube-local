@@ -113,10 +113,13 @@
     white-space: nowrap;
 }
 
-.comment .replies{
-    grid-column:2 / span 2;
+.comment .bottom-row{
+    grid-column:2 / span 3;
     grid-row:4;
     justify-self:start;
+    display: grid;
+    grid-auto-flow: column;
+    grid-column-gap: 10px;
 }
 
 .more-comments{

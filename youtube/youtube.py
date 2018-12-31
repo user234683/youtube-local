@@ -78,6 +78,18 @@ def youtube(env, start_response):
             start_response('200 OK',  (('Content-type','text/html'),) )
             return accounts.get_account_login_page(query_string=query_string).encode()
 
+        elif path == "/delete_comment":
+            start_response('200 OK',  (('Content-type','text/html'),) )
+            return post_comment.get_delete_comment_page(query_string).encode()
+
+        elif path == "/comment_delete_success":
+            start_response('200 OK',  () )
+            return b'Successfully deleted comment'
+
+        elif path == "/comment_delete_fail":
+            start_response('200 OK',  () )
+            return b'Failed to deleted comment'
+
         else:
             start_response('200 OK',  (('Content-type','text/html'),) )
             return channel.get_channel_page_general_url(path, query_string=query_string).encode()
@@ -115,6 +127,14 @@ def youtube(env, start_response):
                     video_id = parameters['video_id'][0]
                 start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comments?ctoken=' + comments.make_comment_ctoken(video_id, sort=1)),) )
             return ''
+
+        elif path == "/delete_comment":
+            parameters = urllib.parse.parse_qs(query_string)
+            code = post_comment.delete_comment(parameters, fields)
+            if code == "SUCCESS":
+                start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comment_delete_success'),) )
+            else:
+                start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comment_delete_fail'),) )
 
         elif path == "/login":
             if 'save' in fields and fields['save'][0] == "on":

@@ -26,10 +26,14 @@ $avatar
                         <address>
                             <a class="author" href="$author_url" title="$author">$author</a>
                         </address>
-                        <span class="text">$text</span>
                         <time datetime="$datetime">$published</time>
+                        <span class="text">$text</span>
+
                         <span class="likes">$likes</span>
+                        <div class="bottom-row">
 $replies
+$action_buttons
+                        </div>
                     </div>
 
                 </div>
@@ -162,6 +166,8 @@ def parse_comments_ajax(content, replies=False):
             comment = {
             'author': comment_raw['author']['runs'][0]['text'],
             'author_url': comment_raw['author_endpoint']['url'],
+            'author_channel_id': '',
+            'author_id': '',
             'author_avatar': comment_raw['author_thumbnail']['url'],
             'likes': comment_raw['like_count'],
             'published': comment_raw['published_time']['runs'][0]['text'],
@@ -207,6 +213,7 @@ def parse_comments_polymer(content, replies=False):
                     video_title = comment_raw['commentTargetTitle']['runs'][0]['text']
 
                 parent_id = comment_raw['comment']['commentRenderer']['commentId']
+                # TODO: move this stuff into the comments_html function
                 if 'replies' in comment_raw:
                     #reply_ctoken = comment_raw['replies']['commentRepliesRenderer']['continuations'][0]['nextContinuationData']['continuation']
                     #comment_id, video_id = get_ids(reply_ctoken)
@@ -226,12 +233,16 @@ def parse_comments_polymer(content, replies=False):
             comment = {
             'author': common.get_plain_text(comment_raw['authorText']),
             'author_url': comment_raw['authorEndpoint']['commandMetadata']['webCommandMetadata']['url'],
+            'author_channel_id': comment_raw['authorEndpoint']['browseEndpoint']['browseId'],
+            'author_id': comment_raw['authorId'],
             'author_avatar': comment_raw['authorThumbnail']['thumbnails'][0]['url'],
             'likes': comment_raw['likeCount'],
             'published': common.get_plain_text(comment_raw['publishedTimeText']),
             'text': comment_raw['contentText'].get('runs', ''),
             'view_replies_text': view_replies_text,
             'replies_url': replies_url,
+            'video_id': video_id,
+            'comment_id': comment_raw['commentId'],
             }
             comments.append(comment)
     except Exception as e:
@@ -256,6 +267,16 @@ def get_comments_html(comments):
             )
         else:
             avatar = ''
+        if comment['author_channel_id'] in accounts.accounts:
+            delete_url = (URL_ORIGIN + '/delete_comment?video_id='
+                + comment['video_id']
+                + '&channel_id='+ comment['author_channel_id']
+                + '&author_id=' + comment['author_id']
+                + '&comment_id=' + comment['comment_id'])
+
+            action_buttons = '''<a href="''' + delete_url + '''" target="_blank">Delete</a>'''
+        else:
+            action_buttons = ''
         html_result += comment_template.substitute(
             author=comment['author'],
             author_url = URL_ORIGIN + comment['author_url'],
@@ -264,8 +285,8 @@ def get_comments_html(comments):
             published = comment['published'],
             text = format_text_runs(comment['text']),
             datetime = '',  #TODO
-            replies=replies,
-            #replies='',
+            replies = replies,
+            action_buttons = action_buttons,
         )
     return html_result
     
