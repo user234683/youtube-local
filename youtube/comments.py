@@ -320,8 +320,8 @@ def comment_box_account_options():
 comment_box_template = Template('''
 <form action="$form_action" method="post" class="comment-form">
     <div id="comment-account-options">
-        <label for="username-selection">Account:</label>
-        <select id="username-selection" name="username">
+        <label for="account-selection">Account:</label>
+        <select id="account-selection" name="channel_id">
 $options
         </select>
         <a href="''' + common.URL_ORIGIN + '''/login" target="_blank">Add account</a>

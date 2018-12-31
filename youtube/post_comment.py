@@ -108,8 +108,8 @@ def get_session_token(video_id, cookiejar):
         raise Exception("Couldn't find xsrf_token")
 
 def post_comment(parameters, fields):
-    username = fields['username'][0]
-    cookiejar = accounts.account_cookiejar(username)
+    channel_id = fields['channel_id'][0]
+    cookiejar = accounts.account_cookiejar(channel_id)
 
     #parameters = urllib.parse.parse_qs(query_string)
     try:
