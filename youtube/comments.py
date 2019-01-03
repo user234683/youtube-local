@@ -26,7 +26,9 @@ $avatar
                         <address>
                             <a class="author" href="$author_url" title="$author">$author</a>
                         </address>
-                        <time datetime="$datetime">$published</time>
+                        <a class="permalink" href="$permalink" title="permalink">
+                            <time datetime="$datetime">$published</time>
+                        </a>
                         <span class="text">$text</span>
 
                         <span class="likes">$likes</span>
@@ -277,6 +279,8 @@ def get_comments_html(comments):
             action_buttons = '''<a href="''' + delete_url + '''" target="_blank">Delete</a>'''
         else:
             action_buttons = ''
+
+        permalink = URL_ORIGIN + '/watch?v=' + comment['video_id'] + '&lc=' + comment['comment_id']
         html_result += comment_template.substitute(
             author=comment['author'],
             author_url = URL_ORIGIN + comment['author_url'],
@@ -287,6 +291,7 @@ def get_comments_html(comments):
             datetime = '',  #TODO
             replies = replies,
             action_buttons = action_buttons,
+            permalink = permalink,
         )
     return html_result
     

@@ -98,10 +98,11 @@
     word-wrap: break-word;
 }
 
-.comment time{
+.comment .permalink{
     grid-column: 3;
     grid-row: 1;
     white-space: nowrap;
+    color: black;
 
 }
 
