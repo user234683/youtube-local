@@ -8,18 +8,31 @@ YOUTUBE_FILES = (
     '/comments.css',
     '/favicon.ico',
 )
-
+page_handlers = {
+    'search':   search.get_search_page,
+    '':         search.get_search_page,
+}
 def youtube(env, start_response):
     path, method, query_string = env['PATH_INFO'], env['REQUEST_METHOD'], env['QUERY_STRING']
+    env['qs_fields'] = urllib.parse.parse_qs(query_string)
+    env['fields'] = dict(env['qs_fields'])
+
+    path_parts = path.rstrip('/').lstrip('/').split('/')
+    env['path_parts'] = path_parts
+
     if method == "GET":
+        try:
+            handler = page_handlers[path_parts[0]]
+        except KeyError:
+            pass
+        else:
+            return handler(env, start_response)
+
         if path in YOUTUBE_FILES:
             with open("youtube" + path, 'rb') as f:
                 mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
                 start_response('200 OK',  (('Content-type',mime_type),) )
                 return f.read()
-        elif path.lstrip('/') == "":
-            start_response('200 OK',  (('Content-type','text/html'),) )
-            return search.get_search_page(query_string).encode()
 
         elif path == "/comments":
             start_response('200 OK',  (('Content-type','text/html'),) )
@@ -32,10 +45,6 @@ def youtube(env, start_response):
                 return b'Incomplete video id (too short): ' + video_id.encode('ascii')
             start_response('200 OK',  (('Content-type','text/html'),) )
             return watch.get_watch_page(query_string).encode()
-        
-        elif path == "/search":
-            start_response('200 OK',  (('Content-type','text/html'),) )
-            return search.get_search_page(query_string).encode()
         
         elif path == "/playlist":
             start_response('200 OK',  (('Content-type','text/html'),) )
@@ -95,7 +104,10 @@ def youtube(env, start_response):
             return channel.get_channel_page_general_url(path, query_string=query_string).encode()
 
     elif method == "POST":
-        fields = urllib.parse.parse_qs(env['wsgi.input'].read().decode())
+        post_fields = urllib.parse.parse_qs(env['wsgi.input'].read().decode())
+        env['post_fields'] = post_fields
+        env['fields'].update(post_fields)
+        fields = post_fields
         if path == "/edit_playlist":
             if fields['action'][0] == 'add':
                 local_playlist.add_to_playlist(fields['playlist_name'][0], fields['video_info_list'])

@@ -66,23 +66,24 @@ showing_results_for = Template('''
 did_you_mean = Template('''
                 <div>Did you mean <a href="$corrected_query_url">$corrected_query</a></div>
 ''')    
-def get_search_page(query_string, parameters=()):
-    qs_query = urllib.parse.parse_qs(query_string)
-    if len(qs_query) == 0:
+def get_search_page(env, start_response):
+    start_response('200 OK', [('Content-type','text/html'),])
+    fields = env['fields']
+    if len(fields) == 0:
         return common.yt_basic_template.substitute(
             page_title = "Search",
             header = common.get_header(),
             style = '',
             page = '',
-        )
-    query = qs_query["query"][0]
-    page = qs_query.get("page", "1")[0]
-    autocorrect = int(qs_query.get("autocorrect", "1")[0])
-    sort = int(qs_query.get("sort", "0")[0])
+        ).encode('utf-8')
+    query = fields["query"][0]
+    page = fields.get("page", "1")[0]
+    autocorrect = int(fields.get("autocorrect", "1")[0])
+    sort = int(fields.get("sort", "0")[0])
     filters = {}
-    filters['time'] = int(qs_query.get("time", "0")[0])
-    filters['type'] = int(qs_query.get("type", "0")[0])
-    filters['duration'] = int(qs_query.get("duration", "0")[0])
+    filters['time'] = int(fields.get("time", "0")[0])
+    filters['type'] = int(fields.get("type", "0")[0])
+    filters['duration'] = int(fields.get("duration", "0")[0])
     info = get_search_json(query, page, autocorrect, sort, filters)
     
     estimated_results = int(info[1]['response']['estimatedResults'])
@@ -97,7 +98,7 @@ def get_search_page(query_string, parameters=()):
             continue
         if type == 'didYouMeanRenderer':
             renderer = renderer[type]
-            corrected_query_string = urllib.parse.parse_qs(query_string)
+            corrected_query_string = fields.copy()
             corrected_query_string['query'] = [renderer['correctedQueryEndpoint']['searchEndpoint']['query']]
             corrected_query_url = URL_ORIGIN + '/search?' + urllib.parse.urlencode(corrected_query_string, doseq=True)
             corrections = did_you_mean.substitute(
@@ -107,7 +108,7 @@ def get_search_page(query_string, parameters=()):
             continue
         if type == 'showingResultsForRenderer':
             renderer = renderer[type]
-            no_autocorrect_query_string = urllib.parse.parse_qs(query_string)
+            no_autocorrect_query_string = fields.copy()
             no_autocorrect_query_string['autocorrect'] = ['0']
             no_autocorrect_query_url = URL_ORIGIN + '/search?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
             corrections = showing_results_for.substitute(
@@ -116,7 +117,7 @@ def get_search_page(query_string, parameters=()):
                 original_query = html.escape(renderer['originalQuery']['simpleText']),
             )
             continue
-        result_list_html += common.renderer_html(renderer, current_query_string=query_string)
+        result_list_html += common.renderer_html(renderer, current_query_string=env['QUERY_STRING'])
         
     page = int(page)
     if page <= 5:
@@ -134,7 +135,7 @@ def get_search_page(query_string, parameters=()):
         search_box_value    = html.escape(query),
         number_of_results   = '{:,}'.format(estimated_results),
         number_of_pages     = '{:,}'.format(estimated_pages),
-        page_buttons        = common.page_buttons_html(page, estimated_pages, URL_ORIGIN + "/search", query_string),
+        page_buttons        = common.page_buttons_html(page, estimated_pages, URL_ORIGIN + "/search", env['QUERY_STRING']),
         corrections         = corrections
         )
-    return result
+    return result.encode('utf-8')
