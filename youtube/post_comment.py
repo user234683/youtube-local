@@ -122,42 +122,22 @@ def delete_comment(env, start_response):
     else:
         start_response('303 See Other',  [('Location', common.URL_ORIGIN + '/comment_delete_fail'),] )
 
-def post_comment(parameters, fields):
-    channel_id = fields['channel_id'][0]
+def post_comment(env, start_response):
+    parameters = env['fields']
+    video_id = parameters['video_id'][0]
+    channel_id = parameters['channel_id'][0]
     cookiejar = accounts.account_cookiejar(channel_id)
-
-    #parameters = urllib.parse.parse_qs(query_string)
-    try:
-        video_id = fields['video_id'][0]
-    except KeyError:
-        video_id = parameters['video_id'][0]
-
     token = get_session_token(video_id, cookiejar)
 
     if 'parent_id' in parameters:
-        code = _post_comment_reply(fields['comment_text'][0], parameters['video_id'][0], parameters['parent_id'][0], token, cookiejar)
-        '''try:
-            response = comments.get_comments_page(query_string)
-        except socket.error as e:
-            traceback.print_tb(e.__traceback__)
-            return b'Refreshing comment page yielded error 502 Bad Gateway.\nPost comment status code: ' + code.encode('ascii')
-        except Exception as e:
-            traceback.print_tb(e.__traceback__)
-            return b'Refreshing comment page yielded error 500 Internal Server Error.\nPost comment status code: ' + code.encode('ascii')
-        return response'''
+        code = _post_comment_reply(parameters['comment_text'][0], parameters['video_id'][0], parameters['parent_id'][0], token, cookiejar)
+        start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comments?' + env['QUERY_STRING']),) )
+
     else:
-        code = _post_comment(fields['comment_text'][0], fields['video_id'][0], token, cookiejar)
-        
-        '''try:
-            response = comments.get_comments_page('ctoken=' + comments.make_comment_ctoken(video_id, sort=1))
-        except socket.error as e:
-            traceback.print_tb(e.__traceback__)
-            return b'Refreshing comment page yielded error 502 Bad Gateway.\nPost comment status code: ' + code.encode('ascii')
-        except Exception as e:
-            traceback.print_tb(e.__traceback__)
-            return b'Refreshing comment page yielded error 500 Internal Server Error.\nPost comment status code: ' + code.encode('ascii')
-        return response'''
-    return code
+        code = _post_comment(parameters['comment_text'][0], parameters['video_id'][0], token, cookiejar)
+        start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comments?ctoken=' + comments.make_comment_ctoken(video_id, sort=1)),) )
+
+    return b''
 
 def get_delete_comment_page(env, start_response):
     start_response('200 OK', [('Content-type','text/html'),])

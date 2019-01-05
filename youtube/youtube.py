@@ -21,6 +21,8 @@ get_handlers = {
 post_handlers = {
     'edit_playlist':    local_playlist.edit_playlist,
     'login':            accounts.add_account,
+    'comments':         post_comment.post_comment,
+    'post_comment':     post_comment.post_comment,
     'delete_comment':   post_comment.delete_comment,
 }
 
@@ -110,19 +112,6 @@ def youtube(env, start_response):
             else:
                 start_response('400 Bad Request', ())
                 return b'400 Bad Request'
-
-        elif path in ("/post_comment", "/comments"):
-            parameters = urllib.parse.parse_qs(query_string)
-            post_comment.post_comment(parameters, fields)
-            if 'parent_id' in parameters:
-                start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comments?' + query_string),) )
-            else:
-                try:
-                    video_id = fields['video_id'][0]
-                except KeyError:
-                    video_id = parameters['video_id'][0]
-                start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comments?ctoken=' + comments.make_comment_ctoken(video_id, sort=1)),) )
-            return ''
 
         else:
             start_response('404 Not Found', ())
