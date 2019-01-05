@@ -21,6 +21,7 @@ get_handlers = {
 post_handlers = {
     'edit_playlist':    local_playlist.edit_playlist,
     'login':            accounts.add_account,
+    'delete_comment':   post_comment.delete_comment,
 }
 
 def youtube(env, start_response):
@@ -122,14 +123,6 @@ def youtube(env, start_response):
                     video_id = parameters['video_id'][0]
                 start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comments?ctoken=' + comments.make_comment_ctoken(video_id, sort=1)),) )
             return ''
-
-        elif path == "/delete_comment":
-            parameters = urllib.parse.parse_qs(query_string)
-            code = post_comment.delete_comment(parameters, fields)
-            if code == "SUCCESS":
-                start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comment_delete_success'),) )
-            else:
-                start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comment_delete_fail'),) )
 
         else:
             start_response('404 Not Found', ())
