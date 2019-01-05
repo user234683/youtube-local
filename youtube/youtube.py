@@ -9,8 +9,14 @@ YOUTUBE_FILES = (
     '/favicon.ico',
 )
 page_handlers = {
-    'search':   search.get_search_page,
-    '':         search.get_search_page,
+    'search':           search.get_search_page,
+    '':                 search.get_search_page,
+    'comments':         comments.get_comments_page,
+    'watch':            watch.get_watch_page,
+    'playlist':         playlist.get_playlist_page,
+    'post_comment':     post_comment.get_post_comment_page,
+    'delete_comment':   post_comment.get_delete_comment_page,
+    'login':            accounts.get_account_login_page,
 }
 def youtube(env, start_response):
     path, method, query_string = env['PATH_INFO'], env['REQUEST_METHOD'], env['QUERY_STRING']
@@ -33,22 +39,6 @@ def youtube(env, start_response):
                 mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
                 start_response('200 OK',  (('Content-type',mime_type),) )
                 return f.read()
-
-        elif path == "/comments":
-            start_response('200 OK',  (('Content-type','text/html'),) )
-            return comments.get_comments_page(query_string).encode()
-
-        elif path == "/watch":
-            video_id = urllib.parse.parse_qs(query_string)['v'][0]
-            if len(video_id) < 11:
-                start_response('404 Not Found', ())
-                return b'Incomplete video id (too short): ' + video_id.encode('ascii')
-            start_response('200 OK',  (('Content-type','text/html'),) )
-            return watch.get_watch_page(query_string).encode()
-        
-        elif path == "/playlist":
-            start_response('200 OK',  (('Content-type','text/html'),) )
-            return playlist.get_playlist_page(query_string).encode()
         
         elif path.startswith("/channel/"):
             start_response('200 OK',  (('Content-type','text/html'),) )
@@ -73,23 +63,11 @@ def youtube(env, start_response):
             result = result.replace(b"align:start position:0%", b"")
             return result
 
-        elif path == "/post_comment":
-            start_response('200 OK',  () )
-            return post_comment.get_post_comment_page(query_string).encode()
-
         elif path == "/opensearch.xml":
             with open("youtube" + path, 'rb') as f:
                 mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
                 start_response('200 OK',  (('Content-type',mime_type),) )
                 return f.read().replace(b'$port_number', str(settings.port_number).encode())
-
-        elif path == "/login":
-            start_response('200 OK',  (('Content-type','text/html'),) )
-            return accounts.get_account_login_page(query_string=query_string).encode()
-
-        elif path == "/delete_comment":
-            start_response('200 OK',  (('Content-type','text/html'),) )
-            return post_comment.get_delete_comment_page(query_string).encode()
 
         elif path == "/comment_delete_success":
             start_response('200 OK',  () )

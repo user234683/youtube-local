@@ -356,8 +356,9 @@ $options
     $video_id_input
     <button type="submit" class="post-comment-button">$post_text</button>
 </form>''')
-def get_comments_page(query_string):
-    parameters = urllib.parse.parse_qs(query_string)
+def get_comments_page(env, start_response):
+    start_response('200 OK',  [('Content-type','text/html'),] )
+    parameters = env['fields']
     ctoken = default_multi_get(parameters, 'ctoken', 0, default='')
     replies = False
     if not ctoken:
@@ -419,4 +420,4 @@ def get_comments_page(query_string):
         header = common.get_header(),
         comments_area = comments_area,
         page_title = page_title,
-    )
+    ).encode('utf-8')

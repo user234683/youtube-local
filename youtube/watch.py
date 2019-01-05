@@ -228,18 +228,23 @@ music_list_table_row = Template('''<tr>
     <td>$attribute</td>
     <td>$value</td>
 ''')
-def get_watch_page(query_string):
-        parsed_qs = urllib.parse.parse_qs(query_string)
-        id = parsed_qs['v'][0]
-        lc = common.default_multi_get(parsed_qs, 'lc', 0, default='')
+def get_watch_page(env, start_response):
+        video_id = env['fields']['v'][0]
+        if len(video_id) < 11:
+            start_response('404 Not Found', ())
+            return b'Incomplete video id (too short): ' + video_id.encode('ascii')
+
+        start_response('200 OK', [('Content-type','text/html'),])
+
+        lc = common.default_multi_get(env['fields'], 'lc', 0, default='')
         if settings.route_tor:
             proxy = 'socks5://127.0.0.1:9150/'
         else:
             proxy = ''
         downloader = YoutubeDL(params={'youtube_include_dash_manifest':False, 'proxy':proxy})
         tasks = (
-            gevent.spawn(comments.video_comments, id, int(settings.default_comment_sorting), lc=lc ), 
-            gevent.spawn(extract_info, downloader, "https://www.youtube.com/watch?v=" + id, download=False)
+            gevent.spawn(comments.video_comments, video_id, int(settings.default_comment_sorting), lc=lc ),
+            gevent.spawn(extract_info, downloader, "https://www.youtube.com/watch?v=" + video_id, download=False)
         )
         gevent.joinall(tasks)
         comments_html, info = tasks[0].value, tasks[1].value
@@ -256,7 +261,7 @@ def get_watch_page(query_string):
                 style = "",
                 header = common.get_header(),
                 page = html.escape(info),
-            )
+            ).encode('utf-8')
             
         sorted_formats = sort_formats(info)
         
@@ -351,4 +356,4 @@ def get_watch_page(query_string):
             music_list              = music_list_html,
             is_unlisted             = '<span class="is-unlisted">Unlisted</span>' if info['unlisted'] else '',
         )
-        return page
+        return page.encode('utf-8')

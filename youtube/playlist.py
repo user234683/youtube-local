@@ -78,8 +78,9 @@ def get_videos_ajax(playlist_id, page):
 
 playlist_stat_template = Template('''
 <div>$stat</div>''')
-def get_playlist_page(query_string):
-    parameters = urllib.parse.parse_qs(query_string)
+def get_playlist_page(env, start_response):
+    start_response('200 OK', [('Content-type','text/html'),])
+    parameters = env['fields']
     playlist_id = parameters['list'][0]
     page = parameters.get("page", "1")[0]
     if page == "1":
@@ -105,7 +106,7 @@ def get_playlist_page(query_string):
 
     metadata = common.ajax_info(first_page_json['content']['playlist_header'])
     video_count = int(metadata['size'].replace(',', ''))
-    page_buttons = common.page_buttons_html(int(page), math.ceil(video_count/20), common.URL_ORIGIN + "/playlist", query_string)
+    page_buttons = common.page_buttons_html(int(page), math.ceil(video_count/20), common.URL_ORIGIN + "/playlist", env['QUERY_STRING'])
 
     html_ready = common.get_html_ready(metadata)
     html_ready['page_title'] = html_ready['title'] + ' - Page ' + str(page)
@@ -119,4 +120,4 @@ def get_playlist_page(query_string):
         page_buttons    = page_buttons,
         stats = stats,
         **html_ready
-    )
+    ).encode('utf-8')

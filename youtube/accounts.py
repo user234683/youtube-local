@@ -51,7 +51,9 @@ def cookiejar_from_lwp_str(lwp_str):
 def account_cookiejar(channel_id):
     return cookiejar_from_lwp_str('\n'.join(accounts[channel_id]['cookies']))
 
-def get_account_login_page(query_string):
+def get_account_login_page(env, start_response):
+    start_response('200 OK',  [('Content-type','text/html'),] )
+
     style = ''' 
     main{
         display: grid;
@@ -114,7 +116,7 @@ Using Tor to log in should only be done if the account was created using a proxy
         style = style,
         header = common.get_header(),
         page = page,
-    )
+    ).encode('utf-8')
 
 
 

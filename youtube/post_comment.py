@@ -152,8 +152,9 @@ def post_comment(parameters, fields):
         return response'''
     return code
 
-def get_delete_comment_page(query_string):
-    parameters = urllib.parse.parse_qs(query_string)
+def get_delete_comment_page(env, start_response):
+    start_response('200 OK', [('Content-type','text/html'),])
+    parameters = env['fields']
 
     style = '''
     main{
@@ -180,10 +181,11 @@ def get_delete_comment_page(query_string):
         style = style,
         header = common.get_header(),
         page = page,
-    )
+    ).encode('utf-8')
 
-def get_post_comment_page(query_string):
-    parameters = urllib.parse.parse_qs(query_string)
+def get_post_comment_page(env, start_response):
+    start_response('200 OK', [('Content-type','text/html'),])
+    parameters = env['fields']
     video_id = parameters['video_id'][0]
     parent_id = common.default_multi_get(parameters, 'parent_id', 0, default='')
     
@@ -224,4 +226,4 @@ textarea{
         style = style,
         header = common.get_header(),
         page = page,
-    )
+    ).encode('utf-8')
