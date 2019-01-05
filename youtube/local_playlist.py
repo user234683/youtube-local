@@ -144,3 +144,12 @@ def get_playlist_page(url, query_string=''):
     else:
         return get_local_playlist_page(url)
 
+
+def edit_playlist(env, start_response):
+    fields = env['fields']
+    if fields['action'][0] == 'add':
+        add_to_playlist(fields['playlist_name'][0], fields['video_info_list'])
+        start_response('204 No Content', ())
+    else:
+        start_response('400 Bad Request', ())
+        return b'400 Bad Request'

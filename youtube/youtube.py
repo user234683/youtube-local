@@ -8,7 +8,7 @@ YOUTUBE_FILES = (
     '/comments.css',
     '/favicon.ico',
 )
-page_handlers = {
+get_handlers = {
     'search':           search.get_search_page,
     '':                 search.get_search_page,
     'comments':         comments.get_comments_page,
@@ -18,6 +18,12 @@ page_handlers = {
     'delete_comment':   post_comment.get_delete_comment_page,
     'login':            accounts.get_account_login_page,
 }
+post_handlers = {
+    'edit_playlist':    local_playlist.edit_playlist,
+
+
+}
+
 def youtube(env, start_response):
     path, method, query_string = env['PATH_INFO'], env['REQUEST_METHOD'], env['QUERY_STRING']
     env['qs_fields'] = urllib.parse.parse_qs(query_string)
@@ -28,7 +34,7 @@ def youtube(env, start_response):
 
     if method == "GET":
         try:
-            handler = page_handlers[path_parts[0]]
+            handler = get_handlers[path_parts[0]]
         except KeyError:
             pass
         else:
@@ -86,15 +92,15 @@ def youtube(env, start_response):
         env['post_fields'] = post_fields
         env['fields'].update(post_fields)
         fields = post_fields
-        if path == "/edit_playlist":
-            if fields['action'][0] == 'add':
-                local_playlist.add_to_playlist(fields['playlist_name'][0], fields['video_info_list'])
-                start_response('204 No Content', ())
-            else:
-                start_response('400 Bad Request', ())
-                return b'400 Bad Request'
 
-        elif path.startswith("/playlists"):
+        try:
+            handler = post_handlers[path_parts[0]]
+        except KeyError:
+            pass
+        else:
+            return handler(env, start_response)
+
+        if path.startswith("/playlists"):
             if fields['action'][0] == 'remove':
                 playlist_name = path[11:]
                 local_playlist.remove_from_playlist(playlist_name, fields['video_info_list'])
