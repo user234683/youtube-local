@@ -25,7 +25,18 @@ def save_accounts():
     with open(os.path.join(settings.data_dir, 'accounts.txt'), 'w', encoding='utf-8') as f:
         f.write(json.dumps(to_save, indent=4))
 
-def add_account(username, password, save, use_tor):
+def cookiejar_from_lwp_str(lwp_str):
+    lwp_str = "#LWP-Cookies-2.0\n" + lwp_str    # header required by _really_load for reading from "file"
+    cookiejar = http.cookiejar.LWPCookieJar()
+    # HACK: cookiejar module insists on using filenames and reading files for you,
+    #  so present a StringIO to this internal method which takes a filelike object
+    cookiejar._really_load(io.StringIO(lwp_str), "", False, False)
+    return cookiejar
+
+def account_cookiejar(channel_id):
+    return cookiejar_from_lwp_str('\n'.join(accounts[channel_id]['cookies']))
+
+def _add_account(username, password, save, use_tor):
     cookiejar = http.cookiejar.LWPCookieJar()
     result = _login(username, password, cookiejar, use_tor)
     if isinstance(result, dict):
@@ -40,16 +51,24 @@ def add_account(username, password, save, use_tor):
         return True
     return False
 
-def cookiejar_from_lwp_str(lwp_str):
-    lwp_str = "#LWP-Cookies-2.0\n" + lwp_str    # header required by _really_load for reading from "file"
-    cookiejar = http.cookiejar.LWPCookieJar()
-    # HACK: cookiejar module insists on using filenames and reading files for you,
-    #  so present a StringIO to this internal method which takes a filelike object
-    cookiejar._really_load(io.StringIO(lwp_str), "", False, False)
-    return cookiejar
+def add_account(env, start_response):
+    fields = env['fields']
+    if 'save' in fields and fields['save'][0] == "on":
+        save_account = True
+    else:
+        save_account = False
 
-def account_cookiejar(channel_id):
-    return cookiejar_from_lwp_str('\n'.join(accounts[channel_id]['cookies']))
+    if 'use_tor' in fields and fields['use_tor'][0] == "on":
+        use_tor = True
+    else:
+        use_tor = False
+
+    if _add_account(fields['username'][0], fields['password'][0], save_account, use_tor ):
+        start_response('200 OK',  () )
+        return b'Account successfully added'
+    else:
+        start_response('200 OK',  () )
+        return b'Failed to add account'
 
 def get_account_login_page(env, start_response):
     start_response('200 OK',  [('Content-type','text/html'),] )

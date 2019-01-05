@@ -20,8 +20,7 @@ get_handlers = {
 }
 post_handlers = {
     'edit_playlist':    local_playlist.edit_playlist,
-
-
+    'login':            accounts.add_account,
 }
 
 def youtube(env, start_response):
@@ -131,24 +130,6 @@ def youtube(env, start_response):
                 start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comment_delete_success'),) )
             else:
                 start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comment_delete_fail'),) )
-
-        elif path == "/login":
-            if 'save' in fields and fields['save'][0] == "on":
-                save_account = True
-            else:
-                save_account = False
-
-            if 'use_tor' in fields and fields['use_tor'][0] == "on":
-                use_tor = True
-            else:
-                use_tor = False
-
-            if accounts.add_account(fields['username'][0], fields['password'][0], save_account, use_tor ):
-                start_response('200 OK',  () )
-                return b'Account successfully added'
-            else:
-                start_response('200 OK',  () )
-                return b'Failed to add account'
 
         else:
             start_response('404 Not Found', ())
