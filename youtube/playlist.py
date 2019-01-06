@@ -80,7 +80,7 @@ playlist_stat_template = Template('''
 <div>$stat</div>''')
 def get_playlist_page(env, start_response):
     start_response('200 OK', [('Content-type','text/html'),])
-    parameters = env['fields']
+    parameters = env['parameters']
     playlist_id = parameters['list'][0]
     page = parameters.get("page", "1")[0]
     if page == "1":

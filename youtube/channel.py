@@ -367,7 +367,7 @@ def get_channel_page(env, start_response):
     except IndexError:
         tab = 'videos'
     
-    parameters = env['fields']
+    parameters = env['parameters']
     page_number = int(common.default_multi_get(parameters, 'page', 0, default='1'))
     sort = common.default_multi_get(parameters, 'sort', 0, default='3')
     view = common.default_multi_get(parameters, 'view', 0, default='1')

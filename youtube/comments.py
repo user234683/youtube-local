@@ -358,7 +358,7 @@ $options
 </form>''')
 def get_comments_page(env, start_response):
     start_response('200 OK',  [('Content-type','text/html'),] )
-    parameters = env['fields']
+    parameters = env['parameters']
     ctoken = default_multi_get(parameters, 'ctoken', 0, default='')
     replies = False
     if not ctoken:

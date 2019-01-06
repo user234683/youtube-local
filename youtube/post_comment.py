@@ -110,12 +110,12 @@ def get_session_token(video_id, cookiejar):
         raise Exception("Couldn't find xsrf_token")
 
 def delete_comment(env, start_response):
-    fields = env['fields']
-    video_id = fields['video_id'][0]
-    cookiejar = accounts.account_cookiejar(fields['channel_id'][0])
+    parameters = env['parameters']
+    video_id = parameters['video_id'][0]
+    cookiejar = accounts.account_cookiejar(parameters['channel_id'][0])
     token = get_session_token(video_id, cookiejar)
 
-    code = _delete_comment(video_id, fields['comment_id'][0], fields['author_id'][0], token, cookiejar)
+    code = _delete_comment(video_id, parameters['comment_id'][0], parameters['author_id'][0], token, cookiejar)
 
     if code == "SUCCESS":
         start_response('303 See Other',  [('Location', common.URL_ORIGIN + '/comment_delete_success'),] )
@@ -123,7 +123,7 @@ def delete_comment(env, start_response):
         start_response('303 See Other',  [('Location', common.URL_ORIGIN + '/comment_delete_fail'),] )
 
 def post_comment(env, start_response):
-    parameters = env['fields']
+    parameters = env['parameters']
     video_id = parameters['video_id'][0]
     channel_id = parameters['channel_id'][0]
     cookiejar = accounts.account_cookiejar(channel_id)
@@ -141,7 +141,7 @@ def post_comment(env, start_response):
 
 def get_delete_comment_page(env, start_response):
     start_response('200 OK', [('Content-type','text/html'),])
-    parameters = env['fields']
+    parameters = env['parameters']
 
     style = '''
     main{
@@ -172,7 +172,7 @@ def get_delete_comment_page(env, start_response):
 
 def get_post_comment_page(env, start_response):
     start_response('200 OK', [('Content-type','text/html'),])
-    parameters = env['fields']
+    parameters = env['parameters']
     video_id = parameters['video_id'][0]
     parent_id = common.default_multi_get(parameters, 'parent_id', 0, default='')
     

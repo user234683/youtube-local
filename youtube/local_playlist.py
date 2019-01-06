@@ -147,10 +147,10 @@ def get_playlist_page(env, start_response):
 
 def path_edit_playlist(env, start_response):
     '''Called when making changes to the playlist from that playlist's page'''
-    fields = env['fields']
-    if fields['action'][0] == 'remove':
+    parameters = env['parameters']
+    if parameters['action'][0] == 'remove':
         playlist_name = env['path_parts'][1]
-        remove_from_playlist(playlist_name, fields['video_info_list'])
+        remove_from_playlist(playlist_name, parameters['video_info_list'])
         start_response('303 See Other', [('Location', common.URL_ORIGIN + env['PATH_INFO']),] )
         return b''
 
@@ -160,9 +160,9 @@ def path_edit_playlist(env, start_response):
 
 def edit_playlist(env, start_response):
     '''Called when adding videos to a playlist from elsewhere'''
-    fields = env['fields']
-    if fields['action'][0] == 'add':
-        add_to_playlist(fields['playlist_name'][0], fields['video_info_list'])
+    parameters = env['parameters']
+    if parameters['action'][0] == 'add':
+        add_to_playlist(parameters['playlist_name'][0], parameters['video_info_list'])
         start_response('204 No Content', ())
     else:
         start_response('400 Bad Request', ())

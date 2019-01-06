@@ -52,18 +52,18 @@ def _add_account(username, password, save, use_tor):
     return False
 
 def add_account(env, start_response):
-    fields = env['fields']
-    if 'save' in fields and fields['save'][0] == "on":
+    parameters = env['parameters']
+    if 'save' in parameters and parameters['save'][0] == "on":
         save_account = True
     else:
         save_account = False
 
-    if 'use_tor' in fields and fields['use_tor'][0] == "on":
+    if 'use_tor' in parameters and parameters['use_tor'][0] == "on":
         use_tor = True
     else:
         use_tor = False
 
-    if _add_account(fields['username'][0], fields['password'][0], save_account, use_tor ):
+    if _add_account(parameters['username'][0], parameters['password'][0], save_account, use_tor ):
         start_response('200 OK',  () )
         return b'Account successfully added'
     else:

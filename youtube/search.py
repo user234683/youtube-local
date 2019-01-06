@@ -68,22 +68,22 @@ did_you_mean = Template('''
 ''')    
 def get_search_page(env, start_response):
     start_response('200 OK', [('Content-type','text/html'),])
-    fields = env['fields']
-    if len(fields) == 0:
+    parameters = env['parameters']
+    if len(parameters) == 0:
         return common.yt_basic_template.substitute(
             page_title = "Search",
             header = common.get_header(),
             style = '',
             page = '',
         ).encode('utf-8')
-    query = fields["query"][0]
-    page = fields.get("page", "1")[0]
-    autocorrect = int(fields.get("autocorrect", "1")[0])
-    sort = int(fields.get("sort", "0")[0])
+    query = parameters["query"][0]
+    page = parameters.get("page", "1")[0]
+    autocorrect = int(parameters.get("autocorrect", "1")[0])
+    sort = int(parameters.get("sort", "0")[0])
     filters = {}
-    filters['time'] = int(fields.get("time", "0")[0])
-    filters['type'] = int(fields.get("type", "0")[0])
-    filters['duration'] = int(fields.get("duration", "0")[0])
+    filters['time'] = int(parameters.get("time", "0")[0])
+    filters['type'] = int(parameters.get("type", "0")[0])
+    filters['duration'] = int(parameters.get("duration", "0")[0])
     info = get_search_json(query, page, autocorrect, sort, filters)
     
     estimated_results = int(info[1]['response']['estimatedResults'])
@@ -98,7 +98,7 @@ def get_search_page(env, start_response):
             continue
         if type == 'didYouMeanRenderer':
             renderer = renderer[type]
-            corrected_query_string = fields.copy()
+            corrected_query_string = parameters.copy()
             corrected_query_string['query'] = [renderer['correctedQueryEndpoint']['searchEndpoint']['query']]
             corrected_query_url = URL_ORIGIN + '/search?' + urllib.parse.urlencode(corrected_query_string, doseq=True)
             corrections = did_you_mean.substitute(
@@ -108,7 +108,7 @@ def get_search_page(env, start_response):
             continue
         if type == 'showingResultsForRenderer':
             renderer = renderer[type]
-            no_autocorrect_query_string = fields.copy()
+            no_autocorrect_query_string = parameters.copy()
             no_autocorrect_query_string['autocorrect'] = ['0']
             no_autocorrect_query_url = URL_ORIGIN + '/search?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
             corrections = showing_results_for.substitute(

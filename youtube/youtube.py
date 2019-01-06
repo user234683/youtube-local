@@ -37,8 +37,8 @@ post_handlers = {
 
 def youtube(env, start_response):
     path, method, query_string = env['PATH_INFO'], env['REQUEST_METHOD'], env['QUERY_STRING']
-    env['qs_fields'] = urllib.parse.parse_qs(query_string)
-    env['fields'] = dict(env['qs_fields'])
+    env['qs_parameters'] = urllib.parse.parse_qs(query_string)
+    env['parameters'] = dict(env['qs_parameters'])
 
     path_parts = path.rstrip('/').lstrip('/').split('/')
     env['path_parts'] = path_parts
@@ -86,10 +86,9 @@ def youtube(env, start_response):
             return channel.get_channel_page_general_url(env, start_response)
 
     elif method == "POST":
-        post_fields = urllib.parse.parse_qs(env['wsgi.input'].read().decode())
-        env['post_fields'] = post_fields
-        env['fields'].update(post_fields)
-        fields = post_fields
+        post_parameters = urllib.parse.parse_qs(env['wsgi.input'].read().decode())
+        env['post_parameters'] = post_parameters
+        env['parameters'].update(post_parameters)
 
         try:
             handler = post_handlers[path_parts[0]]
