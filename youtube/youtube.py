@@ -11,15 +11,24 @@ YOUTUBE_FILES = (
 get_handlers = {
     'search':           search.get_search_page,
     '':                 search.get_search_page,
-    'comments':         comments.get_comments_page,
     'watch':            watch.get_watch_page,
     'playlist':         playlist.get_playlist_page,
+
+    'channel':          channel.get_channel_page,
+    'user':             channel.get_channel_page_general_url,
+    'c':                channel.get_channel_page_general_url,
+
+    'playlists':        local_playlist.get_playlist_page,
+
+    'comments':         comments.get_comments_page,
     'post_comment':     post_comment.get_post_comment_page,
     'delete_comment':   post_comment.get_delete_comment_page,
     'login':            accounts.get_account_login_page,
 }
 post_handlers = {
     'edit_playlist':    local_playlist.edit_playlist,
+    'playlists':        local_playlist.path_edit_playlist,
+
     'login':            accounts.add_account,
     'comments':         post_comment.post_comment,
     'post_comment':     post_comment.post_comment,
@@ -47,18 +56,6 @@ def youtube(env, start_response):
                 mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
                 start_response('200 OK',  (('Content-type',mime_type),) )
                 return f.read()
-        
-        elif path.startswith("/channel/"):
-            start_response('200 OK',  (('Content-type','text/html'),) )
-            return channel.get_channel_page(path[9:], query_string=query_string).encode()
-
-        elif path.startswith("/user/") or path.startswith("/c/"):
-            start_response('200 OK',  (('Content-type','text/html'),) )
-            return channel.get_channel_page_general_url(path, query_string=query_string).encode()
-
-        elif path.startswith("/playlists"):
-            start_response('200 OK',  (('Content-type','text/html'),) )
-            return local_playlist.get_playlist_page(path[10:], query_string=query_string).encode()
 
         elif path.startswith("/data/playlist_thumbnails/"):
             with open(os.path.join(settings.data_dir, os.path.normpath(path[6:])), 'rb') as f:
@@ -86,8 +83,7 @@ def youtube(env, start_response):
             return b'Failed to deleted comment'
 
         else:
-            start_response('200 OK',  (('Content-type','text/html'),) )
-            return channel.get_channel_page_general_url(path, query_string=query_string).encode()
+            return channel.get_channel_page_general_url(env, start_response)
 
     elif method == "POST":
         post_fields = urllib.parse.parse_qs(env['wsgi.input'].read().decode())
@@ -102,20 +98,8 @@ def youtube(env, start_response):
         else:
             return handler(env, start_response)
 
-        if path.startswith("/playlists"):
-            if fields['action'][0] == 'remove':
-                playlist_name = path[11:]
-                local_playlist.remove_from_playlist(playlist_name, fields['video_info_list'])
-                start_response('303 See Other', (('Location', common.URL_ORIGIN + path),) )
-                return local_playlist.get_playlist_page(playlist_name).encode() 
-
-            else:
-                start_response('400 Bad Request', ())
-                return b'400 Bad Request'
-
-        else:
-            start_response('404 Not Found', ())
-            return b'404 Not Found' 
+        start_response('404 Not Found', ())
+        return b'404 Not Found'
 
     else:
         start_response('501 Not Implemented', ())

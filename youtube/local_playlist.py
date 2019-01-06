@@ -137,15 +137,29 @@ def get_playlists_list_page():
     )
 
 
-def get_playlist_page(url, query_string=''):
-    url = url.rstrip('/').lstrip('/')
-    if url == '':
-        return get_playlists_list_page()
+def get_playlist_page(env, start_response):
+    start_response('200 OK', [('Content-type','text/html'),])
+    path_parts = env['path_parts']
+    if len(path_parts) == 1:
+        return get_playlists_list_page().encode('utf-8')
     else:
-        return get_local_playlist_page(url)
+        return get_local_playlist_page(path_parts[1]).encode('utf-8')
 
+def path_edit_playlist(env, start_response):
+    '''Called when making changes to the playlist from that playlist's page'''
+    fields = env['fields']
+    if fields['action'][0] == 'remove':
+        playlist_name = env['path_parts'][1]
+        remove_from_playlist(playlist_name, fields['video_info_list'])
+        start_response('303 See Other', [('Location', common.URL_ORIGIN + env['PATH_INFO']),] )
+        return b''
+
+    else:
+        start_response('400 Bad Request', ())
+        return b'400 Bad Request'
 
 def edit_playlist(env, start_response):
+    '''Called when adding videos to a playlist from elsewhere'''
     fields = env['fields']
     if fields['action'][0] == 'add':
         add_to_playlist(fields['playlist_name'][0], fields['video_info_list'])

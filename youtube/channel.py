@@ -359,15 +359,15 @@ def get_channel_search_json(channel_id, query, page):
     return polymer_json
     
 playlist_sort_codes = {'2': "da", '3': "dd", '4': "lad"}
-def get_channel_page(url, query_string=''):
-    path_components = url.rstrip('/').lstrip('/').split('/')
-    channel_id = path_components[0]
+def get_channel_page(env, start_response):
+    path_parts = env['path_parts']
+    channel_id = path_parts[1]
     try:
-        tab = path_components[1]
+        tab = path_parts[2]
     except IndexError:
         tab = 'videos'
     
-    parameters = urllib.parse.parse_qs(query_string)
+    parameters = env['fields']
     page_number = int(common.default_multi_get(parameters, 'page', 0, default='1'))
     sort = common.default_multi_get(parameters, 'sort', 0, default='3')
     view = common.default_multi_get(parameters, 'view', 0, default='1')
@@ -381,17 +381,17 @@ def get_channel_page(url, query_string=''):
         gevent.joinall(tasks)
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
 
-        return channel_videos_html(polymer_json, page_number, sort, number_of_videos, query_string)
+        result = channel_videos_html(polymer_json, page_number, sort, number_of_videos, env['QUERY_STRING'])
     elif tab == 'about':
         polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/about?pbj=1', common.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
-        return channel_about_page(polymer_json)
+        result = channel_about_page(polymer_json)
     elif tab == 'playlists':
         polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], common.desktop_ua + headers_1)
         '''with open('debug/channel_playlists_debug', 'wb') as f:
             f.write(polymer_json)'''
         polymer_json = json.loads(polymer_json)
-        return channel_playlists_html(polymer_json, sort)
+        result = channel_playlists_html(polymer_json, sort)
     elif tab == 'search':
         tasks = (
             gevent.spawn(get_number_of_videos, channel_id ), 
@@ -400,44 +400,54 @@ def get_channel_page(url, query_string=''):
         gevent.joinall(tasks)
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
 
-        return channel_search_page(polymer_json, query, page_number, number_of_videos, query_string)
+        result = channel_search_page(polymer_json, query, page_number, number_of_videos, env['QUERY_STRING'])
     else:
-        raise http_errors.Error404('Unknown channel tab: ' + tab)
+        start_response('404 Not Found', ())
+        return b'Unknown channel tab: ' + tab.encode('utf-8')
+
+    start_response('200 OK', [('Content-type','text/html'),])
+    return result.encode('utf-8')
 
 # youtube.com/user/[username]/[page]
 # youtube.com/c/[custom]/[page]
 # youtube.com/[custom]/[page]
-def get_channel_page_general_url(url, query_string=''):
-    path_components = url.rstrip('/').lstrip('/').split('/')
-    is_toplevel = not path_components[0] in ('user', 'c')
+def get_channel_page_general_url(env, start_response):
+    path_parts = env['path_parts']
 
-    if len(path_components) + int(is_toplevel) == 3:       # has /[page] after it
-        page = path_components[2]
-        base_url = 'https://www.youtube.com/' + '/'.join(path_components[0:-1])
-    elif len(path_components) + int(is_toplevel) == 2:     # does not have /[page] after it, use /videos by default
+    is_toplevel = not path_parts[0] in ('user', 'c')
+
+    if len(path_parts) + int(is_toplevel) == 3:       # has /[page] after it
+        page = path_parts[2]
+        base_url = 'https://www.youtube.com/' + '/'.join(path_parts[0:-1])
+    elif len(path_parts) + int(is_toplevel) == 2:     # does not have /[page] after it, use /videos by default
         page = 'videos'
-        base_url = 'https://www.youtube.com/' + '/'.join(path_components)
+        base_url = 'https://www.youtube.com/' + '/'.join(path_parts)
     else:
-        raise http_errors.Error404('Invalid channel url')
+        start_response('404 Not Found', ())
+        return b'Invalid channel url'
 
     if page == 'videos':
         polymer_json = common.fetch_url(base_url + '/videos?pbj=1&view=0', common.desktop_ua + headers_1)
         '''with open('debug/user_page_videos', 'wb') as f:
             f.write(polymer_json)'''
         polymer_json = json.loads(polymer_json)
-        return channel_videos_html(polymer_json)
+        result = channel_videos_html(polymer_json)
     elif page == 'about':
         polymer_json = common.fetch_url(base_url + '/about?pbj=1', common.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
-        return channel_about_page(polymer_json)
+        result = channel_about_page(polymer_json)
     elif page == 'playlists':
         polymer_json = common.fetch_url(base_url+ '/playlists?pbj=1&view=1', common.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
-        return channel_playlists_html(polymer_json)
+        result = channel_playlists_html(polymer_json)
     elif page == 'search':
         raise NotImplementedError()
         '''polymer_json = common.fetch_url('https://www.youtube.com/user' + username +  '/search?pbj=1&' + query_string, common.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_search_page('''
     else:
-        raise http_errors.Error404('Unknown channel page: ' + page)
+        start_response('404 Not Found', ())
+        return b'Unknown channel page: ' + page.encode('utf-8')
+
+    start_response('200 OK', [('Content-type','text/html'),])
+    return result.encode('utf-8')
