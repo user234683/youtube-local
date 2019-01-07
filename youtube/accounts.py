@@ -23,7 +23,7 @@ def account_list_data():
 def save_accounts():
     to_save = {channel_id: account for channel_id, account in accounts.items() if account['save']}
     with open(os.path.join(settings.data_dir, 'accounts.txt'), 'w', encoding='utf-8') as f:
-        f.write(json.dumps(to_save, indent=4))
+        f.write(json.dumps(to_save, indent=4)+'\n')
 
 def cookiejar_from_lwp_str(lwp_str):
     lwp_str = "#LWP-Cookies-2.0\n" + lwp_str    # header required by _really_load for reading from "file"
