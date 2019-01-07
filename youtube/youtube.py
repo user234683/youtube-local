@@ -75,11 +75,11 @@ def youtube(env, start_response):
                 return f.read().replace(b'$port_number', str(settings.port_number).encode())
 
         elif path == "/comment_delete_success":
-            start_response('200 OK',  () )
+            start_response('200 OK', [('Content-type', 'text/plain'),] )
             return b'Successfully deleted comment'
 
         elif path == "/comment_delete_fail":
-            start_response('200 OK',  () )
+            start_response('200 OK',  [('Content-type', 'text/plain'),] )
             return b'Failed to deleted comment'
 
         else:
@@ -97,9 +97,9 @@ def youtube(env, start_response):
         else:
             return handler(env, start_response)
 
-        start_response('404 Not Found', ())
+        start_response('404 Not Found', [('Content-type', 'text/plain'),])
         return b'404 Not Found'
 
     else:
-        start_response('501 Not Implemented', ())
+        start_response('501 Not Implemented', [('Content-type', 'text/plain'),])
         return b'501 Not Implemented'

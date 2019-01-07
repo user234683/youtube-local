@@ -402,7 +402,7 @@ def get_channel_page(env, start_response):
 
         result = channel_search_page(polymer_json, query, page_number, number_of_videos, env['QUERY_STRING'])
     else:
-        start_response('404 Not Found', ())
+        start_response('404 Not Found', [('Content-type', 'text/plain'),])
         return b'Unknown channel tab: ' + tab.encode('utf-8')
 
     start_response('200 OK', [('Content-type','text/html'),])
@@ -423,7 +423,7 @@ def get_channel_page_general_url(env, start_response):
         page = 'videos'
         base_url = 'https://www.youtube.com/' + '/'.join(path_parts)
     else:
-        start_response('404 Not Found', ())
+        start_response('404 Not Found', [('Content-type', 'text/plain'),])
         return b'Invalid channel url'
 
     if page == 'videos':
@@ -446,7 +446,7 @@ def get_channel_page_general_url(env, start_response):
         polymer_json = json.loads(polymer_json)
         return channel_search_page('''
     else:
-        start_response('404 Not Found', ())
+        start_response('404 Not Found', [('Content-type', 'text/plain'),])
         return b'Unknown channel page: ' + page.encode('utf-8')
 
     start_response('200 OK', [('Content-type','text/html'),])

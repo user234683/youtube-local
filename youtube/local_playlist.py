@@ -155,7 +155,7 @@ def path_edit_playlist(env, start_response):
         return b''
 
     else:
-        start_response('400 Bad Request', ())
+        start_response('400 Bad Request', [('Content-type', 'text/plain'),])
         return b'400 Bad Request'
 
 def edit_playlist(env, start_response):
@@ -165,5 +165,5 @@ def edit_playlist(env, start_response):
         add_to_playlist(parameters['playlist_name'][0], parameters['video_info_list'])
         start_response('204 No Content', ())
     else:
-        start_response('400 Bad Request', ())
+        start_response('400 Bad Request', [('Content-type', 'text/plain'),])
         return b'400 Bad Request'

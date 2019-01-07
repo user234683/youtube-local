@@ -231,7 +231,7 @@ music_list_table_row = Template('''<tr>
 def get_watch_page(env, start_response):
         video_id = env['parameters']['v'][0]
         if len(video_id) < 11:
-            start_response('404 Not Found', ())
+            start_response('404 Not Found', [('Content-type', 'text/plain'),])
             return b'Incomplete video id (too short): ' + video_id.encode('ascii')
 
         start_response('200 OK', [('Content-type','text/html'),])

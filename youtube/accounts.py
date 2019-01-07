@@ -64,10 +64,10 @@ def add_account(env, start_response):
         use_tor = False
 
     if _add_account(parameters['username'][0], parameters['password'][0], save_account, use_tor ):
-        start_response('200 OK',  () )
+        start_response('200 OK',  [('Content-type', 'text/plain'),] )
         return b'Account successfully added'
     else:
-        start_response('200 OK',  () )
+        start_response('200 OK',  [('Content-type', 'text/plain'),] )
         return b'Failed to add account'
 
 def get_account_login_page(env, start_response):
