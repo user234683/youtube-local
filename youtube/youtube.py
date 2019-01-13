@@ -63,7 +63,7 @@ def youtube(env, start_response):
                 return f.read()
 
         elif path.startswith("/api/"):
-            start_response('200 OK',  () )
+            start_response('200 OK',  [('Content-type', 'text/vtt'),] )
             result = common.fetch_url('https://www.youtube.com' + path + ('?' + query_string if query_string else ''))
             result = result.replace(b"align:start position:0%", b"")
             return result
