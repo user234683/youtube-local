@@ -14,18 +14,6 @@ import re
 import settings
 
 
-BAN_FILE = "banned_addresses.txt"
-try:
-    with open(BAN_FILE, 'r') as f:
-        banned_addresses = f.read().splitlines()
-except FileNotFoundError:
-    banned_addresses = ()
-
-def ban_address(address):
-    banned_addresses.append(address)
-    with open(BAN_FILE, 'a') as f:
-        f.write(address + "\n")
-        
 
 def youtu_be(env, start_response):
     id = env['PATH_INFO'][1:]
@@ -83,21 +71,11 @@ def site_dispatch(env, start_response):
     try:
         method = env['REQUEST_METHOD']
         path = env['PATH_INFO']
-        if client_address in banned_addresses:
-            yield error_code('403 Fuck Off', start_response)
-            return
+
         if method=="POST" and client_address not in ('127.0.0.1', '::1'):
             yield error_code('403 Forbidden', start_response)
             return
-        if "phpmyadmin" in path or (path == "/" and method == "HEAD"):
-            #ban_address(client_address)
-            start_response('403 Fuck Off', ())
-            yield b'403 Fuck Off'
-            return
 
-        '''if env['QUERY_STRING']:
-            path += '?' + env['QUERY_STRING']'''
-        #path_parts = urllib.parse.urlparse(path)
         try:
             env['SERVER_NAME'], env['PATH_INFO'] = split_url(path[1:])
         except ValueError:
