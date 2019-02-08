@@ -42,35 +42,35 @@ def playlist_ctoken(playlist_id, offset):
 headers_1 = (
     ('Accept', '*/*'),
     ('Accept-Language', 'en-US,en;q=0.5'),
-    ('X-YouTube-Client-Name', '1'),
+    ('X-YouTube-Client-Name', '2'),
     ('X-YouTube-Client-Version', '2.20180614'),
 )
 
 def playlist_first_page(playlist_id, report_text = "Retrieved playlist"):
-    url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&ajax=1&disable_polymer=true'
+    url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&pbj=1'
     content = common.fetch_url(url, common.mobile_ua + headers_1, report_text=report_text)
-    if content[0:4] == b")]}'":
-        content = content[4:]
+    '''with open('debug/playlist_debug', 'wb') as f:
+        f.write(content)'''
     content = json.loads(common.uppercase_escape(content.decode('utf-8')))
+
     return content
     
 
 #https://m.youtube.com/playlist?itct=CBMQybcCIhMIptj9xJaJ2wIV2JKcCh3Idwu-&ctoken=4qmFsgI2EiRWTFBMT3kwajlBdmxWWlB0bzZJa2pLZnB1MFNjeC0tN1BHVEMaDmVnWlFWRHBEUWxFJTNE&pbj=1
-def get_videos_ajax(playlist_id, page):
+def get_videos(playlist_id, page):
 
-    url = "https://m.youtube.com/playlist?action_continuation=1&ajax=1&ctoken=" + playlist_ctoken(playlist_id, (int(page)-1)*20)
+    url = "https://m.youtube.com/playlist?ctoken=" + playlist_ctoken(playlist_id, (int(page)-1)*20) + "&pbj=1"
     headers = {
         'User-Agent': '  Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
         'Accept': '*/*',
         'Accept-Language': 'en-US,en;q=0.5',
         'X-YouTube-Client-Name': '2',
-        'X-YouTube-Client-Version': '1.20180508',
+        'X-YouTube-Client-Version': '2.20180508',
     }
 
     content = common.fetch_url(url, headers, report_text="Retrieved playlist")
     '''with open('debug/playlist_debug', 'wb') as f:
         f.write(content)'''
-    content = content[4:]
 
     info = json.loads(common.uppercase_escape(content.decode('utf-8')))
     return info
@@ -89,22 +89,22 @@ def get_playlist_page(env, start_response):
     else:
         tasks = (
             gevent.spawn(playlist_first_page, playlist_id, report_text="Retrieved playlist info" ), 
-            gevent.spawn(get_videos_ajax, playlist_id, page)
+            gevent.spawn(get_videos, playlist_id, page)
         )
         gevent.joinall(tasks)
         first_page_json, this_page_json = tasks[0].value, tasks[1].value
     
-    try:
-        video_list = this_page_json['content']['section_list']['contents'][0]['contents'][0]['contents']
-    except KeyError:
-        video_list = this_page_json['content']['continuation_contents']['contents']
+    try:    # first page
+        video_list = this_page_json['response']['contents']['singleColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['playlistVideoListRenderer']['contents']
+    except KeyError:    # other pages
+        video_list = this_page_json['response']['continuationContents']['playlistVideoListContinuation']['contents']
     videos_html = ''
     for video_json in video_list:
-        info = common.ajax_info(video_json)
+        info = common.renderer_info(video_json['playlistVideoRenderer'])
         videos_html += common.video_item_html(info, common.small_video_item_template)
 
 
-    metadata = common.ajax_info(first_page_json['content']['playlist_header'])
+    metadata = common.renderer_info(first_page_json['response']['header']['playlistHeaderRenderer'])
     video_count = int(metadata['size'].replace(',', ''))
     page_buttons = common.page_buttons_html(int(page), math.ceil(video_count/20), common.URL_ORIGIN + "/playlist", env['QUERY_STRING'])
 

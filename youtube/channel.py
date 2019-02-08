@@ -47,6 +47,12 @@ headers_1 = (
     ('X-YouTube-Client-Name', '1'),
     ('X-YouTube-Client-Version', '2.20180830'),
 )
+headers_pbj = (
+    ('Accept', '*/*'),
+    ('Accept-Language', 'en-US,en;q=0.5'),
+    ('X-YouTube-Client-Name', '2'),
+    ('X-YouTube-Client-Version', '2.20180830'),
+)
 # https://www.youtube.com/browse_ajax?action_continuation=1&direct_render=1&continuation=4qmFsgJAEhhVQzdVY3M0MkZaeTN1WXpqcnF6T0lIc3caJEVnWjJhV1JsYjNNZ0FEZ0JZQUZxQUhvQk1yZ0JBQSUzRCUzRA%3D%3D
 # https://www.youtube.com/browse_ajax?ctoken=4qmFsgJAEhhVQzdVY3M0MkZaeTN1WXpqcnF6T0lIc3caJEVnWjJhV1JsYjNNZ0FEZ0JZQUZxQUhvQk1yZ0JBQSUzRCUzRA%3D%3D&continuation=4qmFsgJAEhhVQzdVY3M0MkZaeTN1WXpqcnF6T0lIc3caJEVnWjJhV1JsYjNNZ0FEZ0JZQUZxQUhvQk1yZ0JBQSUzRCUzRA%3D%3D&itct=CDsQybcCIhMIhZi1krTc2wIVjMicCh2HXQnhKJsc
 
@@ -99,14 +105,15 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1):
 def get_number_of_videos(channel_id):
     # Uploads playlist
     playlist_id = 'UU' + channel_id[2:]
-    url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&ajax=1&disable_polymer=true'
+    url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&pbj=1'
     print("Getting number of videos")
-    response = common.fetch_url(url, common.mobile_ua + headers_1)
+    response = common.fetch_url(url, common.mobile_ua + headers_pbj)
     '''with open('debug/playlist_debug_metadata', 'wb') as f:
         f.write(response)'''
     response = response.decode('utf-8')
     print("Got response for number of videos")
-    match = re.search(r'"num_videos_text":\s*{(?:"item_type":\s*"formatted_string",)?\s*"runs":\s*\[{"text":\s*"([\d,]*) videos"', response)
+
+    match = re.search(r'"numVideosText":\s*{\s*"runs":\s*\[{"text":\s*"([\d,]*) videos"', response)
     if match:
         return int(match.group(1).replace(',',''))
     else:

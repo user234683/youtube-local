@@ -483,8 +483,11 @@ dispatch = {
     'thumbnail':            ('thumbnail',   get_thumbnail),
     'thumbnails':           ('thumbnail',   lambda node: node[0]['thumbnails'][0]['url']),
 
+    'viewCountText':        ('views',       get_text),
+    'numVideosText':        ('size',        lambda node: get_text(node).split(' ')[0]),     # the format is "324 videos"
     'videoCountText':       ('size',        get_text),
     'playlistId':           ('id',          lambda node: node),
+    'descriptionText':      ('description', get_formatted_text),
 
     'subscriberCountText':  ('subscriber_count',    get_text),
     'channelId':            ('id',          lambda node: node),
@@ -510,6 +513,10 @@ def renderer_info(renderer):
             info['views'] = get_text(renderer['viewCountText'])
         elif 'shortViewCountText' in renderer:
             info['views'] = get_text(renderer['shortViewCountText'])
+
+        if 'ownerText' in renderer:
+            info['author'] = renderer['ownerText']['runs'][0]['text']
+            info['author_url'] = renderer['ownerText']['runs'][0]['navigationEndpoint']['commandMetadata']['webCommandMetadata']['url']
         try:
             overlays = renderer['thumbnailOverlays']
         except KeyError:
