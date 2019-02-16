@@ -182,7 +182,12 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookieja
     '''
     headers = dict(headers)     # Note: Calling dict() on a dict will make a copy
     headers['Accept-Encoding'] = 'gzip, br'
-    
+
+    # prevent python version being leaked by urllib if User-Agent isn't provided
+    #  (urllib will use ex. Python-urllib/3.6 otherwise)
+    if 'User-Agent' not in headers and 'user-agent' not in headers and 'User-agent' not in headers:
+        headers['User-Agent'] = 'Python-urllib'
+
     if data is not None:
         if isinstance(data, str):
             data = data.encode('ascii')
