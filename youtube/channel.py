@@ -107,7 +107,16 @@ def get_number_of_videos(channel_id):
     playlist_id = 'UU' + channel_id[2:]
     url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&pbj=1'
     print("Getting number of videos")
-    response = common.fetch_url(url, common.mobile_ua + headers_pbj)
+
+    # Sometimes retrieving playlist info fails with 403 for no discernable reason
+    try:
+        response = common.fetch_url(url, common.mobile_ua + headers_pbj)
+    except urllib.error.HTTPError as e:
+        if e.code != 403:
+            raise
+        print("Couldn't retrieve number of videos")
+        return 1000
+
     '''with open('debug/playlist_debug_metadata', 'wb') as f:
         f.write(response)'''
     response = response.decode('utf-8')
