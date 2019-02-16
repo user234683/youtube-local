@@ -2,13 +2,14 @@ import base64
 import youtube.common as common
 import urllib
 import json
-from string import Template
+import string
+from youtube import template
 import youtube.proto as proto
 import gevent
 import math
 
 with open("yt_playlist_template.html", "r") as file:
-    yt_playlist_template = Template(file.read())
+    yt_playlist_template = template.Template(file.read())
 
 
 
@@ -76,7 +77,7 @@ def get_videos(playlist_id, page):
     return info
 
 
-playlist_stat_template = Template('''
+playlist_stat_template = string.Template('''
 <div>$stat</div>''')
 def get_playlist_page(env, start_response):
     start_response('200 OK', [('Content-type','text/html'),])
