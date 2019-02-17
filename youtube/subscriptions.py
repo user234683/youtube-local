@@ -1,4 +1,6 @@
-from youtube import common, settings, channel
+from youtube import common, channel
+import settings
+from string import Template
 import sqlite3
 import os
 import secrets
@@ -9,6 +11,10 @@ try:
     import atoma
 except ModuleNotFoundError:
     print('Error: atoma not installed, subscriptions will not work')
+
+with open('yt_subscriptions_template.html', 'r', encoding='utf-8') as f:
+    subscriptions_template = Template(f.read())
+
 
 # https://stackabuse.com/a-sqlite-tutorial-with-python/
 
@@ -35,7 +41,7 @@ def open_database():
                               title text NOT NULL,
                               duration text,
                               time_published integer NOT NULL,
-                              description text,
+                              description text
                           )''')
         connection.commit()
     except:
@@ -73,11 +79,19 @@ def _get_videos(number, offset):
     connection = open_database()
     try:
         cursor = connection.cursor()
-        cursor.execute('''SELECT video_id, title, duration, time_published, description, channel_id, channel_name
+        db_videos = cursor.execute('''SELECT video_id, title, duration, channel_name
                           FROM videos
                           INNER JOIN subscribed_channels on videos.uploader_id = subscribed_channels.id
                           ORDER BY time_published DESC
-                          LIMIT ? OFFSET ?''', number, offset)
+                          LIMIT ? OFFSET ?''', (number, offset))
+
+        for db_video in db_videos:
+            yield {
+                'id':   db_video[0],
+                'title':    db_video[1],
+                'duration': db_video[2],
+                'author':   db_video[3],
+            }
     except:
         connection.rollback()
         raise
@@ -176,3 +190,18 @@ def _get_upstream_videos(channel_id, channel_name, time_last_checked):
             info['time published'] = youtube_timestamp_to_posix(info['published'])
         videos.append(info)
     return videos
+
+def get_subscriptions_page(env, start_response):
+    items_html = '''<nav class="item-grid">\n'''
+
+    for item in _get_videos(30, 0):
+        items_html += common.video_item_html(info, common.small_video_item_template)
+    items_html += '''\n</nav>'''
+
+    start_response('200 OK', [('Content-type','text/html'),])
+    return subscriptions_template.substitute(
+        header = common.get_header(),
+        items = items_html,
+        page_buttons = '',
+    ).encode('utf-8')
+

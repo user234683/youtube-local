@@ -1,7 +1,7 @@
 import mimetypes
 import urllib.parse
 import os
-from youtube import local_playlist, watch, search, playlist, channel, comments, common, post_comment, accounts
+from youtube import local_playlist, watch, search, playlist, channel, comments, common, post_comment, accounts, subscriptions
 import settings
 YOUTUBE_FILES = (
     "/shared.css",
@@ -24,6 +24,8 @@ get_handlers = {
     'post_comment':     post_comment.get_post_comment_page,
     'delete_comment':   post_comment.get_delete_comment_page,
     'login':            accounts.get_account_login_page,
+
+    'subscriptions':    subscriptions.get_subscriptions_page,
 }
 post_handlers = {
     'edit_playlist':    local_playlist.edit_playlist,
