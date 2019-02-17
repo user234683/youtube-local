@@ -33,6 +33,7 @@ def open_database():
                               uploader_id integer NOT NULL REFERENCES subscribed_channels(id) ON UPDATE CASCADE ON DELETE CASCADE,
                               video_id text NOT NULL,
                               title text NOT NULL,
+                              duration text,
                               time_published integer NOT NULL,
                               description text,
                           )''')
@@ -72,7 +73,7 @@ def _get_videos(number, offset):
     connection = open_database()
     try:
         cursor = connection.cursor()
-        cursor.execute('''SELECT video_id, title, time_published, description, channel_id, channel_name
+        cursor.execute('''SELECT video_id, title, duration, time_published, description, channel_id, channel_name
                           FROM videos
                           INNER JOIN subscribed_channels on videos.uploader_id = subscribed_channels.id
                           ORDER BY time_published DESC
