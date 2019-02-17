@@ -35,6 +35,8 @@ post_handlers = {
     'comments':         post_comment.post_comment,
     'post_comment':     post_comment.post_comment,
     'delete_comment':   post_comment.delete_comment,
+
+    'subscriptions':    subscriptions.post_subscriptions_page,
 }
 
 def youtube(env, start_response):

@@ -18,12 +18,15 @@
                     height:200px;
                     width:200px;
                 }
-                main .title{
+                .metadata{
                     grid-row:1;
-                    grid-column:2;                
+                    grid-column:2;
+                    margin-left: 10px;
+                    display:grid;
+                    align-content: start;
+                    grid-row-gap:10px;
                 }
                 main .channel-tabs{
-                    grid-row:2;
                     grid-column: 1 / span 2;
                     
                     display:grid;
@@ -48,7 +51,6 @@
                         font-weight:bold;
                     }
                 .item-grid{
-                    grid-row:4;
                     grid-column: 1 / span 2;
                 }
                 .item-list{
@@ -68,7 +70,15 @@
 $header
         <main>       
             <img class="avatar" src="$avatar">
-            <h2 class="title">$channel_title</h2>
+            <div class="metadata">
+                <h2 class="title">$channel_title</h2>
+                <form method="POST" action="/youtube.com/subscriptions" class="subscribe">
+                    <input type="submit" value="Subscribe">
+                    <input type="hidden" name="channel_id" value="$channel_id">
+                    <input type="hidden" name="channel_name" value="$channel_title">
+                    <input type="hidden" name="action" value="subscribe">
+                </form>
+            </div>
             <nav class="channel-tabs">
 $channel_tabs
             </nav>

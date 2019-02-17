@@ -5,6 +5,10 @@ import sqlite3
 import os
 import secrets
 import datetime
+import itertools
+import time
+import urllib
+import socks, sockshandler
 
 # so as to not completely break on people who have updated but don't know of new dependency
 try:
@@ -51,11 +55,16 @@ def open_database():
 
     return connection
 
-def _subscribe(channel_id, channel_name):
+def _subscribe(channels):
+    ''' channels is a list of (channel_id, channel_name) '''
+
+    # set time_last_checked to 0 on all channels being subscribed to
+    channels = ( (channel_id, channel_name, 0) for channel_id, channel_name in channels)
+
     connection = open_database()
     try:
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO subscribed_channels (channel_id, name) VALUES (?, ?)", (channel_id, channel_name))
+        cursor.executemany("INSERT INTO subscribed_channels (channel_id, channel_name, time_last_checked) VALUES (?, ?, ?)", channels)
         connection.commit()
     except:
         connection.rollback()
@@ -63,11 +72,12 @@ def _subscribe(channel_id, channel_name):
     finally:
         connection.close()
 
-def _unsubscribe(channel_id):
+def _unsubscribe(channel_ids):
+    ''' channel_ids is a list of channel_ids '''
     connection = open_database()
     try:
         cursor = connection.cursor()
-        cursor.execute("DELETE FROM subscribed_channels WHERE channel_id=?", (channel_id, ))
+        cursor.executemany("DELETE FROM subscribed_channels WHERE channel_id=?", ((channel_id, ) for channel_id in channel_ids))
         connection.commit()
     except:
         connection.rollback()
@@ -125,12 +135,14 @@ def youtube_timestamp_to_posix(dumb_timestamp):
 
 weekdays = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
 months = ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
-def _get_upstream_videos(channel_id, channel_name, time_last_checked):
+def _get_upstream_videos(channel_id, time_last_checked):
     feed_url = "https://www.youtube.com/feeds/videos.xml?channel_id=" + channel_id
     headers = {}
 
     # randomly change time_last_checked up to one day earlier to make tracking harder
     time_last_checked = time_last_checked - secrets.randbelow(24*3600)
+    if time_last_checked < 0:   # happens when time_last_checked is initialized to 0 when checking for first time
+        time_last_checked = 0
 
     # If-Modified-Since header: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since
     struct_time = time.gmtime(time_last_checked)
@@ -142,7 +154,7 @@ def _get_upstream_videos(channel_id, channel_name, time_last_checked):
 
     headers['User-Agent'] = 'Python-urllib'     # Don't leak python version
     headers['Accept-Encoding'] = 'gzip, br'
-    req = urllib.request.Request(url, headers=headers)
+    req = urllib.request.Request(feed_url, headers=headers)
     if settings.route_tor:
         opener = urllib.request.build_opener(sockshandler.SocksiPyHandler(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 9150))
     else:
@@ -165,13 +177,10 @@ def _get_upstream_videos(channel_id, channel_name, time_last_checked):
     for entry in feed.entries:
         video_id = entry.id_[9:]     # example of id_: yt:video:q6EoRBvdVPQ
 
-        # standard names used in this program for purposes of html templating
         atom_videos[video_id] = {
             'title': entry.title.value,
-            'author': entry.authors[0].name,
             #'description': '',              # Not supported by atoma
             #'duration': '',                 # Youtube's atom feeds don't provide it.. very frustrating
-            'published':    entry.published.strftime('%m/%d/%Y'),
             'time_published':   int(entry.published.timestamp()),
         }
 
@@ -182,12 +191,13 @@ def _get_upstream_videos(channel_id, channel_name, time_last_checked):
     # Now check channel page to retrieve missing information for videos
     json_channel_videos = channel.get_grid_items(channel.get_channel_tab(channel_id)[1]['response'])
     for json_video in json_channel_videos:
-        info = renderer_info(json_video)
+        info = common.renderer_info(json_video['gridVideoRenderer'])
+        if 'description' not in info:
+            info['description'] = ''
         if info['id'] in atom_videos:
             info.update(atom_videos[info['id']])
         else:
-            info['author'] = channel_name
-            info['time published'] = youtube_timestamp_to_posix(info['published'])
+            info['time_published'] = youtube_timestamp_to_posix(info['published'])
         videos.append(info)
     return videos
 
@@ -195,7 +205,7 @@ def get_subscriptions_page(env, start_response):
     items_html = '''<nav class="item-grid">\n'''
 
     for item in _get_videos(30, 0):
-        items_html += common.video_item_html(info, common.small_video_item_template)
+        items_html += common.video_item_html(item, common.small_video_item_template)
     items_html += '''\n</nav>'''
 
     start_response('200 OK', [('Content-type','text/html'),])
@@ -205,3 +215,38 @@ def get_subscriptions_page(env, start_response):
         page_buttons = '',
     ).encode('utf-8')
 
+def post_subscriptions_page(env, start_response):
+    params = env['parameters']
+    action = params['action'][0]
+    if action == 'subscribe':
+        if len(params['channel_id']) != len(params['channel_name']):
+            start_response('400 Bad Request', ())
+            return b'400 Bad Request, length of channel_id != length of channel_name'
+        _subscribe(zip(params['channel_id'], params['channel_name']))
+
+    elif action == 'unsubscribe':
+        _unsubscribe(params['channel_id'])
+
+    elif action == 'refresh':
+        connection = open_database()
+        try:
+            cursor = connection.cursor()
+            for uploader_id, channel_id, time_last_checked in cursor.execute('''SELECT id, channel_id, time_last_checked FROM subscribed_channels'''):
+                db_videos = ( (uploader_id, info['id'], info['title'], info['duration'], info['time_published'], info['description']) for info in _get_upstream_videos(channel_id, time_last_checked) )
+                cursor.executemany('''INSERT INTO videos (uploader_id, video_id, title, duration, time_published, description) VALUES (?, ?, ?, ?, ?, ?)''', db_videos)
+
+            cursor.execute('''UPDATE subscribed_channels SET time_last_checked = ?''', ( int(time.time()), ) )
+            connection.commit()
+        except:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+        start_response('303 See Other', [('Location', common.URL_ORIGIN + '/subscriptions'),] )
+        return b''
+    else:
+        start_response('400 Bad Request', ())
+        return b'400 Bad Request'
+    start_response('204 No Content', ())
+    return b''

@@ -248,6 +248,7 @@ def channel_videos_html(polymer_json, current_page=1, current_sort=3, number_of_
     return yt_channel_items_template.substitute(
         header              = common.get_header(),
         channel_title       = microformat['title'],
+        channel_id          = channel_id,
         channel_tabs        = channel_tabs_html(channel_id, 'Videos'),
         sort_buttons        = channel_sort_buttons_html(channel_id, 'videos', current_sort),
         avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
@@ -269,6 +270,7 @@ def channel_playlists_html(polymer_json, current_sort=3):
     return yt_channel_items_template.substitute(
         header              = common.get_header(),
         channel_title       = microformat['title'],
+        channel_id          = channel_id,
         channel_tabs        = channel_tabs_html(channel_id, 'Playlists'),
         sort_buttons        = channel_sort_buttons_html(channel_id, 'playlists', current_sort),
         avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
@@ -333,6 +335,7 @@ def channel_about_page(polymer_json):
         description         = description,
         links               = channel_links,
         stats               = stats,
+        channel_id          = channel_metadata['channelId'],
         channel_tabs        = channel_tabs_html(channel_metadata['channelId'], 'About'),
     )
 
@@ -353,6 +356,7 @@ def channel_search_page(polymer_json, query, current_page=1, number_of_videos = 
     return yt_channel_items_template.substitute(
         header              = common.get_header(),
         channel_title       = html.escape(microformat['title']),
+        channel_id          = channel_id,
         channel_tabs        = channel_tabs_html(channel_id, '', query),
         avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
         page_title          = html.escape(query + ' - Channel search'),
