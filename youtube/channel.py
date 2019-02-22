@@ -1,6 +1,6 @@
 import base64
-import youtube.common as common
-from youtube.common import default_multi_get, URL_ORIGIN, get_thumbnail_url, video_id
+from youtube import util, yt_data_extract, html_common
+
 import http_errors
 import urllib
 import json
@@ -91,7 +91,7 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1):
     url = "https://www.youtube.com/browse_ajax?ctoken=" + ctoken
 
     print("Sending channel tab ajax request")
-    content = common.fetch_url(url, common.desktop_ua + headers_1)
+    content = util.fetch_url(url, util.desktop_ua + headers_1)
     print("Finished recieving channel tab response")
 
     '''with open('debug/channel_debug', 'wb') as f:
@@ -110,7 +110,7 @@ def get_number_of_videos(channel_id):
 
     # Sometimes retrieving playlist info fails with 403 for no discernable reason
     try:
-        response = common.fetch_url(url, common.mobile_ua + headers_pbj)
+        response = util.fetch_url(url, util.mobile_ua + headers_pbj)
     except urllib.error.HTTPError as e:
         if e.code != 403:
             raise
@@ -133,20 +133,20 @@ def get_channel_id(username):
     # method that gives the smallest possible response at ~10 kb
     # needs to be as fast as possible
     url = 'https://m.youtube.com/user/' + username + '/about?ajax=1&disable_polymer=true'
-    response = common.fetch_url(url, common.mobile_ua + headers_1).decode('utf-8')
+    response = util.fetch_url(url, util.mobile_ua + headers_1).decode('utf-8')
     return re.search(r'"channel_id":\s*"([a-zA-Z0-9_-]*)"', response).group(1)
 
 def grid_items_html(items, additional_info={}):
     result = '''            <nav class="item-grid">\n'''
     for item in items:
-        result += common.renderer_html(item, additional_info)
+        result += html_common.renderer_html(item, additional_info)
     result += '''\n</nav>'''
     return result
 
 def list_items_html(items, additional_info={}):
     result = '''                <nav class="item-list">'''
     for item in items:
-        result += common.renderer_html(item, additional_info)
+        result += html_common.renderer_html(item, additional_info)
     result += '''\n</nav>'''
     return result
 
@@ -168,11 +168,11 @@ def channel_tabs_html(channel_id, current_tab, search_box_value=''):
             )
         else:
             result += channel_tab_template.substitute(
-                href_attribute = ' href="' + URL_ORIGIN + '/channel/' + channel_id + '/' + tab_name.lower() + '"',
+                href_attribute = ' href="' + util.URL_ORIGIN + '/channel/' + channel_id + '/' + tab_name.lower() + '"',
                 tab_name = tab_name,
             )
     result += channel_search_template.substitute(
-        action = URL_ORIGIN + "/channel/" + channel_id + "/search",
+        action = util.URL_ORIGIN + "/channel/" + channel_id + "/search",
         search_box_value = html.escape(search_box_value),
     )
     return result
@@ -192,7 +192,7 @@ def channel_sort_buttons_html(channel_id, tab, current_sort):
             )
         else:
             result += channel_sort_button_template.substitute(
-                href_attribute=' href="' + URL_ORIGIN + '/channel/' + channel_id + '/' + tab + '?sort=' + sort_number + '"',
+                href_attribute=' href="' + util.URL_ORIGIN + '/channel/' + channel_id + '/' + tab + '?sort=' + sort_number + '"',
                 text = 'Sort by ' + sort_name
             )
     return result
@@ -246,14 +246,14 @@ def channel_videos_html(polymer_json, current_page=1, current_sort=3, number_of_
     items_html = grid_items_html(items, {'author': microformat['title']})
     
     return yt_channel_items_template.substitute(
-        header              = common.get_header(),
+        header              = html_common.get_header(),
         channel_title       = microformat['title'],
         channel_tabs        = channel_tabs_html(channel_id, 'Videos'),
         sort_buttons        = channel_sort_buttons_html(channel_id, 'videos', current_sort),
         avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
         page_title          = microformat['title'] + ' - Channel',
         items               = items_html,
-        page_buttons        = common.page_buttons_html(current_page, math.ceil(number_of_videos/30), URL_ORIGIN + "/channel/" + channel_id + "/videos", current_query_string),
+        page_buttons        = html_common.page_buttons_html(current_page, math.ceil(number_of_videos/30), util.URL_ORIGIN + "/channel/" + channel_id + "/videos", current_query_string),
         number_of_results   = '{:,}'.format(number_of_videos) + " videos",
     )
 
@@ -267,7 +267,7 @@ def channel_playlists_html(polymer_json, current_sort=3):
     items_html = grid_items_html(items, {'author': microformat['title']})
     
     return yt_channel_items_template.substitute(
-        header              = common.get_header(),
+        header              = html_common.get_header(),
         channel_title       = microformat['title'],
         channel_tabs        = channel_tabs_html(channel_id, 'Playlists'),
         sort_buttons        = channel_sort_buttons_html(channel_id, 'playlists', current_sort),
@@ -310,25 +310,25 @@ def channel_about_page(polymer_json):
 
         channel_links += channel_link_template.substitute(
             url     = html.escape(url),
-            text    = common.get_plain_text(link_json['title']),
+            text    = yt_data_extract.get_plain_text(link_json['title']),
         )
 
     stats = ''
     for stat_name in ('subscriberCountText', 'joinedDateText', 'viewCountText', 'country'):
         try:
-            stat_value = common.get_plain_text(channel_metadata[stat_name])
+            stat_value = yt_data_extract.get_plain_text(channel_metadata[stat_name])
         except KeyError:
             continue
         else:
             stats += stat_template.substitute(stat_value=stat_value)
     try:
-        description = common.format_text_runs(common.get_formatted_text(channel_metadata['description']))
+        description = yt_data_extract.format_text_runs(yt_data_extract.get_formatted_text(channel_metadata['description']))
     except KeyError:
         description = ''
     return yt_channel_about_template.substitute(
-        header              = common.get_header(),
-        page_title          = common.get_plain_text(channel_metadata['title']) + ' - About',
-        channel_title       = common.get_plain_text(channel_metadata['title']),
+        header              = html_common.get_header(),
+        page_title          = yt_data_extract.get_plain_text(channel_metadata['title']) + ' - About',
+        channel_title       = yt_data_extract.get_plain_text(channel_metadata['title']),
         avatar              = html.escape(avatar),
         description         = description,
         links               = channel_links,
@@ -351,13 +351,13 @@ def channel_search_page(polymer_json, query, current_page=1, number_of_videos = 
     items_html = list_items_html(items)
 
     return yt_channel_items_template.substitute(
-        header              = common.get_header(),
+        header              = html_common.get_header(),
         channel_title       = html.escape(microformat['title']),
         channel_tabs        = channel_tabs_html(channel_id, '', query),
         avatar              = '/' + microformat['thumbnail']['thumbnails'][0]['url'],
         page_title          = html.escape(query + ' - Channel search'),
         items               = items_html,
-        page_buttons        = common.page_buttons_html(current_page, math.ceil(number_of_videos/29), URL_ORIGIN + "/channel/" + channel_id + "/search", current_query_string),
+        page_buttons        = html_common.page_buttons_html(current_page, math.ceil(number_of_videos/29), util.URL_ORIGIN + "/channel/" + channel_id + "/search", current_query_string),
         number_of_results   = '',
         sort_buttons        = '',
     )
@@ -367,7 +367,7 @@ def get_channel_search_json(channel_id, query, page):
     ctoken = proto.string(2, channel_id) + proto.string(3, params) + proto.string(11, query)
     ctoken = base64.urlsafe_b64encode(proto.nested(80226972, ctoken)).decode('ascii')
 
-    polymer_json = common.fetch_url("https://www.youtube.com/browse_ajax?ctoken=" + ctoken, common.desktop_ua + headers_1)
+    polymer_json = util.fetch_url("https://www.youtube.com/browse_ajax?ctoken=" + ctoken, util.desktop_ua + headers_1)
     '''with open('debug/channel_search_debug', 'wb') as f:
         f.write(polymer_json)'''
     polymer_json = json.loads(polymer_json)
@@ -384,10 +384,10 @@ def get_channel_page(env, start_response):
         tab = 'videos'
     
     parameters = env['parameters']
-    page_number = int(common.default_multi_get(parameters, 'page', 0, default='1'))
-    sort = common.default_multi_get(parameters, 'sort', 0, default='3')
-    view = common.default_multi_get(parameters, 'view', 0, default='1')
-    query = common.default_multi_get(parameters, 'query', 0, default='')
+    page_number = int(util.default_multi_get(parameters, 'page', 0, default='1'))
+    sort = util.default_multi_get(parameters, 'sort', 0, default='3')
+    view = util.default_multi_get(parameters, 'view', 0, default='1')
+    query = util.default_multi_get(parameters, 'query', 0, default='')
 
     if tab == 'videos':
         tasks = (
@@ -399,11 +399,11 @@ def get_channel_page(env, start_response):
 
         result = channel_videos_html(polymer_json, page_number, sort, number_of_videos, env['QUERY_STRING'])
     elif tab == 'about':
-        polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/about?pbj=1', common.desktop_ua + headers_1)
+        polymer_json = util.fetch_url('https://www.youtube.com/channel/' + channel_id + '/about?pbj=1', util.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
         result = channel_about_page(polymer_json)
     elif tab == 'playlists':
-        polymer_json = common.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], common.desktop_ua + headers_1)
+        polymer_json = util.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], util.desktop_ua + headers_1)
         '''with open('debug/channel_playlists_debug', 'wb') as f:
             f.write(polymer_json)'''
         polymer_json = json.loads(polymer_json)
@@ -443,22 +443,22 @@ def get_channel_page_general_url(env, start_response):
         return b'Invalid channel url'
 
     if page == 'videos':
-        polymer_json = common.fetch_url(base_url + '/videos?pbj=1&view=0', common.desktop_ua + headers_1)
+        polymer_json = util.fetch_url(base_url + '/videos?pbj=1&view=0', util.desktop_ua + headers_1)
         '''with open('debug/user_page_videos', 'wb') as f:
             f.write(polymer_json)'''
         polymer_json = json.loads(polymer_json)
         result = channel_videos_html(polymer_json)
     elif page == 'about':
-        polymer_json = common.fetch_url(base_url + '/about?pbj=1', common.desktop_ua + headers_1)
+        polymer_json = util.fetch_url(base_url + '/about?pbj=1', util.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
         result = channel_about_page(polymer_json)
     elif page == 'playlists':
-        polymer_json = common.fetch_url(base_url+ '/playlists?pbj=1&view=1', common.desktop_ua + headers_1)
+        polymer_json = util.fetch_url(base_url+ '/playlists?pbj=1&view=1', util.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
         result = channel_playlists_html(polymer_json)
     elif page == 'search':
         raise NotImplementedError()
-        '''polymer_json = common.fetch_url('https://www.youtube.com/user' + username +  '/search?pbj=1&' + query_string, common.desktop_ua + headers_1)
+        '''polymer_json = util.fetch_url('https://www.youtube.com/user' + username +  '/search?pbj=1&' + query_string, util.desktop_ua + headers_1)
         polymer_json = json.loads(polymer_json)
         return channel_search_page('''
     else:

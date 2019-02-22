@@ -1,11 +1,12 @@
+from youtube.template import Template
+from youtube import util, html_common
+import settings
+
 import os
 import json
-from youtube.template import Template
-from youtube import common
 import html
 import gevent
 import urllib
-import settings
 
 playlists_directory = os.path.join(settings.data_dir, "playlists")
 thumbnails_directory = os.path.join(settings.data_dir, "playlist_thumbnails")
@@ -38,7 +39,7 @@ def download_thumbnail(playlist_name, video_id):
     url = "https://i.ytimg.com/vi/" + video_id + "/mqdefault.jpg"
     save_location = os.path.join(thumbnails_directory, playlist_name, video_id + ".jpg")
     try:
-        thumbnail = common.fetch_url(url, report_text="Saved local playlist thumbnail: " + video_id)
+        thumbnail = util.fetch_url(url, report_text="Saved local playlist thumbnail: " + video_id)
     except urllib.error.HTTPError as e:
         print("Failed to download thumbnail for " + video_id + ": " + str(e))
         return
@@ -78,15 +79,15 @@ def get_local_playlist_page(name):
             if info['id'] + ".jpg" in thumbnails:
                 info['thumbnail'] = "/youtube.com/data/playlist_thumbnails/" + name + "/" + info['id'] + ".jpg"
             else:
-                info['thumbnail'] = common.get_thumbnail_url(info['id'])
+                info['thumbnail'] = util.get_thumbnail_url(info['id'])
                 missing_thumbnails.append(info['id'])
-            videos_html += common.video_item_html(info, common.small_video_item_template)
+            videos_html += html_common.video_item_html(info, html_common.small_video_item_template)
         except json.decoder.JSONDecodeError:
             pass
     gevent.spawn(download_thumbnails, name, missing_thumbnails)
     return local_playlist_template.substitute(
         page_title = name + ' - Local playlist',
-        header = common.get_header(),
+        header = html_common.get_header(),
         videos = videos_html,
         title = name,
         page_buttons = ''
@@ -127,11 +128,11 @@ def get_playlists_list_page():
     page = '''<ul>\n'''
     list_item_template = Template('''    <li><a href="$url">$name</a></li>\n''')
     for name in get_playlist_names():
-        page += list_item_template.substitute(url = html.escape(common.URL_ORIGIN + '/playlists/' + name), name = html.escape(name))
+        page += list_item_template.substitute(url = html.escape(util.URL_ORIGIN + '/playlists/' + name), name = html.escape(name))
     page += '''</ul>\n'''
-    return common.yt_basic_template.substitute(
+    return html_common.yt_basic_template.substitute(
         page_title = "Local playlists",
-        header = common.get_header(),
+        header = html_common.get_header(),
         style = '',
         page = page,
     )
@@ -151,7 +152,7 @@ def path_edit_playlist(env, start_response):
     if parameters['action'][0] == 'remove':
         playlist_name = env['path_parts'][1]
         remove_from_playlist(playlist_name, parameters['video_info_list'])
-        start_response('303 See Other', [('Location', common.URL_ORIGIN + env['PATH_INFO']),] )
+        start_response('303 See Other', [('Location', util.URL_ORIGIN + env['PATH_INFO']),] )
         return b''
 
     else:

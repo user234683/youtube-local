@@ -1,10 +1,10 @@
 # Contains functions having to do with logging in
+from youtube import util, html_common
+import settings
 
 import urllib
 import json
-from youtube import common
 import re
-import settings
 import http.cookiejar
 import io
 import os
@@ -106,7 +106,7 @@ def get_account_login_page(env, start_response):
     '''
 
     page = '''
-    <form action="''' + common.URL_ORIGIN + '''/login" method="POST">
+    <form action="''' + util.URL_ORIGIN + '''/login" method="POST">
         <div class="form-field">
             <label for="username">Username:</label>
             <input type="text" id="username" name="username">
@@ -130,10 +130,10 @@ Using Tor to log in should only be done if the account was created using a proxy
     </div>
     '''
 
-    return common.yt_basic_template.substitute(
+    return html_common.yt_basic_template.substitute(
         page_title = "Login",
         style = style,
-        header = common.get_header(),
+        header = html_common.get_header(),
         page = page,
     ).encode('utf-8')
 
@@ -229,7 +229,7 @@ def _login(username, password, cookiejar, use_tor):
     Taken from youtube-dl
     """
 
-    login_page = common.fetch_url(_LOGIN_URL, yt_dl_headers, report_text='Downloaded login page', cookiejar_receive=cookiejar, use_tor=use_tor).decode('utf-8')
+    login_page = util.fetch_url(_LOGIN_URL, yt_dl_headers, report_text='Downloaded login page', cookiejar_receive=cookiejar, use_tor=use_tor).decode('utf-8')
     '''with open('debug/login_page', 'w', encoding='utf-8') as f:
         f.write(login_page)'''
     #print(cookiejar.as_lwp_str())
@@ -255,7 +255,7 @@ def _login(username, password, cookiejar, use_tor):
             'Google-Accounts-XSRF': 1,
         }
         headers.update(yt_dl_headers)
-        result = common.fetch_url(url, headers, report_text=note, data=data, cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=use_tor).decode('utf-8')
+        result = util.fetch_url(url, headers, report_text=note, data=data, cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=use_tor).decode('utf-8')
         #print(cookiejar.as_lwp_str())
         '''with open('debug/' + note, 'w', encoding='utf-8') as f:
             f.write(result)'''
@@ -387,7 +387,7 @@ def _login(username, password, cookiejar, use_tor):
         return False
 
     try:
-        check_cookie_results = common.fetch_url(check_cookie_url, headers=yt_dl_headers, report_text="Checked cookie", cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=use_tor).decode('utf-8')
+        check_cookie_results = util.fetch_url(check_cookie_url, headers=yt_dl_headers, report_text="Checked cookie", cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=use_tor).decode('utf-8')
     except (urllib.error.URLError, compat_http_client.HTTPException, socket.error) as err:
         return False
 
@@ -398,7 +398,7 @@ def _login(username, password, cookiejar, use_tor):
         warn('Unable to log in')
         return False
 
-    select_site_page = common.fetch_url('https://m.youtube.com/select_site', headers=common.mobile_ua, report_text="Retrieved page for channel id", cookiejar_send=cookiejar, use_tor=use_tor).decode('utf-8')
+    select_site_page = util.fetch_url('https://m.youtube.com/select_site', headers=util.mobile_ua, report_text="Retrieved page for channel id", cookiejar_send=cookiejar, use_tor=use_tor).decode('utf-8')
     match = _CHANNEL_ID_RE.search(select_site_page)
     if match is None:
         warn('Failed to find channel id')

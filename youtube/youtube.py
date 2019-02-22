@@ -1,7 +1,7 @@
 import mimetypes
 import urllib.parse
 import os
-from youtube import local_playlist, watch, search, playlist, channel, comments, common, post_comment, accounts
+from youtube import local_playlist, watch, search, playlist, channel, comments, post_comment, accounts, util
 import settings
 YOUTUBE_FILES = (
     "/shared.css",
@@ -64,7 +64,7 @@ def youtube(env, start_response):
 
         elif path.startswith("/api/"):
             start_response('200 OK',  [('Content-type', 'text/vtt'),] )
-            result = common.fetch_url('https://www.youtube.com' + path + ('?' + query_string if query_string else ''))
+            result = util.fetch_url('https://www.youtube.com' + path + ('?' + query_string if query_string else ''))
             result = result.replace(b"align:start position:0%", b"")
             return result
 

@@ -1,11 +1,11 @@
 # Contains functions having to do with posting/editing/deleting comments
+from youtube import util, html_common, proto, comments, accounts
+import settings
 
 import urllib
 import json
-from youtube import common, proto, comments, accounts
 import re
 import traceback
-import settings
 import os
 
 def _post_comment(text, video_id, session_token, cookiejar):
@@ -31,7 +31,7 @@ def _post_comment(text, video_id, session_token, cookiejar):
     data = urllib.parse.urlencode(data_dict).encode()
 
 
-    content = common.fetch_url("https://m.youtube.com/service_ajax?name=createCommentEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
+    content = util.fetch_url("https://m.youtube.com/service_ajax?name=createCommentEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
 
     code = json.loads(content)['code']
     print("Comment posting code: " + code)
@@ -62,7 +62,7 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
     }
     data = urllib.parse.urlencode(data_dict).encode()
 
-    content = common.fetch_url("https://m.youtube.com/service_ajax?name=createCommentReplyEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
+    content = util.fetch_url("https://m.youtube.com/service_ajax?name=createCommentReplyEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
 
     code = json.loads(content)['code']
     print("Comment posting code: " + code)
@@ -90,7 +90,7 @@ def _delete_comment(video_id, comment_id, author_id, session_token, cookiejar):
     }
     data = urllib.parse.urlencode(data_dict).encode()
 
-    content = common.fetch_url("https://m.youtube.com/service_ajax?name=performCommentActionEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
+    content = util.fetch_url("https://m.youtube.com/service_ajax?name=performCommentActionEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
     code = json.loads(content)['code']
     print("Comment deletion code: " + code)
     return code
@@ -101,8 +101,8 @@ def get_session_token(video_id, cookiejar):
     # youtube-dl uses disable_polymer=1 which uses a different request format which has an obfuscated javascript algorithm to generate a parameter called "bgr"
     # Tokens retrieved from disable_polymer pages only work with that format. Tokens retrieved on mobile only work using mobile requests
     # Additionally, tokens retrieved without sending the same cookie won't work. So this is necessary even if the bgr and stuff was reverse engineered.
-    headers = {'User-Agent': common.mobile_user_agent}
-    mobile_page = common.fetch_url('https://m.youtube.com/watch?v=' + video_id, headers, report_text="Retrieved session token for comment", cookiejar_send=cookiejar, cookiejar_receive=cookiejar).decode()
+    headers = {'User-Agent': util.mobile_user_agent}
+    mobile_page = util.fetch_url('https://m.youtube.com/watch?v=' + video_id, headers, report_text="Retrieved session token for comment", cookiejar_send=cookiejar, cookiejar_receive=cookiejar).decode()
     match = xsrf_token_regex.search(mobile_page)
     if match:
         return match.group(1).replace("%3D", "=")
@@ -118,9 +118,9 @@ def delete_comment(env, start_response):
     code = _delete_comment(video_id, parameters['comment_id'][0], parameters['author_id'][0], token, cookiejar)
 
     if code == "SUCCESS":
-        start_response('303 See Other',  [('Location', common.URL_ORIGIN + '/comment_delete_success'),] )
+        start_response('303 See Other',  [('Location', util.URL_ORIGIN + '/comment_delete_success'),] )
     else:
-        start_response('303 See Other',  [('Location', common.URL_ORIGIN + '/comment_delete_fail'),] )
+        start_response('303 See Other',  [('Location', util.URL_ORIGIN + '/comment_delete_fail'),] )
 
 def post_comment(env, start_response):
     parameters = env['parameters']
@@ -131,11 +131,11 @@ def post_comment(env, start_response):
 
     if 'parent_id' in parameters:
         code = _post_comment_reply(parameters['comment_text'][0], parameters['video_id'][0], parameters['parent_id'][0], token, cookiejar)
-        start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comments?' + env['QUERY_STRING']),) )
+        start_response('303 See Other',  (('Location', util.URL_ORIGIN + '/comments?' + env['QUERY_STRING']),) )
 
     else:
         code = _post_comment(parameters['comment_text'][0], parameters['video_id'][0], token, cookiejar)
-        start_response('303 See Other',  (('Location', common.URL_ORIGIN + '/comments?ctoken=' + comments.make_comment_ctoken(video_id, sort=1)),) )
+        start_response('303 See Other',  (('Location', util.URL_ORIGIN + '/comments?ctoken=' + comments.make_comment_ctoken(video_id, sort=1)),) )
 
     return b''
 
@@ -163,10 +163,10 @@ def get_delete_comment_page(env, start_response):
     page += '''
         <input type="submit" value="Yes, delete it">
     </form>'''
-    return common.yt_basic_template.substitute(
+    return html_common.yt_basic_template.substitute(
         page_title = "Delete comment?",
         style = style,
-        header = common.get_header(),
+        header = html_common.get_header(),
         page = page,
     ).encode('utf-8')
 
@@ -174,7 +174,7 @@ def get_post_comment_page(env, start_response):
     start_response('200 OK', [('Content-type','text/html'),])
     parameters = env['parameters']
     video_id = parameters['video_id'][0]
-    parent_id = common.default_multi_get(parameters, 'parent_id', 0, default='')
+    parent_id = util.default_multi_get(parameters, 'parent_id', 0, default='')
     
     style = ''' main{
     display: grid;
@@ -194,23 +194,23 @@ textarea{
 }'''
     if parent_id:   # comment reply
         comment_box = comments.comment_box_template.substitute(
-            form_action = common.URL_ORIGIN + '/comments?parent_id=' + parent_id + "&video_id=" + video_id,
+            form_action = util.URL_ORIGIN + '/comments?parent_id=' + parent_id + "&video_id=" + video_id,
             video_id_input = '',
             post_text = "Post reply",
             options=comments.comment_box_account_options(),
         )
     else:
         comment_box = comments.comment_box_template.substitute(
-            form_action = common.URL_ORIGIN + '/post_comment',
+            form_action = util.URL_ORIGIN + '/post_comment',
             video_id_input = '''<input type="hidden" name="video_id" value="''' + video_id + '''">''',
             post_text = "Post comment",
             options=comments.comment_box_account_options(),
         )
         
     page = '''<div class="left">\n''' + comment_box + '''</div>\n'''
-    return common.yt_basic_template.substitute(
+    return html_common.yt_basic_template.substitute(
         page_title = "Post comment reply" if parent_id else "Post a comment",
         style = style,
-        header = common.get_header(),
+        header = html_common.get_header(),
         page = page,
     ).encode('utf-8')

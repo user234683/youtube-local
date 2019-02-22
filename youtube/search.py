@@ -1,11 +1,12 @@
+from youtube import util, html_common, yt_data_extract, proto
+
 import json
 import urllib
 import html
 from string import Template
 import base64
 from math import ceil
-from youtube.common import default_multi_get, get_thumbnail_url, URL_ORIGIN
-from youtube import common, proto
+
 
 with open("yt_search_results_template.html", "r") as file:
     yt_search_results_template = file.read()
@@ -54,7 +55,7 @@ def get_search_json(query, page, autocorrect, sort, filters):
         'X-YouTube-Client-Version': '2.20180418',
     }
     url += "&pbj=1&sp=" + page_number_to_sp_parameter(page, autocorrect, sort, filters).replace("=", "%3D")
-    content = common.fetch_url(url, headers=headers, report_text="Got search results")
+    content = util.fetch_url(url, headers=headers, report_text="Got search results")
     info = json.loads(content)
     return info
     
@@ -70,9 +71,9 @@ def get_search_page(env, start_response):
     start_response('200 OK', [('Content-type','text/html'),])
     parameters = env['parameters']
     if len(parameters) == 0:
-        return common.yt_basic_template.substitute(
+        return html_common.yt_basic_template.substitute(
             page_title = "Search",
-            header = common.get_header(),
+            header = html_common.get_header(),
             style = '',
             page = '',
         ).encode('utf-8')
@@ -100,24 +101,24 @@ def get_search_page(env, start_response):
             renderer = renderer[type]
             corrected_query_string = parameters.copy()
             corrected_query_string['query'] = [renderer['correctedQueryEndpoint']['searchEndpoint']['query']]
-            corrected_query_url = URL_ORIGIN + '/search?' + urllib.parse.urlencode(corrected_query_string, doseq=True)
+            corrected_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(corrected_query_string, doseq=True)
             corrections = did_you_mean.substitute(
                 corrected_query_url = corrected_query_url,
-                corrected_query = common.format_text_runs(renderer['correctedQuery']['runs']),
+                corrected_query = yt_data_extract.format_text_runs(renderer['correctedQuery']['runs']),
             )
             continue
         if type == 'showingResultsForRenderer':
             renderer = renderer[type]
             no_autocorrect_query_string = parameters.copy()
             no_autocorrect_query_string['autocorrect'] = ['0']
-            no_autocorrect_query_url = URL_ORIGIN + '/search?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
+            no_autocorrect_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
             corrections = showing_results_for.substitute(
-                corrected_query = common.format_text_runs(renderer['correctedQuery']['runs']),
+                corrected_query = yt_data_extract.format_text_runs(renderer['correctedQuery']['runs']),
                 original_query_url = no_autocorrect_query_url,
                 original_query = html.escape(renderer['originalQuery']['simpleText']),
             )
             continue
-        result_list_html += common.renderer_html(renderer, current_query_string=env['QUERY_STRING'])
+        result_list_html += html_common.renderer_html(renderer, current_query_string=env['QUERY_STRING'])
         
     page = int(page)
     if page <= 5:
@@ -129,13 +130,13 @@ def get_search_page(env, start_response):
         
     
     result = Template(yt_search_results_template).substitute(
-        header              = common.get_header(query),
+        header              = html_common.get_header(query),
         results             = result_list_html, 
         page_title          = query + " - Search", 
         search_box_value    = html.escape(query),
         number_of_results   = '{:,}'.format(estimated_results),
         number_of_pages     = '{:,}'.format(estimated_pages),
-        page_buttons        = common.page_buttons_html(page, estimated_pages, URL_ORIGIN + "/search", env['QUERY_STRING']),
+        page_buttons        = html_common.page_buttons_html(page, estimated_pages, util.URL_ORIGIN + "/search", env['QUERY_STRING']),
         corrections         = corrections
         )
     return result.encode('utf-8')

@@ -1,12 +1,12 @@
+from youtube import util, html_common, comments
+
 from youtube_dl.YoutubeDL import YoutubeDL
 from youtube_dl.extractor.youtube import YoutubeError
 import json
 import urllib
 from string import Template
 import html
-import youtube.common as common
-from youtube.common import default_multi_get, get_thumbnail_url, video_id, URL_ORIGIN
-import youtube.comments as comments
+
 import gevent
 import settings
 import os
@@ -127,9 +127,9 @@ def get_related_items_html(info):
     result = ""
     for item in info['related_vids']:
         if 'list' in item:  # playlist:
-            result += common.small_playlist_item_html(watch_page_related_playlist_info(item))
+            result += html_common.small_playlist_item_html(watch_page_related_playlist_info(item))
         else:
-            result += common.small_video_item_html(watch_page_related_video_info(item))
+            result += html_common.small_video_item_html(watch_page_related_video_info(item))
     return result
 
     
@@ -137,7 +137,7 @@ def get_related_items_html(info):
 # converts these to standard names
 def watch_page_related_video_info(item):
     result = {key: item[key] for key in ('id', 'title', 'author')}
-    result['duration'] = common.seconds_to_timestamp(item['length_seconds'])
+    result['duration'] = util.seconds_to_timestamp(item['length_seconds'])
     try:
         result['views'] = item['short_view_count_text']
     except KeyError:
@@ -155,9 +155,9 @@ def watch_page_related_playlist_info(item):
     
 def sort_formats(info):
     sorted_formats = info['formats'].copy()
-    sorted_formats.sort(key=lambda x: default_multi_get(_formats, x['format_id'], 'height', default=0))
+    sorted_formats.sort(key=lambda x: util.default_multi_get(_formats, x['format_id'], 'height', default=0))
     for index, format in enumerate(sorted_formats):
-        if default_multi_get(_formats, format['format_id'], 'height', default=0) >= 360:
+        if util.default_multi_get(_formats, format['format_id'], 'height', default=0) >= 360:
             break
     sorted_formats = sorted_formats[index:] + sorted_formats[0:index]
     sorted_formats = [format for format in info['formats'] if format['acodec'] != 'none' and format['vcodec'] != 'none']
@@ -236,7 +236,7 @@ def get_watch_page(env, start_response):
 
         start_response('200 OK', [('Content-type','text/html'),])
 
-        lc = common.default_multi_get(env['parameters'], 'lc', 0, default='')
+        lc = util.default_multi_get(env['parameters'], 'lc', 0, default='')
         if settings.route_tor:
             proxy = 'socks5://127.0.0.1:9150/'
         else:
@@ -256,17 +256,17 @@ def get_watch_page(env, start_response):
         #chosen_format = choose_format(info)
 
         if isinstance(info, str): # youtube error
-            return common.yt_basic_template.substitute(
+            return html_common.yt_basic_template.substitute(
                 page_title = "Error",
                 style = "",
-                header = common.get_header(),
+                header = html_common.get_header(),
                 page = html.escape(info),
             ).encode('utf-8')
             
         sorted_formats = sort_formats(info)
         
         video_info = {
-            "duration": common.seconds_to_timestamp(info["duration"]),
+            "duration": util.seconds_to_timestamp(info["duration"]),
             "id":       info['id'],
             "title":    info['title'],
             "author":   info['uploader'],
@@ -338,7 +338,7 @@ def get_watch_page(env, start_response):
         page = yt_watch_template.substitute(
             video_title             = html.escape(info["title"]),
             page_title              = html.escape(info["title"]),
-            header                  = common.get_header(),
+            header                  = html_common.get_header(),
             uploader                = html.escape(info["uploader"]),
             uploader_channel_url    = '/' + info["uploader_url"],
             upload_date             = upload_date,
