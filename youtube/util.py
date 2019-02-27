@@ -149,7 +149,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookieja
     else:           # Use a urllib3 pool. Cookies can't be used since urllib3 doesn't have easy support for them.
         pool = get_pool(use_tor and settings.route_tor)
 
-        response = pool.request(method, url, headers=headers, timeout=timeout, preload_content=False)
+        response = pool.request(method, url, headers=headers, timeout=timeout, preload_content=False, decode_content=False)
         response_time = time.time()
 
         content = response.read()
