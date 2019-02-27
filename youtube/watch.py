@@ -127,9 +127,11 @@ def get_related_items_html(info):
     result = ""
     for item in info['related_vids']:
         if 'list' in item:  # playlist:
-            result += html_common.small_playlist_item_html(watch_page_related_playlist_info(item))
+            item = watch_page_related_playlist_info(item)
+            result += html_common.playlist_item_html(item, html_common.small_playlist_item_template)
         else:
-            result += html_common.small_video_item_html(watch_page_related_video_info(item))
+            item = watch_page_related_video_info(item)
+            result += html_common.video_item_html(item, html_common.small_video_item_template)
     return result
 
     
@@ -142,6 +144,7 @@ def watch_page_related_video_info(item):
         result['views'] = item['short_view_count_text']
     except KeyError:
         result['views'] = ''
+    result['thumbnail'] = util.get_thumbnail_url(item['id'])
     return result
     
 def watch_page_related_playlist_info(item):
@@ -150,6 +153,7 @@ def watch_page_related_playlist_info(item):
         'title': item['playlist_title'],
         'id': item['list'],
         'first_video_id': item['video_id'],
+        'thumbnail': util.get_thumbnail_url(item['video_id']),
     }
 
     

@@ -103,56 +103,6 @@ medium_channel_item_template = Template('''
 
 
 
-# -----
-# HTML
-# -----
-
-def small_video_item_html(item):
-    video_info = json.dumps({key: item[key] for key in ('id', 'title', 'author', 'duration')})
-    return small_video_item_template.substitute(
-        title       = html.escape(item["title"]),
-        views       = item["views"],
-        author      = html.escape(item["author"]),
-        duration    = item["duration"],
-        url         = util.URL_ORIGIN + "/watch?v=" + item["id"],
-        thumbnail   = util.get_thumbnail_url(item['id']),
-        video_info  = html.escape(video_info),
-    )
-
-def small_playlist_item_html(item):
-    return small_playlist_item_template.substitute(
-        title=html.escape(item["title"]),
-        size = item['size'],
-        author="",
-        url = util.URL_ORIGIN + "/playlist?list=" + item["id"],
-        thumbnail= util.get_thumbnail_url(item['first_video_id']),
-    )
-
-def medium_playlist_item_html(item):
-    return medium_playlist_item_template.substitute(
-        title=html.escape(item["title"]),
-        size = item['size'],
-        author=item['author'],
-        author_url= util.URL_ORIGIN + item['author_url'],
-        url = util.URL_ORIGIN + "/playlist?list=" + item["id"],
-        thumbnail= item['thumbnail'],
-    )
-
-def medium_video_item_html(medium_video_info):
-    info = medium_video_info
-       
-    return medium_video_item_template.substitute(
-            title=html.escape(info["title"]),
-            views=info["views"],
-            published = info["published"],
-            description = yt_data_extract.format_text_runs(info["description"]),
-            author=html.escape(info["author"]),
-            author_url=info["author_url"],
-            duration=info["duration"],
-            url = util.URL_ORIGIN + "/watch?v=" + info["id"],
-            thumbnail=info['thumbnail'],
-            datetime='', # TODO
-        )
 
 
 header_template = Template('''
