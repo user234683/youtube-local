@@ -15,9 +15,9 @@ Download the zip file under the Releases page. Unzip it anywhere you choose.
 
 ### Linux/MacOS
 
-Ensure you have python 3.5 or later installed. Then, install gevent, brotli, and PySocks by running
+Ensure you have python 3.5 or later installed. Then, install gevent, brotli, PySocks, and urllib3 by running
 ```
-pip3 install gevent brotli pysocks
+pip3 install gevent brotli pysocks urllib3
 ```
 **Note**: If pip isn't installed, install it according to [this answer](https://unix.stackexchange.com/a/182467), but make sure you run `python3 get-pip.py` instead of `python get-pip.py`
 
