@@ -1712,7 +1712,8 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                         view_count = extract_view_count(get_video_info)
                     if not video_info:
                         video_info = get_video_info
-                    if 'token' in get_video_info:
+                    get_token = get_video_info.get('token') or get_video_info.get('account_playback_token')
+                    if get_token:
                         # Different get_video_info requests may report different results, e.g.
                         # some may report video unavailability, but some may serve it without
                         # any complaint (see https://github.com/rg3/youtube-dl/issues/7362,
@@ -1722,7 +1723,8 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                         # due to YouTube measures against IP ranges of hosting providers.
                         # Working around by preferring the first succeeded video_info containing
                         # the token if no such video_info yet was found.
-                        if 'token' not in video_info:
+                        token = video_info.get('token') or video_info.get('account_playback_token')
+                        if not token:
                             video_info = get_video_info
                         break
 
@@ -1731,7 +1733,8 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                 r'(?s)<h1[^>]+id="unavailable-message"[^>]*>(.+?)</h1>',
                 video_webpage, 'unavailable message', default=None)
 
-        if 'token' not in video_info:
+        token = video_info.get('token') or video_info.get('account_playback_token')
+        if not token:
             if 'reason' in video_info:
                 if 'The uploader has not made this video available in your country.' in video_info['reason']:
                     regions_allowed = self._html_search_meta(
