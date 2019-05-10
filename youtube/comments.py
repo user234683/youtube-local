@@ -234,10 +234,7 @@ def parse_comments_polymer(content, replies=False):
             
             comment_raw = comment_raw['commentRenderer']
             comment = {
-            'author': yt_data_extract.get_plain_text(comment_raw['authorText']),
-            'author_url': comment_raw['authorEndpoint']['commandMetadata']['webCommandMetadata']['url'],
-            'author_channel_id': comment_raw['authorEndpoint']['browseEndpoint']['browseId'],
-            'author_id': comment_raw['authorId'],
+            'author_id': comment_raw.get('authorId', ''),
             'author_avatar': comment_raw['authorThumbnail']['thumbnails'][0]['url'],
             'likes': comment_raw['likeCount'],
             'published': yt_data_extract.get_plain_text(comment_raw['publishedTimeText']),
@@ -247,6 +244,16 @@ def parse_comments_polymer(content, replies=False):
             'video_id': video_id,
             'comment_id': comment_raw['commentId'],
             }
+
+            if 'authorText' in comment_raw:     # deleted channels have no name or channel link
+                comment['author'] = yt_data_extract.get_plain_text(comment_raw['authorText'])
+                comment['author_url'] = comment_raw['authorEndpoint']['commandMetadata']['webCommandMetadata']['url']
+                comment['author_channel_id'] = comment_raw['authorEndpoint']['browseEndpoint']['browseId']
+            else:
+                comment['author'] = ''
+                comment['author_url'] = ''
+                comment['author_channel_id'] = ''
+
             comments.append(comment)
     except Exception as e:
         print('Error parsing comments: ' + str(e))
