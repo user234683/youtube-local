@@ -1,4 +1,4 @@
-from youtube import common, channel
+from youtube import util, yt_data_extract, html_common, channel
 import settings
 from string import Template
 import sqlite3
@@ -169,7 +169,7 @@ def _get_upstream_videos(channel_id, time_last_checked):
 
     content = response.read()
     print('Retrieved videos for ' + channel_id)
-    content = common.decode_content(content, response.getheader('Content-Encoding', default='identity'))
+    content = util.decode_content(content, response.getheader('Content-Encoding', default='identity'))
 
 
     feed = atoma.parse_atom_bytes(content)
@@ -191,7 +191,7 @@ def _get_upstream_videos(channel_id, time_last_checked):
     # Now check channel page to retrieve missing information for videos
     json_channel_videos = channel.get_grid_items(channel.get_channel_tab(channel_id)[1]['response'])
     for json_video in json_channel_videos:
-        info = common.renderer_info(json_video['gridVideoRenderer'])
+        info = yt_data_extract.renderer_info(json_video['gridVideoRenderer'])
         if 'description' not in info:
             info['description'] = ''
         if info['id'] in atom_videos:
@@ -205,12 +205,12 @@ def get_subscriptions_page(env, start_response):
     items_html = '''<nav class="item-grid">\n'''
 
     for item in _get_videos(30, 0):
-        items_html += common.video_item_html(item, common.small_video_item_template)
+        items_html += html_common.video_item_html(item, html_common.small_video_item_template)
     items_html += '''\n</nav>'''
 
     start_response('200 OK', [('Content-type','text/html'),])
     return subscriptions_template.substitute(
-        header = common.get_header(),
+        header = html_common.get_header(),
         items = items_html,
         page_buttons = '',
     ).encode('utf-8')
@@ -243,7 +243,7 @@ def post_subscriptions_page(env, start_response):
         finally:
             connection.close()
 
-        start_response('303 See Other', [('Location', common.URL_ORIGIN + '/subscriptions'),] )
+        start_response('303 See Other', [('Location', util.URL_ORIGIN + '/subscriptions'),] )
         return b''
     else:
         start_response('400 Bad Request', ())

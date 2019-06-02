@@ -2,16 +2,19 @@ from gevent import monkey
 monkey.patch_all()
 import gevent.socket
 
-from gevent.pywsgi import WSGIServer
 from youtube.youtube import youtube
+from youtube import util
 import http_errors
+import settings
+
+from gevent.pywsgi import WSGIServer
 import urllib
+import urllib3
 import socket
 import socks, sockshandler
 import subprocess
 import re
 
-import settings
 
 
 
@@ -31,15 +34,14 @@ def proxy_site(env, start_response):
         url += '?' + env['QUERY_STRING']
 
 
-    req = urllib.request.Request(url, headers=headers)
-    if settings.route_tor:
-        opener = urllib.request.build_opener(sockshandler.SocksiPyHandler(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 9150))
-        response = opener.open(req, timeout=10)
-    else:
-        response = urllib.request.urlopen(req, timeout=10)
+    content, response = util.fetch_url(url, headers, return_response=True)
 
-    start_response('200 OK', response.getheaders() )
-    return response.read()
+    headers = response.getheaders()
+    if isinstance(headers, urllib3._collections.HTTPHeaderDict):
+        headers = headers.items()
+
+    start_response('200 OK', headers )
+    return content
 
 site_handlers = {
     'youtube.com':youtube,

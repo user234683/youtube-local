@@ -60,7 +60,7 @@ def unpadded_b64encode(data):
 
 def as_bytes(value):
     if isinstance(value, str):
-        return value.encode('ascii')
+        return value.encode('utf-8')
     return value
 
 

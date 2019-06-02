@@ -1,14 +1,14 @@
+from youtube import util, yt_data_extract, html_common, template, proto
+
 import base64
-import youtube.common as common
 import urllib
 import json
-from string import Template
-import youtube.proto as proto
+import string
 import gevent
 import math
 
 with open("yt_playlist_template.html", "r") as file:
-    yt_playlist_template = Template(file.read())
+    yt_playlist_template = template.Template(file.read())
 
 
 
@@ -48,10 +48,10 @@ headers_1 = (
 
 def playlist_first_page(playlist_id, report_text = "Retrieved playlist"):
     url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&pbj=1'
-    content = common.fetch_url(url, common.mobile_ua + headers_1, report_text=report_text)
+    content = util.fetch_url(url, util.mobile_ua + headers_1, report_text=report_text)
     '''with open('debug/playlist_debug', 'wb') as f:
         f.write(content)'''
-    content = json.loads(common.uppercase_escape(content.decode('utf-8')))
+    content = json.loads(util.uppercase_escape(content.decode('utf-8')))
 
     return content
     
@@ -68,15 +68,15 @@ def get_videos(playlist_id, page):
         'X-YouTube-Client-Version': '2.20180508',
     }
 
-    content = common.fetch_url(url, headers, report_text="Retrieved playlist")
+    content = util.fetch_url(url, headers, report_text="Retrieved playlist")
     '''with open('debug/playlist_debug', 'wb') as f:
         f.write(content)'''
 
-    info = json.loads(common.uppercase_escape(content.decode('utf-8')))
+    info = json.loads(util.uppercase_escape(content.decode('utf-8')))
     return info
 
 
-playlist_stat_template = Template('''
+playlist_stat_template = string.Template('''
 <div>$stat</div>''')
 def get_playlist_page(env, start_response):
     start_response('200 OK', [('Content-type','text/html'),])
@@ -100,22 +100,22 @@ def get_playlist_page(env, start_response):
         video_list = this_page_json['response']['continuationContents']['playlistVideoListContinuation']['contents']
     videos_html = ''
     for video_json in video_list:
-        info = common.renderer_info(video_json['playlistVideoRenderer'])
-        videos_html += common.video_item_html(info, common.small_video_item_template)
+        info = yt_data_extract.renderer_info(video_json['playlistVideoRenderer'])
+        videos_html += html_common.video_item_html(info, html_common.small_video_item_template)
 
 
-    metadata = common.renderer_info(first_page_json['response']['header']['playlistHeaderRenderer'])
+    metadata = yt_data_extract.renderer_info(first_page_json['response']['header']['playlistHeaderRenderer'])
     video_count = int(metadata['size'].replace(',', ''))
-    page_buttons = common.page_buttons_html(int(page), math.ceil(video_count/20), common.URL_ORIGIN + "/playlist", env['QUERY_STRING'])
+    page_buttons = html_common.page_buttons_html(int(page), math.ceil(video_count/20), util.URL_ORIGIN + "/playlist", env['QUERY_STRING'])
 
-    html_ready = common.get_html_ready(metadata)
+    html_ready = html_common.get_html_ready(metadata)
     html_ready['page_title'] = html_ready['title'] + ' - Page ' + str(page)
 
     stats = ''
     stats += playlist_stat_template.substitute(stat=html_ready['size'] + ' videos')
     stats += playlist_stat_template.substitute(stat=html_ready['views'])
     return yt_playlist_template.substitute(
-        header          = common.get_header(),
+        header          = html_common.get_header(),
         videos          = videos_html,
         page_buttons    = page_buttons,
         stats = stats,

@@ -1,7 +1,7 @@
 # youtube-local
 
 ![screenshot](https://user-images.githubusercontent.com/28744867/42791028-dabb709a-8922-11e8-935b-6680541e08e4.png)
-youtube-local is a browser-based client written in Python for watching Youtube anonymously and without the lag of the javascript-heavy page used by Youtube. One of the primary features is that all requests are routed through Tor, except for the video file at googlevideo.com. This is analogous to what HookTube does, except that you do not have to trust a third-party to respect your privacy. The assumption here is that Google won't put the effort in to incorporate the video file requests into their survelliance systems, as it's not worth pursuing the incredibly small number of users who care about privacy. Using Tor is optional; when not routing through Tor, video pages load *faster* than they do with Youtube's laggy javascript page (for me atleast).
+youtube-local is a browser-based client written in Python for watching Youtube anonymously and without the lag of the javascript-heavy page used by Youtube. One of the primary features is that all requests are routed through Tor, except for the video file at googlevideo.com. This is analogous to what HookTube does, except that you do not have to trust a third-party to respect your privacy. The assumption here is that Google won't put the effort in to incorporate the video file requests into their survelliance systems, as it's not worth pursuing the incredibly small number of users who care about privacy. Tor has high latency, so this will not be as fast as regular Youtube. However, using Tor is optional; when not routing through Tor, video pages may load faster than they do with Youtube's laggy javascript page depending on your browser.
 
 The Youtube API is not used, so no keys or anything are needed. It uses the same requests as the Youtube webpage. No javascript is used either.
 
@@ -15,9 +15,9 @@ Download the zip file under the Releases page. Unzip it anywhere you choose.
 
 ### Linux/MacOS
 
-Ensure you have python 3.5 or later installed. Then, install gevent, brotli, and PySocks by running
+Ensure you have python 3.5 or later installed. Then, install gevent, brotli, PySocks, and urllib3 by running
 ```
-pip3 install gevent brotli pysocks
+pip3 install gevent brotli pysocks urllib3
 ```
 **Note**: If pip isn't installed, install it according to [this answer](https://unix.stackexchange.com/a/182467), but make sure you run `python3 get-pip.py` instead of `python get-pip.py`
 
