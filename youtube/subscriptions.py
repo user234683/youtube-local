@@ -130,11 +130,11 @@ def _get_upstream_videos(channel_id):
     videos = []
 
     json_channel_videos = channel.get_grid_items(channel.get_channel_tab(channel_id)[1]['response'])
-    for json_video in json_channel_videos:
+    for i, json_video in enumerate(json_channel_videos):
         info = yt_data_extract.renderer_info(json_video['gridVideoRenderer'])
         if 'description' not in info:
             info['description'] = ''
-        info['time_published'] = youtube_timestamp_to_posix(info['published'])
+        info['time_published'] = youtube_timestamp_to_posix(info['published']) - i  # subtract a few seconds off the videos so they will be in the right order
         videos.append(info)
     return videos
 
