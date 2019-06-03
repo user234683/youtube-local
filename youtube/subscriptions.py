@@ -10,12 +10,6 @@ import time
 import urllib
 import socks, sockshandler
 
-# so as to not completely break on people who have updated but don't know of new dependency
-try:
-    import atoma
-except ModuleNotFoundError:
-    print('Error: atoma not installed, subscriptions will not work')
-
 with open('yt_subscriptions_template.html', 'r', encoding='utf-8') as f:
     subscriptions_template = Template(f.read())
 
@@ -132,72 +126,15 @@ def youtube_timestamp_to_posix(dumb_timestamp):
         unit = unit[:-1]    # remove s from end
     return now - number*units[unit]
 
-
-weekdays = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
-months = ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
-def _get_upstream_videos(channel_id, time_last_checked):
-    feed_url = "https://www.youtube.com/feeds/videos.xml?channel_id=" + channel_id
-    headers = {}
-
-    # randomly change time_last_checked up to one day earlier to make tracking harder
-    time_last_checked = time_last_checked - secrets.randbelow(24*3600)
-    if time_last_checked < 0:   # happens when time_last_checked is initialized to 0 when checking for first time
-        time_last_checked = 0
-
-    # If-Modified-Since header: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/If-Modified-Since
-    struct_time = time.gmtime(time_last_checked)
-    weekday = weekdays[struct_time.tm_wday]     # dumb requirement
-    month = months[struct_time.tm_mon - 1]
-    headers['If-Modified-Since'] = time.strftime(weekday + ', %d ' + month + ' %Y %H:%M:%S GMT', struct_time)
-    print(headers['If-Modified-Since'])
-
-
-    headers['User-Agent'] = 'Python-urllib'     # Don't leak python version
-    headers['Accept-Encoding'] = 'gzip, br'
-    req = urllib.request.Request(feed_url, headers=headers)
-    if settings.route_tor:
-        opener = urllib.request.build_opener(sockshandler.SocksiPyHandler(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 9150))
-    else:
-        opener = urllib.request.build_opener()
-    response = opener.open(req, timeout=15)
-
-
-    if response.getcode == '304':
-        print('No new videos for ' + channel_id)
-        return []
-
-
-    content = response.read()
-    print('Retrieved videos for ' + channel_id)
-    content = util.decode_content(content, response.getheader('Content-Encoding', default='identity'))
-
-
-    feed = atoma.parse_atom_bytes(content)
-    atom_videos = {}
-    for entry in feed.entries:
-        video_id = entry.id_[9:]     # example of id_: yt:video:q6EoRBvdVPQ
-
-        atom_videos[video_id] = {
-            'title': entry.title.value,
-            #'description': '',              # Not supported by atoma
-            #'duration': '',                 # Youtube's atom feeds don't provide it.. very frustrating
-            'time_published':   int(entry.published.timestamp()),
-        }
-
-
-    # final list
+def _get_upstream_videos(channel_id):
     videos = []
 
-    # Now check channel page to retrieve missing information for videos
     json_channel_videos = channel.get_grid_items(channel.get_channel_tab(channel_id)[1]['response'])
     for json_video in json_channel_videos:
         info = yt_data_extract.renderer_info(json_video['gridVideoRenderer'])
         if 'description' not in info:
             info['description'] = ''
-        if info['id'] in atom_videos:
-            info.update(atom_videos[info['id']])
-        else:
-            info['time_published'] = youtube_timestamp_to_posix(info['published'])
+        info['time_published'] = youtube_timestamp_to_posix(info['published'])
         videos.append(info)
     return videos
 
@@ -231,8 +168,8 @@ def post_subscriptions_page(env, start_response):
         connection = open_database()
         try:
             cursor = connection.cursor()
-            for uploader_id, channel_id, time_last_checked in cursor.execute('''SELECT id, channel_id, time_last_checked FROM subscribed_channels'''):
-                db_videos = ( (uploader_id, info['id'], info['title'], info['duration'], info['time_published'], info['description']) for info in _get_upstream_videos(channel_id, time_last_checked) )
+            for uploader_id, channel_id in cursor.execute('''SELECT id, channel_id FROM subscribed_channels'''):
+                db_videos = ( (uploader_id, info['id'], info['title'], info['duration'], info['time_published'], info['description']) for info in _get_upstream_videos(channel_id) )
                 cursor.executemany('''INSERT INTO videos (uploader_id, video_id, title, duration, time_published, description) VALUES (?, ?, ?, ?, ?, ?)''', db_videos)
 
             cursor.execute('''UPDATE subscribed_channels SET time_last_checked = ?''', ( int(time.time()), ) )
