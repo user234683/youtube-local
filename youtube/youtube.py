@@ -61,7 +61,7 @@ def youtube(env, start_response):
                 start_response('200 OK',  (('Content-type',mime_type),) )
                 return f.read()
 
-        elif path.startswith("/data/playlist_thumbnails/"):
+        elif path.startswith('/data/playlist_thumbnails/') or path.startswith('/data/subscription_thumbnails/'):
             with open(os.path.join(settings.data_dir, os.path.normpath(path[6:])), 'rb') as f:
                 start_response('200 OK',  (('Content-type', "image/jpeg"),) )
                 return f.read()

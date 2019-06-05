@@ -5,6 +5,8 @@ import brotli
 import urllib.parse
 import re
 import time
+import os
+import gevent
 
 # The trouble with the requests library: It ships its own certificate bundle via certifi
 #  instead of using the system certificate store, meaning self-signed certificates
@@ -172,6 +174,36 @@ desktop_ua = (('User-Agent', desktop_user_agent),)
 
 
 
+
+
+
+
+def download_thumbnail(save_directory, video_id):
+    url = "https://i.ytimg.com/vi/" + video_id + "/mqdefault.jpg"
+    save_location = os.path.join(save_directory, video_id + ".jpg")
+    try:
+        thumbnail = fetch_url(url, report_text="Saved thumbnail: " + video_id)
+    except urllib.error.HTTPError as e:
+        print("Failed to download thumbnail for " + video_id + ": " + str(e))
+        return
+    try:
+        f = open(save_location, 'wb')
+    except FileNotFoundError:
+        os.makedirs(save_directory)
+        f = open(save_location, 'wb')
+    f.write(thumbnail)
+    f.close()
+
+def download_thumbnails(save_directory, ids):
+    if not isinstance(ids, (list, tuple)):
+        ids = list(ids)
+    # only do 5 at a time
+    # do the n where n is divisible by 5
+    i = -1
+    for i in range(0, int(len(ids)/5) - 1 ):
+        gevent.joinall([gevent.spawn(download_thumbnail, save_directory, ids[j]) for j in range(i*5, i*5 + 5)])
+    # do the remainders (< 5)
+    gevent.joinall([gevent.spawn(download_thumbnail, save_directory, ids[j]) for j in range(i*5 + 5, len(ids))])
 
 
 

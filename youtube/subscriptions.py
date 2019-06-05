@@ -3,16 +3,13 @@ import settings
 from string import Template
 import sqlite3
 import os
-import secrets
-import datetime
-import itertools
 import time
-import urllib
-import socks, sockshandler
+import gevent
 
 with open('yt_subscriptions_template.html', 'r', encoding='utf-8') as f:
     subscriptions_template = Template(f.read())
 
+thumbnails_directory = os.path.join(settings.data_dir, "subscription_thumbnails")
 
 # https://stackabuse.com/a-sqlite-tutorial-with-python/
 
@@ -28,14 +25,14 @@ def open_database():
         cursor = connection.cursor()
         cursor.execute('''CREATE TABLE IF NOT EXISTS subscribed_channels (
                               id integer PRIMARY KEY,
-                              channel_id text NOT NULL,
+                              channel_id text UNIQUE NOT NULL,
                               channel_name text NOT NULL,
                               time_last_checked integer
                           )''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS videos (
                               id integer PRIMARY KEY,
                               uploader_id integer NOT NULL REFERENCES subscribed_channels(id) ON UPDATE CASCADE ON DELETE CASCADE,
-                              video_id text NOT NULL,
+                              video_id text UNIQUE NOT NULL,
                               title text NOT NULL,
                               duration text,
                               time_published integer NOT NULL,
@@ -58,7 +55,7 @@ def _subscribe(channels):
     connection = open_database()
     try:
         cursor = connection.cursor()
-        cursor.executemany("INSERT INTO subscribed_channels (channel_id, channel_name, time_last_checked) VALUES (?, ?, ?)", channels)
+        cursor.executemany("INSERT OR IGNORE INTO subscribed_channels (channel_id, channel_name, time_last_checked) VALUES (?, ?, ?)", channels)
         connection.commit()
     except:
         connection.rollback()
@@ -104,6 +101,10 @@ def _get_videos(number, offset):
 
 
 
+
+
+
+
 units = {
     'year': 31536000,   # 365*24*3600
     'month': 2592000,   # 30*24*3600
@@ -126,6 +127,16 @@ def youtube_timestamp_to_posix(dumb_timestamp):
         unit = unit[:-1]    # remove s from end
     return now - number*units[unit]
 
+# Use this to mark a thumbnail acceptable to be retrieved at the request of the browser
+downloading_thumbnails = set()
+def download_thumbnails(thumbnails_directory, thumbnails):
+    try:
+        g = gevent.spawn(util.download_thumbnails, thumbnails_directory, thumbnails)
+        g.join()
+    finally:
+        downloading_thumbnails.difference_update(thumbnails)
+
+
 def _get_upstream_videos(channel_id):
     videos = []
 
@@ -136,12 +147,34 @@ def _get_upstream_videos(channel_id):
             info['description'] = ''
         info['time_published'] = youtube_timestamp_to_posix(info['published']) - i  # subtract a few seconds off the videos so they will be in the right order
         videos.append(info)
+
+    try:
+        existing_thumbnails = set(os.path.splitext(name)[0] for name in os.listdir(thumbnails_directory))
+    except FileNotFoundError:
+        existing_thumbnails = set()
+    missing_thumbnails = set(video['id'] for video in videos) - existing_thumbnails
+    downloading_thumbnails.update(missing_thumbnails)
+    gevent.spawn(download_thumbnails, thumbnails_directory, missing_thumbnails)
+
     return videos
+
+
+
+
+
+
+
+
 
 def get_subscriptions_page(env, start_response):
     items_html = '''<nav class="item-grid">\n'''
 
     for item in _get_videos(30, 0):
+        print("Downloading_thumbnails: ", downloading_thumbnails)
+        if item['id'] in downloading_thumbnails:
+            item['thumbnail'] = util.get_thumbnail_url(item['id'])
+        else:
+            item['thumbnail'] = util.URL_ORIGIN + '/data/subscription_thumbnails/' + item['id'] + '.jpg'
         items_html += html_common.video_item_html(item, html_common.small_video_item_template)
     items_html += '''\n</nav>'''
 
@@ -168,9 +201,9 @@ def post_subscriptions_page(env, start_response):
         connection = open_database()
         try:
             cursor = connection.cursor()
-            for uploader_id, channel_id in cursor.execute('''SELECT id, channel_id FROM subscribed_channels'''):
+            for uploader_id, channel_id in cursor.execute('''SELECT id, channel_id FROM subscribed_channels''').fetchall():
                 db_videos = ( (uploader_id, info['id'], info['title'], info['duration'], info['time_published'], info['description']) for info in _get_upstream_videos(channel_id) )
-                cursor.executemany('''INSERT INTO videos (uploader_id, video_id, title, duration, time_published, description) VALUES (?, ?, ?, ?, ?, ?)''', db_videos)
+                cursor.executemany('''INSERT OR IGNORE INTO videos (uploader_id, video_id, title, duration, time_published, description) VALUES (?, ?, ?, ?, ?, ?)''', db_videos)
 
             cursor.execute('''UPDATE subscribed_channels SET time_last_checked = ?''', ( int(time.time()), ) )
             connection.commit()
