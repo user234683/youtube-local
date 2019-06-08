@@ -125,14 +125,12 @@ def _remove_tags(channel_ids, tags):
 
 
 
-def _get_tags(channel_id):
-    with open_database() as connection:
-        with connection as cursor:
-            return [row[0] for row in cursor.execute('''SELECT tag
-                                                        FROM tag_associations
-                                                        WHERE sql_channel_id = (
-                                                            SELECT id FROM subscribed_channels WHERE yt_channel_id = ?
-                                                        )''', (channel_id,))]
+def _get_tags(cursor, channel_id):
+    return [row[0] for row in cursor.execute('''SELECT tag
+                                                FROM tag_associations
+                                                WHERE sql_channel_id = (
+                                                    SELECT id FROM subscribed_channels WHERE yt_channel_id = ?
+                                                )''', (channel_id,))]
 
 def _get_all_tags():
     with open_database() as connection:
@@ -253,13 +251,15 @@ sub_list_item_template = Template('''
 def get_subscription_manager_page(env, start_response):
 
     sub_list_html = ''
-    for channel_name, channel_id in _get_subscribed_channels():
-        sub_list_html += sub_list_item_template.substitute(
-            channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
-            channel_name = html.escape(channel_name),
-            channel_id = channel_id,
-            tags = ', '.join(_get_tags(channel_id)),
-        )
+    with open_database() as connection:
+        with connection as cursor:
+            for channel_name, channel_id in _get_subscribed_channels():
+                sub_list_html += sub_list_item_template.substitute(
+                    channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
+                    channel_name = html.escape(channel_name),
+                    channel_id = channel_id,
+                    tags = ', '.join(_get_tags(cursor, channel_id)),
+                )
 
 
 
