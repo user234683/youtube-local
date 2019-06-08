@@ -8,6 +8,7 @@ import gevent
 import html
 import json
 import traceback
+import contextlib
 
 with open('yt_subscriptions_template.html', 'r', encoding='utf-8') as f:
     subscriptions_template = Template(f.read())
@@ -58,7 +59,8 @@ def open_database():
         connection.close()
         raise
 
-    return connection
+    # https://stackoverflow.com/questions/19522505/using-sqlite3-in-python-with-with-keyword
+    return contextlib.closing(connection)
 
 def _subscribe(channels):
     ''' channels is a list of (channel_id, channel_name) '''
@@ -66,146 +68,88 @@ def _subscribe(channels):
     # set time_last_checked to 0 on all channels being subscribed to
     channels = ( (channel_id, channel_name, 0) for channel_id, channel_name in channels)
 
-    connection = open_database()
-    try:
-        cursor = connection.cursor()
-        cursor.executemany("INSERT OR IGNORE INTO subscribed_channels (yt_channel_id, channel_name, time_last_checked) VALUES (?, ?, ?)", channels)
-        connection.commit()
-    except:
-        connection.rollback()
-        raise
-    finally:
-        connection.close()
+    with open_database() as connection:
+        with connection as cursor:
+            cursor.executemany('''INSERT OR IGNORE INTO subscribed_channels (yt_channel_id, channel_name, time_last_checked)
+                                  VALUES (?, ?, ?)''', channels)
 
 # TODO: delete thumbnails
 def _unsubscribe(channel_ids):
     ''' channel_ids is a list of channel_ids '''
-    connection = open_database()
-    try:
-        cursor = connection.cursor()
-        cursor.executemany("DELETE FROM subscribed_channels WHERE yt_channel_id=?", ((channel_id, ) for channel_id in channel_ids))
-        connection.commit()
-    except:
-        connection.rollback()
-        raise
-    finally:
-        connection.close()
+    with open_database() as connection:
+        with connection as cursor:
+            cursor.executemany("DELETE FROM subscribed_channels WHERE yt_channel_id=?", ((channel_id, ) for channel_id in channel_ids))
 
 def _get_videos(number, offset):
-    connection = open_database()
-    try:
-        cursor = connection.cursor()
-        db_videos = cursor.execute('''SELECT video_id, title, duration, channel_name
-                          FROM videos
-                          INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
-                          ORDER BY time_published DESC
-                          LIMIT ? OFFSET ?''', (number, offset))
+    with open_database() as connection:
+        with connection as cursor:
+            db_videos = cursor.execute('''SELECT video_id, title, duration, channel_name
+                                          FROM videos
+                                          INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
+                                          ORDER BY time_published DESC
+                                          LIMIT ? OFFSET ?''', (number, offset))
 
-        for db_video in db_videos:
-            yield {
-                'id':   db_video[0],
-                'title':    db_video[1],
-                'duration': db_video[2],
-                'author':   db_video[3],
-            }
-    except:
-        connection.rollback()
-        raise
-    finally:
-        connection.close()
+            for db_video in db_videos:
+                yield {
+                    'id':   db_video[0],
+                    'title':    db_video[1],
+                    'duration': db_video[2],
+                    'author':   db_video[3],
+                }
 
 def _get_subscribed_channels():
-    connection = open_database()
-    try:
-        cursor = connection.cursor()
-        for item in cursor.execute('''SELECT channel_name, yt_channel_id
-                                      FROM subscribed_channels
-                                      ORDER BY channel_name'''):
-            yield item
-    except:
-        connection.rollback()
-        raise
-    finally:
-        connection.close()
+    with open_database() as connection:
+        with connection as cursor:
+            for item in cursor.execute('''SELECT channel_name, yt_channel_id
+                                          FROM subscribed_channels
+                                          ORDER BY channel_name'''):
+                yield item
+
 
 def _add_tags(channel_ids, tags):
-    connection = open_database()
-    try:
-        cursor = connection.cursor()
-
-        pairs = [(tag, yt_channel_id) for tag in tags for yt_channel_id in channel_ids]
-
-        cursor.executemany('''INSERT OR IGNORE INTO tag_associations (tag, sql_channel_id)
-                              SELECT ?, id FROM subscribed_channels WHERE yt_channel_id = ? ''', pairs)
-        connection.commit()
-    except:
-        connection.rollback()
-        raise
-    finally:
-        connection.close()
-
+    with open_database() as connection:
+        with connection as cursor:
+            pairs = [(tag, yt_channel_id) for tag in tags for yt_channel_id in channel_ids]
+            cursor.executemany('''INSERT OR IGNORE INTO tag_associations (tag, sql_channel_id)
+                                  SELECT ?, id FROM subscribed_channels WHERE yt_channel_id = ? ''', pairs)
 
 
 def _remove_tags(channel_ids, tags):
-    connection = open_database()
-    try:
-        cursor = connection.cursor()
+    with open_database() as connection:
+        with connection as cursor:
+            pairs = [(tag, yt_channel_id) for tag in tags for yt_channel_id in channel_ids]
+            cursor.executemany('''DELETE FROM tag_associations
+                                  WHERE tag = ? AND sql_channel_id = (
+                                      SELECT id FROM subscribed_channels WHERE yt_channel_id = ?
+                                   )''', pairs)
 
-        pairs = [(tag, yt_channel_id) for tag in tags for yt_channel_id in channel_ids]
-
-        cursor.executemany('''DELETE FROM tag_associations WHERE tag = ? AND sql_channel_id = (
-                                          SELECT id FROM subscribed_channels WHERE yt_channel_id = ?
-                                      )''', pairs)
-        connection.commit()
-    except:
-        connection.rollback()
-        raise
-    finally:
-        connection.close()
 
 
 def _get_tags(channel_id):
-    connection = open_database()
-    try:
-        cursor = connection.cursor()
-
-        return [row[0] for row in cursor.execute('''SELECT tag
-                                      FROM tag_associations
-                                      WHERE sql_channel_id = (
-                                          SELECT id FROM subscribed_channels WHERE yt_channel_id = ?
-                                      )''', (channel_id,))]
-    except:
-        connection.rollback()
-        raise
-    finally:
-        connection.close()
+    with open_database() as connection:
+        with connection as cursor:
+            return [row[0] for row in cursor.execute('''SELECT tag
+                                                        FROM tag_associations
+                                                        WHERE sql_channel_id = (
+                                                            SELECT id FROM subscribed_channels WHERE yt_channel_id = ?
+                                                        )''', (channel_id,))]
 
 def _get_all_tags():
-    connection = open_database()
-    try:
-        cursor = connection.cursor()
-        return [row[0] for row in cursor.execute('''SELECT DISTINCT tag FROM tag_associations''')]
-    except:
-        connection.rollback()
-        raise
-    finally:
-        connection.close()
+    with open_database() as connection:
+        with connection as cursor:
+            return [row[0] for row in cursor.execute('''SELECT DISTINCT tag FROM tag_associations''')]
 
 def _get_channel_names(channel_ids):
     ''' returns list of (channel_id, channel_name) '''
-    connection = open_database()
-    try:
-        cursor = connection.cursor()
-        result = []
-        for channel_id in channel_ids:
-            row = cursor.execute('''SELECT channel_name FROM subscribed_channels WHERE yt_channel_id = ?''', (channel_id,)).fetchone()
-            result.append( (channel_id, row[0]) )
-        return result
-    except:
-        connection.rollback()
-        raise
-    finally:
-        connection.close()
+    with open_database() as connection:
+        with connection as cursor:
+            result = []
+            for channel_id in channel_ids:
+                row = cursor.execute('''SELECT channel_name
+                                        FROM subscribed_channels
+                                        WHERE yt_channel_id = ?''', (channel_id,)).fetchone()
+                result.append( (channel_id, row[0]) )
+            return result
 
 
 units = {
@@ -464,20 +408,13 @@ def post_subscriptions_page(env, start_response):
         _unsubscribe(params['channel_id'])
 
     elif action == 'refresh':
-        connection = open_database()
-        try:
-            cursor = connection.cursor()
-            for sql_channel_id, yt_channel_id in cursor.execute('''SELECT id, yt_channel_id FROM subscribed_channels''').fetchall():
-                db_videos = ( (sql_channel_id, info['id'], info['title'], info['duration'], info['time_published'], info['description']) for info in _get_upstream_videos(yt_channel_id) )
-                cursor.executemany('''INSERT OR IGNORE INTO videos (sql_channel_id, video_id, title, duration, time_published, description) VALUES (?, ?, ?, ?, ?, ?)''', db_videos)
+        with open_database() as connection:
+            with connection as cursor:
+                for sql_channel_id, yt_channel_id in cursor.execute('''SELECT id, yt_channel_id FROM subscribed_channels''').fetchall():
+                    db_videos = ( (sql_channel_id, info['id'], info['title'], info['duration'], info['time_published'], info['description']) for info in _get_upstream_videos(yt_channel_id) )
+                    cursor.executemany('''INSERT OR IGNORE INTO videos (sql_channel_id, video_id, title, duration, time_published, description) VALUES (?, ?, ?, ?, ?, ?)''', db_videos)
 
-            cursor.execute('''UPDATE subscribed_channels SET time_last_checked = ?''', ( int(time.time()), ) )
-            connection.commit()
-        except:
-            connection.rollback()
-            raise
-        finally:
-            connection.close()
+                cursor.execute('''UPDATE subscribed_channels SET time_last_checked = ?''', ( int(time.time()), ) )
 
         start_response('303 See Other', [('Location', util.URL_ORIGIN + '/subscriptions'),] )
         return b''
