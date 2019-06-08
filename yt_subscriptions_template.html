@@ -7,19 +7,69 @@
         <link href="/youtube.com/favicon.ico" type="image/x-icon" rel="icon">
         <link title="Youtube local" href="/youtube.com/opensearch.xml" rel="search" type="application/opensearchdescription+xml">
         <style type="text/css">
-            .item-list{
-                width:1000px;
+            main{
+                display:flex;
+                flex-direction: row;
             }
+            .item-grid{
+                flex-grow: 1;
+            }
+            .subscriptions-sidebar{
+                flex-basis: 300px;
+                background-color: #dadada;
+                border-left: 2px;
+            }
+                .sidebar-links{
+                    display:flex;
+                    justify-content: space-between;
+                    padding-left:10px;
+                    padding-right: 10px;
+                }
+
+                .sidebar-list{
+                    list-style: none;
+                    padding-left:10px;
+                    padding-right: 10px;
+                }
+                    .sidebar-list > li{
+                        display:flex;
+                        justify-content: space-between;
+                        margin-bottom: 5px;
+                    }
+                        .sub-refresh-list .sidebar-item-name{
+                            text-overflow: clip;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            max-width: 200px;
+                        }
         </style>
     </head>
     <body>
 $header
         <main>
-            <form method="POST">
-                <input type="submit" value="refresh">
-                <input type="hidden" name="action" value="refresh">
-            </form>
+
 $items
+
+            <div class="subscriptions-sidebar">
+                <div class="sidebar-links">
+                    <a href="/youtube.com/subscription_manager" class="sub-manager-link">Subscription Manager</a>
+                    <form method="POST" class="refresh-all">
+                        <input type="submit" value="Check All">
+                        <input type="hidden" name="action" value="refresh">
+                    </form>
+                </div>
+
+                <hr>
+                <ol class="sidebar-list tags">
+$tags
+                </ol>
+
+                <ol class="sidebar-list sub-refresh-list">
+$sub_list
+                </ol>
+
+            </div>
+
             <nav class="page-button-row">
 $page_buttons
             </nav>

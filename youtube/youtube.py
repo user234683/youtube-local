@@ -1,6 +1,7 @@
 import mimetypes
 import urllib.parse
 import os
+import re
 from youtube import local_playlist, watch, search, playlist, channel, comments, post_comment, accounts, util, subscriptions
 import settings
 YOUTUBE_FILES = (
@@ -25,7 +26,8 @@ get_handlers = {
     'delete_comment':   post_comment.get_delete_comment_page,
     'login':            accounts.get_account_login_page,
 
-    'subscriptions':    subscriptions.get_subscriptions_page,
+    'subscriptions':            subscriptions.get_subscriptions_page,
+    'subscription_manager':     subscriptions.get_subscription_manager_page,
 }
 post_handlers = {
     'edit_playlist':    local_playlist.edit_playlist,
@@ -37,6 +39,8 @@ post_handlers = {
     'delete_comment':   post_comment.delete_comment,
 
     'subscriptions':    subscriptions.post_subscriptions_page,
+    'subscription_manager':     subscriptions.post_subscription_manager_page,
+    'import_subscriptions':     subscriptions.import_subscriptions,
 }
 
 def youtube(env, start_response):
@@ -90,9 +94,56 @@ def youtube(env, start_response):
             return channel.get_channel_page_general_url(env, start_response)
 
     elif method == "POST":
-        post_parameters = urllib.parse.parse_qs(env['wsgi.input'].read().decode())
-        env['post_parameters'] = post_parameters
-        env['parameters'].update(post_parameters)
+        content_type = env['CONTENT_TYPE']
+        if content_type == 'application/x-www-form-urlencoded':
+            post_parameters = urllib.parse.parse_qs(env['wsgi.input'].read().decode())
+            env['post_parameters'] = post_parameters
+            env['parameters'].update(post_parameters)
+
+        # Ugly hack that will be removed once I clean up this trainwreck and switch to a microframework
+        # Only supports a single file with no other fields
+        elif content_type.startswith('multipart/form-data'):
+            content = env['wsgi.input'].read()
+
+            # find double line break
+            file_start = content.find(b'\r\n\r\n')
+            if file_start == -1:
+                start_response('400 Bad Request', ())
+                return b'400 Bad Request'
+
+            file_start += 4
+
+            lines = content[0:file_start].splitlines()
+            boundary = lines[0]
+
+            file_end = content.find(boundary, file_start)
+            if file_end == -1:
+                start_response('400 Bad Request', ())
+                return b'400 Bad Request'
+            file_end -= 2  # Subtract newlines
+            file = content[file_start:file_end]
+
+            properties = dict()
+            for line in lines[1:]:
+                line = line.decode('utf-8')
+                colon = line.find(':')
+                if colon == -1:
+                    continue
+                properties[line[0:colon]] = line[colon+2:]
+
+            mime_type = properties['Content-Type']
+            field_name = re.search(r'name="([^"]*)"' , properties['Content-Disposition'])
+            if field_name is None:
+                start_response('400 Bad Request', ())
+                return b'400 Bad Request'
+            field_name = field_name.group(1)
+
+            env['post_parameters'] = {field_name: (mime_type, file)}
+            env['parameters'][field_name] = (mime_type, file)
+
+        else:
+            start_response('400 Bad Request', ())
+            return b'400 Bad Request'
 
         try:
             handler = post_handlers[path_parts[0]]
