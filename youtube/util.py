@@ -7,6 +7,8 @@ import re
 import time
 import os
 import gevent
+import gevent.queue
+import gevent.lock
 
 # The trouble with the requests library: It ships its own certificate bundle via certifi
 #  instead of using the system certificate store, meaning self-signed certificates
@@ -176,6 +178,53 @@ desktop_ua = (('User-Agent', desktop_user_agent),)
 
 
 
+class RateLimitedQueue(gevent.queue.Queue):
+    ''' Does initial_burst (def. 30) at first, then alternates between waiting waiting_period (def. 5) seconds and doing subsequent_bursts (def. 10) queries. After 5 seconds with nothing left in the queue, resets rate limiting. '''
+
+    def __init__(self, initial_burst=30, waiting_period=5, subsequent_bursts=10):
+        self.initial_burst = initial_burst
+        self.waiting_period = waiting_period
+        self.subsequent_bursts = subsequent_bursts
+
+        self.count_since_last_wait = 0
+        self.surpassed_initial = False
+
+        self.lock = gevent.lock.BoundedSemaphore(1)
+        self.currently_empty = False
+        self.empty_start = 0
+        gevent.queue.Queue.__init__(self)
+
+
+    def get(self):
+        self.lock.acquire()     # blocks if another greenlet currently has the lock
+        if self.count_since_last_wait >= self.subsequent_bursts and self.surpassed_initial:
+            gevent.sleep(self.waiting_period)
+            self.count_since_last_wait = 0
+
+        elif self.count_since_last_wait >= self.initial_burst and not self.surpassed_initial:
+            self.surpassed_initial = True
+            gevent.sleep(self.waiting_period)
+            self.count_since_last_wait = 0
+
+        self.count_since_last_wait += 1
+
+        if not self.currently_empty and self.empty():
+            self.currently_empty = True
+            self.empty_start = time.monotonic()
+
+        item = gevent.queue.Queue.get(self)     # blocks when nothing left
+
+        if self.currently_empty:
+            if time.monotonic() - self.empty_start >= self.waiting_period:
+                self.count_since_last_wait = 0
+                self.surpassed_initial = False
+
+            self.currently_empty = False
+
+        self.lock.release()
+
+        return item
+
 
 
 def download_thumbnail(save_directory, video_id):
@@ -185,14 +234,15 @@ def download_thumbnail(save_directory, video_id):
         thumbnail = fetch_url(url, report_text="Saved thumbnail: " + video_id)
     except urllib.error.HTTPError as e:
         print("Failed to download thumbnail for " + video_id + ": " + str(e))
-        return
+        return False
     try:
         f = open(save_location, 'wb')
     except FileNotFoundError:
-        os.makedirs(save_directory)
+        os.makedirs(save_directory, exist_ok = True)
         f = open(save_location, 'wb')
     f.write(thumbnail)
     f.close()
+    return True
 
 def download_thumbnails(save_directory, ids):
     if not isinstance(ids, (list, tuple)):
