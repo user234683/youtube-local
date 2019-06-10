@@ -9,6 +9,7 @@ import html
 import json
 import traceback
 import contextlib
+import defusedxml.ElementTree
 
 with open('yt_subscriptions_template.html', 'r', encoding='utf-8') as f:
     subscriptions_template = Template(f.read())
@@ -322,8 +323,27 @@ def import_subscriptions(env, start_response):
             traceback.print_exc()
             start_response('400 Bad Request', () )
             return b'400 Bad Request: Unknown json structure'
+    elif content_type in ('application/xml', 'text/xml', 'text/x-opml'):
+        try:
+            root = defusedxml.ElementTree.fromstring(file)
+            assert root.tag == 'opml'
+            channels = []
+            for outline_element in root[0][0]:
+                if (outline_element.tag != 'outline') or ('xmlUrl' not in outline_element.attrib):
+                    continue
+
+
+                channel_name = outline_element.attrib['text']
+                channel_rss_url = outline_element.attrib['xmlUrl']
+                channel_id = channel_rss_url[channel_rss_url.find('channel_id=')+11:].strip()
+                channels.append( (channel_id, channel_name) )
+
+        except (AssertionError, IndexError, defusedxml.ElementTree.ParseError) as e:
+            start_response('400 Bad Request', () )
+            return b'400 Bad Request: Unable to read opml xml file, or the file is not the expected format'
     else:
-        raise NotImplementedError()
+            start_response('400 Bad Request', () )
+            return b'400 Bad Request: Unsupported file format: ' + html.escape(content_type).encode('utf-8') + b'. Only subscription.json files (from Google Takeouts) and XML OPML files exported from Youtube\'s subscription manager page are supported'
 
     _subscribe(channels)
 
