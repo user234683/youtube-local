@@ -362,21 +362,7 @@ def get_subscription_manager_page(env, start_response):
     ).encode('utf-8')
 
 def list_from_comma_separated_tags(string):
-    tags = []
-    prev_comma = -1
-    next_comma = string.find(',')
-    while next_comma != -1:
-        tag = string[prev_comma+1:next_comma].strip()
-        if tag:
-            tags.append(tag)
-
-        prev_comma = next_comma
-        next_comma = string.find(',', prev_comma+1)
-
-    last_tag = string[prev_comma+1:].strip()
-    if last_tag:
-        tags.append(last_tag)
-    return tags
+    return [tag.strip() for tag in string.split(',') if tag.strip()]
 
 
 unsubscribe_list_item_template = Template('''
