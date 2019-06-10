@@ -101,7 +101,7 @@ def _get_videos(cursor, number, offset):
 def _get_subscribed_channels(cursor):
     for item in cursor.execute('''SELECT channel_name, yt_channel_id
                                   FROM subscribed_channels
-                                  ORDER BY channel_name'''):
+                                  ORDER BY channel_name COLLATE NOCASE'''):
         yield item
 
 
@@ -151,7 +151,7 @@ def _channels_with_tag(cursor, tag, order=False):
                    )
                 '''
     if order:
-        statement += '''ORDER BY channel_name'''
+        statement += '''ORDER BY channel_name COLLATE NOCASE'''
 
     return cursor.execute(statement, [tag]).fetchall()
 
@@ -398,7 +398,7 @@ def get_subscription_manager_page(env, start_response):
                                                  WHERE id NOT IN (
                                                      SELECT sql_channel_id FROM tag_associations
                                                  )
-                                                 ORDER BY channel_name''').fetchall()
+                                                 ORDER BY channel_name COLLATE NOCASE''').fetchall()
                 if channel_list:
                     sub_list_html = ''
                     for channel_id, channel_name in channel_list:
