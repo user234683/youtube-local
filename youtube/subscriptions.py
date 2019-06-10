@@ -151,6 +151,21 @@ def _get_channel_names(channel_ids):
             return result
 
 
+def _channels_with_tag(cursor, tag, order=False):
+    ''' returns list of (channel_id, channel_name) '''
+
+    statement = '''SELECT yt_channel_id, channel_name
+                   FROM subscribed_channels
+                   WHERE subscribed_channels.id IN (
+                       SELECT tag_associations.sql_channel_id FROM tag_associations WHERE tag=?
+                   )
+                '''
+    if order:
+        statement += '''ORDER BY channel_name'''
+
+    return cursor.execute(statement, [tag]).fetchall()
+
+
 units = {
     'year': 31536000,   # 365*24*3600
     'month': 2592000,   # 30*24*3600
@@ -281,11 +296,8 @@ def check_tags(tags):
     with open_database() as connection:
         with connection as cursor:
             for tag in tags:
-                channel_id_name_list += cursor.execute('''SELECT yt_channel_id, channel_name
-                                                          FROM subscribed_channels
-                                                          WHERE subscribed_channels.id IN (
-                                                              SELECT tag_associations.sql_channel_id FROM tag_associations WHERE tag=?
-                                                          )''', [tag]).fetchall()
+                channel_id_name_list += _channels_with_tag(cursor, tag)
+
     channel_names.update(channel_id_name_list)
     check_channels_if_necessary([item[0] for item in channel_id_name_list])
 
@@ -354,30 +366,87 @@ def import_subscriptions(env, start_response):
 
 sub_list_item_template = Template('''
 <li>
+    <input class="sub-list-checkbox" name="channel_ids" value="$channel_id" form="subscription-manager-form" type="checkbox">
     <a href="$channel_url" class="sub-list-item-name" title="$channel_name">$channel_name</a>
     <span class="tag-list">$tags</span>
-    <input class="sub-list-checkbox" name="channel_ids" value="$channel_id" form="subscription-manager-form" type="checkbox">
 </li>''')
 
+tag_group_template = Template('''
+<li class="tag-group">
+    <h2 class="tag-group-name">$tag</h2>
+    <ol class="sub-list">
+$sub_list
+    </ol>
+</li>
+''')
 def get_subscription_manager_page(env, start_response):
-
-    sub_list_html = ''
     with open_database() as connection:
         with connection as cursor:
-            for channel_name, channel_id in _get_subscribed_channels():
-                sub_list_html += sub_list_item_template.substitute(
-                    channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
-                    channel_name = html.escape(channel_name),
-                    channel_id = channel_id,
-                    tags = ', '.join(_get_tags(cursor, channel_id)),
-                )
+            if env['parameters'].get('group_by_tags', '0')[0] == '1':
+
+                sort_name = "Don't group"
+                sort_link = util.URL_ORIGIN + '/subscription_manager'
+
+                main_list_html = '<ul class="tag-group-list">'
+                for tag in _get_all_tags():
+                    sub_list_html = ''
+                    for channel_id, channel_name in _channels_with_tag(cursor, tag, order=True):
+                        sub_list_html += sub_list_item_template.substitute(
+                            channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
+                            channel_name = html.escape(channel_name),
+                            channel_id = channel_id,
+                            tags = ', '.join(t for t in _get_tags(cursor, channel_id) if t != tag),
+                        )
+                    main_list_html += tag_group_template.substitute(
+                        tag = tag,
+                        sub_list = sub_list_html,
+                    )
+
+                # Channels with no tags
+                channel_list = cursor.execute('''SELECT yt_channel_id, channel_name
+                                                 FROM subscribed_channels
+                                                 WHERE id NOT IN (
+                                                     SELECT sql_channel_id FROM tag_associations
+                                                 )
+                                                 ORDER BY channel_name''').fetchall()
+                if channel_list:
+                    sub_list_html = ''
+                    for channel_id, channel_name in channel_list:
+                        sub_list_html += sub_list_item_template.substitute(
+                            channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
+                            channel_name = html.escape(channel_name),
+                            channel_id = channel_id,
+                            tags = '',
+                        )
+                    main_list_html += tag_group_template.substitute(
+                        tag = "No tags",
+                        sub_list = sub_list_html,
+                    )
+                main_list_html += '</ul>'
+
+            else:
+
+                sort_name = "Group by tags"
+                sort_link = util.URL_ORIGIN + '/subscription_manager?group_by_tags=1'
+
+                main_list_html = '<ol class="sub-list">'
+                for channel_name, channel_id in _get_subscribed_channels():
+                    main_list_html += sub_list_item_template.substitute(
+                        channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
+                        channel_name = html.escape(channel_name),
+                        channel_id = channel_id,
+                        tags = ', '.join(_get_tags(cursor, channel_id)),
+                    )
+                main_list_html += '</ol>'
 
 
 
     start_response('200 OK', [('Content-type','text/html'),])
     return subscription_manager_template.substitute(
         header = html_common.get_header(),
-        sub_list = sub_list_html,
+        main_list = main_list_html,
+        sort_name = sort_name,
+        sort_link = sort_link,
         page_buttons = '',
     ).encode('utf-8')
 

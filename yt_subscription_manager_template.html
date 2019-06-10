@@ -44,6 +44,18 @@
                 padding:10px;
             }
 
+
+            .tag-group-list{
+                list-style: none;
+                margin-left: 10px;
+                margin-right: 10px;
+                padding: 0px;
+            }
+                .tag-group{
+                    border-style: solid;
+                    margin-bottom: 10px;
+                }
+
             .sub-list{
                 list-style: none;
                 padding:10px;
@@ -52,10 +64,16 @@
             }
                 .sub-list > li{
                     display:flex;
-                    justify-content: space-between;
                     margin-bottom: 10px;
                     background-color: #dadada;
                 }
+                    .tag-list{
+                        margin-left:15px;
+                        font-weight:bold;
+                    }
+                    .sub-list-item-name{
+                        margin-left:15px;
+                    }
                     .sub-list-checkbox{
                         height: 1.5em;
                         width: 1.5em;
@@ -82,7 +100,7 @@ $header
             <hr>
 
             <form id="subscription-manager-form" class="sub-list-controls" method="POST">
-                <a class="sort-button" href="/youtube.com/subscription_manager?group_by_tags=1">Group by tags</a>
+                <a class="sort-button" href="$sort_link">$sort_name</a>
                 <input type="text" name="tags">
                 <button type="submit" name="action" value="add_tags">Add tags</button>
                 <button type="submit" name="action" value="remove_tags">Remove tags</button>
@@ -90,9 +108,7 @@ $header
                 <input type="reset" value="Clear Selection">
             </form>
 
-            <ol class="sub-list">
-$sub_list
-            </ol>
+$main_list
 
         </main>
     </body>
