@@ -63,66 +63,60 @@ def open_database():
     # https://stackoverflow.com/questions/19522505/using-sqlite3-in-python-with-with-keyword
     return contextlib.closing(connection)
 
-def _subscribe(channels):
+def with_open_db(function, *args, **kwargs):
+    with open_database() as connection:
+        with connection as cursor:
+            return function(cursor, *args, **kwargs)
+
+
+def _subscribe(cursor, channels):
     ''' channels is a list of (channel_id, channel_name) '''
 
     # set time_last_checked to 0 on all channels being subscribed to
     channels = ( (channel_id, channel_name, 0) for channel_id, channel_name in channels)
 
-    with open_database() as connection:
-        with connection as cursor:
-            cursor.executemany('''INSERT OR IGNORE INTO subscribed_channels (yt_channel_id, channel_name, time_last_checked)
-                                  VALUES (?, ?, ?)''', channels)
+    cursor.executemany('''INSERT OR IGNORE INTO subscribed_channels (yt_channel_id, channel_name, time_last_checked)
+                          VALUES (?, ?, ?)''', channels)
 
 # TODO: delete thumbnails
-def _unsubscribe(channel_ids):
+def _unsubscribe(cursor, channel_ids):
     ''' channel_ids is a list of channel_ids '''
-    with open_database() as connection:
-        with connection as cursor:
-            cursor.executemany("DELETE FROM subscribed_channels WHERE yt_channel_id=?", ((channel_id, ) for channel_id in channel_ids))
+    cursor.executemany("DELETE FROM subscribed_channels WHERE yt_channel_id=?", ((channel_id, ) for channel_id in channel_ids))
 
-def _get_videos(number, offset):
-    with open_database() as connection:
-        with connection as cursor:
-            db_videos = cursor.execute('''SELECT video_id, title, duration, channel_name
-                                          FROM videos
-                                          INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
-                                          ORDER BY time_published DESC
-                                          LIMIT ? OFFSET ?''', (number, offset))
+def _get_videos(cursor, number, offset):
+    db_videos = cursor.execute('''SELECT video_id, title, duration, channel_name
+                                  FROM videos
+                                  INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
+                                  ORDER BY time_published DESC
+                                  LIMIT ? OFFSET ?''', (number, offset))
 
-            for db_video in db_videos:
-                yield {
-                    'id':   db_video[0],
-                    'title':    db_video[1],
-                    'duration': db_video[2],
-                    'author':   db_video[3],
-                }
+    for db_video in db_videos:
+        yield {
+            'id':   db_video[0],
+            'title':    db_video[1],
+            'duration': db_video[2],
+            'author':   db_video[3],
+        }
 
-def _get_subscribed_channels():
-    with open_database() as connection:
-        with connection as cursor:
-            for item in cursor.execute('''SELECT channel_name, yt_channel_id
-                                          FROM subscribed_channels
-                                          ORDER BY channel_name'''):
-                yield item
+def _get_subscribed_channels(cursor):
+    for item in cursor.execute('''SELECT channel_name, yt_channel_id
+                                  FROM subscribed_channels
+                                  ORDER BY channel_name'''):
+        yield item
 
 
-def _add_tags(channel_ids, tags):
-    with open_database() as connection:
-        with connection as cursor:
-            pairs = [(tag, yt_channel_id) for tag in tags for yt_channel_id in channel_ids]
-            cursor.executemany('''INSERT OR IGNORE INTO tag_associations (tag, sql_channel_id)
-                                  SELECT ?, id FROM subscribed_channels WHERE yt_channel_id = ? ''', pairs)
+def _add_tags(cursor, channel_ids, tags):
+    pairs = [(tag, yt_channel_id) for tag in tags for yt_channel_id in channel_ids]
+    cursor.executemany('''INSERT OR IGNORE INTO tag_associations (tag, sql_channel_id)
+                          SELECT ?, id FROM subscribed_channels WHERE yt_channel_id = ? ''', pairs)
 
 
-def _remove_tags(channel_ids, tags):
-    with open_database() as connection:
-        with connection as cursor:
-            pairs = [(tag, yt_channel_id) for tag in tags for yt_channel_id in channel_ids]
-            cursor.executemany('''DELETE FROM tag_associations
-                                  WHERE tag = ? AND sql_channel_id = (
-                                      SELECT id FROM subscribed_channels WHERE yt_channel_id = ?
-                                   )''', pairs)
+def _remove_tags(cursor, channel_ids, tags):
+    pairs = [(tag, yt_channel_id) for tag in tags for yt_channel_id in channel_ids]
+    cursor.executemany('''DELETE FROM tag_associations
+                          WHERE tag = ? AND sql_channel_id = (
+                              SELECT id FROM subscribed_channels WHERE yt_channel_id = ?
+                           )''', pairs)
 
 
 
@@ -133,22 +127,18 @@ def _get_tags(cursor, channel_id):
                                                     SELECT id FROM subscribed_channels WHERE yt_channel_id = ?
                                                 )''', (channel_id,))]
 
-def _get_all_tags():
-    with open_database() as connection:
-        with connection as cursor:
-            return [row[0] for row in cursor.execute('''SELECT DISTINCT tag FROM tag_associations''')]
+def _get_all_tags(cursor):
+    return [row[0] for row in cursor.execute('''SELECT DISTINCT tag FROM tag_associations''')]
 
-def _get_channel_names(channel_ids):
+def _get_channel_names(cursor, channel_ids):
     ''' returns list of (channel_id, channel_name) '''
-    with open_database() as connection:
-        with connection as cursor:
-            result = []
-            for channel_id in channel_ids:
-                row = cursor.execute('''SELECT channel_name
-                                        FROM subscribed_channels
-                                        WHERE yt_channel_id = ?''', (channel_id,)).fetchone()
-                result.append( (channel_id, row[0]) )
-            return result
+    result = []
+    for channel_id in channel_ids:
+        row = cursor.execute('''SELECT channel_name
+                                FROM subscribed_channels
+                                WHERE yt_channel_id = ?''', (channel_id,)).fetchone()
+        result.append( (channel_id, row[0]) )
+    return result
 
 
 def _channels_with_tag(cursor, tag, order=False):
@@ -357,7 +347,7 @@ def import_subscriptions(env, start_response):
             start_response('400 Bad Request', () )
             return b'400 Bad Request: Unsupported file format: ' + html.escape(content_type).encode('utf-8') + b'. Only subscription.json files (from Google Takeouts) and XML OPML files exported from Youtube\'s subscription manager page are supported'
 
-    _subscribe(channels)
+    with_open_db(_subscribe, channels)
 
     start_response('303 See Other', [('Location', util.URL_ORIGIN + '/subscription_manager'),] )
     return b''
@@ -388,7 +378,7 @@ def get_subscription_manager_page(env, start_response):
                 sort_link = util.URL_ORIGIN + '/subscription_manager'
 
                 main_list_html = '<ul class="tag-group-list">'
-                for tag in _get_all_tags():
+                for tag in _get_all_tags(cursor):
                     sub_list_html = ''
                     for channel_id, channel_name in _channels_with_tag(cursor, tag, order=True):
                         sub_list_html += sub_list_item_template.substitute(
@@ -430,7 +420,7 @@ def get_subscription_manager_page(env, start_response):
                 sort_link = util.URL_ORIGIN + '/subscription_manager?group_by_tags=1'
 
                 main_list_html = '<ol class="sub-list">'
-                for channel_name, channel_id in _get_subscribed_channels():
+                for channel_name, channel_id in _get_subscribed_channels(cursor):
                     main_list_html += sub_list_item_template.substitute(
                         channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
                         channel_name = html.escape(channel_name),
@@ -461,11 +451,11 @@ def post_subscription_manager_page(env, start_response):
     action = params['action'][0]
 
     if action == 'add_tags':
-        _add_tags(params['channel_ids'], [tag.lower() for tag in list_from_comma_separated_tags(params['tags'][0])])
+        with_open_db(_add_tags, params['channel_ids'], [tag.lower() for tag in list_from_comma_separated_tags(params['tags'][0])])
     elif action == 'remove_tags':
-        _remove_tags(params['channel_ids'], [tag.lower() for tag in list_from_comma_separated_tags(params['tags'][0])])
+        with_open_db(_remove_tags, params['channel_ids'], [tag.lower() for tag in list_from_comma_separated_tags(params['tags'][0])])
     elif action == 'unsubscribe':
-        _unsubscribe(params['channel_ids'])
+        with_open_db(_unsubscribe, params['channel_ids'])
     elif action == 'unsubscribe_verify':
         page = '''
         <span>Are you sure you want to unsubscribe from these channels?</span>
@@ -479,7 +469,7 @@ def post_subscription_manager_page(env, start_response):
             <input type="submit" value="Yes, unsubscribe">
         </form>
         <ul>'''
-        for channel_id, channel_name in _get_channel_names(params['channel_ids']):
+        for channel_id, channel_name in with_open_db(_get_channel_names, params['channel_ids']):
             page += unsubscribe_list_item_template.substitute(
                 channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
                 channel_name = html.escape(channel_name),
@@ -526,29 +516,31 @@ sidebar_channel_item_template = Template('''
 </li>''')
 
 def get_subscriptions_page(env, start_response):
-    items_html = '''<nav class="item-grid">\n'''
+    with open_database() as connection:
+        with connection as cursor:
+            items_html = '''<nav class="item-grid">\n'''
 
-    for item in _get_videos(30, 0):
-        if item['id'] in downloading_thumbnails:
-            item['thumbnail'] = util.get_thumbnail_url(item['id'])
-        else:
-            item['thumbnail'] = util.URL_ORIGIN + '/data/subscription_thumbnails/' + item['id'] + '.jpg'
-        items_html += html_common.video_item_html(item, html_common.small_video_item_template)
-    items_html += '''\n</nav>'''
-
-
-    tag_list_html = ''
-    for tag_name in _get_all_tags():
-        tag_list_html += sidebar_tag_item_template.substitute(tag_name = tag_name)
+            for item in _get_videos(cursor, 30, 0):
+                if item['id'] in downloading_thumbnails:
+                    item['thumbnail'] = util.get_thumbnail_url(item['id'])
+                else:
+                    item['thumbnail'] = util.URL_ORIGIN + '/data/subscription_thumbnails/' + item['id'] + '.jpg'
+                items_html += html_common.video_item_html(item, html_common.small_video_item_template)
+            items_html += '''\n</nav>'''
 
 
-    sub_list_html = ''
-    for channel_name, channel_id in _get_subscribed_channels():
-        sub_list_html += sidebar_channel_item_template.substitute(
-            channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
-            channel_name = html.escape(channel_name),
-            channel_id = channel_id,
-        )
+            tag_list_html = ''
+            for tag_name in _get_all_tags(cursor):
+                tag_list_html += sidebar_tag_item_template.substitute(tag_name = tag_name)
+
+
+            sub_list_html = ''
+            for channel_name, channel_id in _get_subscribed_channels(cursor):
+                sub_list_html += sidebar_channel_item_template.substitute(
+                    channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
+                    channel_name = html.escape(channel_name),
+                    channel_id = channel_id,
+                )
 
 
 
@@ -568,10 +560,10 @@ def post_subscriptions_page(env, start_response):
         if len(params['channel_id']) != len(params['channel_name']):
             start_response('400 Bad Request', ())
             return b'400 Bad Request, length of channel_id != length of channel_name'
-        _subscribe(zip(params['channel_id'], params['channel_name']))
+        with_open_db(_subscribe, zip(params['channel_id'], params['channel_name']))
 
     elif action == 'unsubscribe':
-        _unsubscribe(params['channel_id'])
+        with_open_db(_unsubscribe, params['channel_id'])
 
     elif action == 'refresh':
         type = params['type'][0]
