@@ -520,7 +520,7 @@ def get_subscriptions_page(env, start_response):
         with connection as cursor:
             items_html = '''<nav class="item-grid">\n'''
 
-            for item in _get_videos(cursor, 30, 0):
+            for item in _get_videos(cursor, 60, 0):
                 if item['id'] in downloading_thumbnails:
                     item['thumbnail'] = util.get_thumbnail_url(item['id'])
                 else:
