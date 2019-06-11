@@ -320,6 +320,7 @@ def check_tags(tags):
 def check_specific_channels(channel_ids):
     with open_database() as connection:
         with connection as cursor:
+            channel_id_name_list = []
             for channel_id in channel_ids:
                 channel_id_name_list += cursor.execute('''SELECT yt_channel_id, channel_name
                                                           FROM subscribed_channels
