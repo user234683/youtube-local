@@ -62,7 +62,7 @@
                 column-width: 300px;
                 column-gap: 40px;
             }
-                .sub-list > li{
+                .sub-list-item{
                     display:flex;
                     margin-bottom: 10px;
                     background-color: #dadada;
@@ -78,6 +78,9 @@
                         height: 1.5em;
                         width: 1.5em;
                     }
+                .muted{
+                    background-color: #888888;
+                }
         </style>
     </head>
     <body>
@@ -105,6 +108,8 @@ $header
                 <button type="submit" name="action" value="add_tags">Add tags</button>
                 <button type="submit" name="action" value="remove_tags">Remove tags</button>
                 <button type="submit" name="action" value="unsubscribe_verify">Unsubscribe</button>
+                <button type="submit" name="action" value="mute">Mute</button>
+                <button type="submit" name="action" value="unmute">Unmute</button>
                 <input type="reset" value="Clear Selection">
             </form>
 

@@ -36,7 +36,9 @@ def open_database():
                               id integer PRIMARY KEY,
                               yt_channel_id text UNIQUE NOT NULL,
                               channel_name text NOT NULL,
-                              time_last_checked integer
+                              time_last_checked integer,
+                              muted integer DEFAULT 0,
+                              upload_frequency integer
                           )''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS videos (
                               id integer PRIMARY KEY,
@@ -113,7 +115,7 @@ def _get_videos(cursor, number, offset):
         }
 
 def _get_subscribed_channels(cursor):
-    for item in cursor.execute('''SELECT channel_name, yt_channel_id
+    for item in cursor.execute('''SELECT channel_name, yt_channel_id, muted
                                   FROM subscribed_channels
                                   ORDER BY channel_name COLLATE NOCASE'''):
         yield item
@@ -155,15 +157,22 @@ def _get_channel_names(cursor, channel_ids):
     return result
 
 
-def _channels_with_tag(cursor, tag, order=False):
+def _channels_with_tag(cursor, tag, order=False, exclude_muted=False, include_muted_status=False):
     ''' returns list of (channel_id, channel_name) '''
 
-    statement = '''SELECT yt_channel_id, channel_name
+    statement = '''SELECT yt_channel_id, channel_name'''
+
+    if include_muted_status:
+        statement += ''', muted'''
+
+    statement += '''
                    FROM subscribed_channels
                    WHERE subscribed_channels.id IN (
                        SELECT tag_associations.sql_channel_id FROM tag_associations WHERE tag=?
                    )
                 '''
+    if exclude_muted:
+        statement += '''AND muted != 1\n'''
     if order:
         statement += '''ORDER BY channel_name COLLATE NOCASE'''
 
@@ -289,7 +298,9 @@ def _get_upstream_videos(channel_id):
 def check_all_channels():
     with open_database() as connection:
         with connection as cursor:
-            channel_id_name_list = cursor.execute('''SELECT yt_channel_id, channel_name FROM subscribed_channels''').fetchall()
+            channel_id_name_list = cursor.execute('''SELECT yt_channel_id, channel_name
+                                                     FROM subscribed_channels
+                                                     WHERE muted != 1''').fetchall()
 
     channel_names.update(channel_id_name_list)
     check_channels_if_necessary([item[0] for item in channel_id_name_list])
@@ -300,7 +311,7 @@ def check_tags(tags):
     with open_database() as connection:
         with connection as cursor:
             for tag in tags:
-                channel_id_name_list += _channels_with_tag(cursor, tag)
+                channel_id_name_list += _channels_with_tag(cursor, tag, exclude_muted=True)
 
     channel_names.update(channel_id_name_list)
     check_channels_if_necessary([item[0] for item in channel_id_name_list])
@@ -369,7 +380,7 @@ def import_subscriptions(env, start_response):
 
 
 sub_list_item_template = Template('''
-<li>
+<li class="sub-list-item $mute_class">
     <input class="sub-list-checkbox" name="channel_ids" value="$channel_id" form="subscription-manager-form" type="checkbox">
     <a href="$channel_url" class="sub-list-item-name" title="$channel_name">$channel_name</a>
     <span class="tag-list">$tags</span>
@@ -394,12 +405,13 @@ def get_subscription_manager_page(env, start_response):
                 main_list_html = '<ul class="tag-group-list">'
                 for tag in _get_all_tags(cursor):
                     sub_list_html = ''
-                    for channel_id, channel_name in _channels_with_tag(cursor, tag, order=True):
+                    for channel_id, channel_name, muted in _channels_with_tag(cursor, tag, order=True, include_muted_status=True):
                         sub_list_html += sub_list_item_template.substitute(
                             channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
                             channel_name = html.escape(channel_name),
                             channel_id = channel_id,
                             tags = ', '.join(t for t in _get_tags(cursor, channel_id) if t != tag),
+                            mute_class = 'muted' if muted else '',
                         )
                     main_list_html += tag_group_template.substitute(
                         tag = tag,
@@ -407,7 +419,7 @@ def get_subscription_manager_page(env, start_response):
                     )
 
                 # Channels with no tags
-                channel_list = cursor.execute('''SELECT yt_channel_id, channel_name
+                channel_list = cursor.execute('''SELECT yt_channel_id, channel_name, muted
                                                  FROM subscribed_channels
                                                  WHERE id NOT IN (
                                                      SELECT sql_channel_id FROM tag_associations
@@ -415,12 +427,13 @@ def get_subscription_manager_page(env, start_response):
                                                  ORDER BY channel_name COLLATE NOCASE''').fetchall()
                 if channel_list:
                     sub_list_html = ''
-                    for channel_id, channel_name in channel_list:
+                    for channel_id, channel_name, muted in channel_list:
                         sub_list_html += sub_list_item_template.substitute(
                             channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
                             channel_name = html.escape(channel_name),
                             channel_id = channel_id,
                             tags = '',
+                            mute_class = 'muted' if muted else '',
                         )
                     main_list_html += tag_group_template.substitute(
                         tag = "No tags",
@@ -434,12 +447,13 @@ def get_subscription_manager_page(env, start_response):
                 sort_link = util.URL_ORIGIN + '/subscription_manager?group_by_tags=1'
 
                 main_list_html = '<ol class="sub-list">'
-                for channel_name, channel_id in _get_subscribed_channels(cursor):
+                for channel_name, channel_id, muted in _get_subscribed_channels(cursor):
                     main_list_html += sub_list_item_template.substitute(
                         channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
                         channel_name = html.escape(channel_name),
                         channel_id = channel_id,
                         tags = ', '.join(_get_tags(cursor, channel_id)),
+                        mute_class = 'muted' if muted else '',
                     )
                 main_list_html += '</ol>'
 
@@ -464,42 +478,53 @@ def post_subscription_manager_page(env, start_response):
     params = env['parameters']
     action = params['action'][0]
 
-    if action == 'add_tags':
-        with_open_db(_add_tags, params['channel_ids'], [tag.lower() for tag in list_from_comma_separated_tags(params['tags'][0])])
-    elif action == 'remove_tags':
-        with_open_db(_remove_tags, params['channel_ids'], [tag.lower() for tag in list_from_comma_separated_tags(params['tags'][0])])
-    elif action == 'unsubscribe':
-        with_open_db(_unsubscribe, params['channel_ids'])
-    elif action == 'unsubscribe_verify':
-        page = '''
-        <span>Are you sure you want to unsubscribe from these channels?</span>
-        <form class="subscriptions-import-form" action="/youtube.com/subscription_manager" method="POST">'''
+    with open_database() as connection:
+        with connection as cursor:
+            if action == 'add_tags':
+                _add_tags(cursor, params['channel_ids'], [tag.lower() for tag in list_from_comma_separated_tags(params['tags'][0])])
+            elif action == 'remove_tags':
+                _remove_tags(cursor, params['channel_ids'], [tag.lower() for tag in list_from_comma_separated_tags(params['tags'][0])])
+            elif action == 'unsubscribe':
+                _unsubscribe(cursor, params['channel_ids'])
+            elif action == 'unsubscribe_verify':
+                page = '''
+                <span>Are you sure you want to unsubscribe from these channels?</span>
+                <form class="subscriptions-import-form" action="/youtube.com/subscription_manager" method="POST">'''
 
-        for channel_id in params['channel_ids']:
-            page += '<input type="hidden" name="channel_ids" value="' + channel_id + '">\n'
+                for channel_id in params['channel_ids']:
+                    page += '<input type="hidden" name="channel_ids" value="' + channel_id + '">\n'
 
-        page += '''
-            <input type="hidden" name="action" value="unsubscribe">
-            <input type="submit" value="Yes, unsubscribe">
-        </form>
-        <ul>'''
-        for channel_id, channel_name in with_open_db(_get_channel_names, params['channel_ids']):
-            page += unsubscribe_list_item_template.substitute(
-                channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
-                channel_name = html.escape(channel_name),
-            )
-        page += '''</ul>'''
+                page += '''
+                    <input type="hidden" name="action" value="unsubscribe">
+                    <input type="submit" value="Yes, unsubscribe">
+                </form>
+                <ul>'''
+                for channel_id, channel_name in _get_channel_names(cursor, params['channel_ids']):
+                    page += unsubscribe_list_item_template.substitute(
+                        channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
+                        channel_name = html.escape(channel_name),
+                    )
+                page += '''</ul>'''
 
-        start_response('200 OK', [('Content-type','text/html'),])
-        return html_common.yt_basic_template.substitute(
-            page_title = 'Unsubscribe?',
-            style = '',
-            header = html_common.get_header(),
-            page = page,
-        ).encode('utf-8')
-    else:
-        start_response('400 Bad Request', ())
-        return b'400 Bad Request'
+                start_response('200 OK', [('Content-type','text/html'),])
+                return html_common.yt_basic_template.substitute(
+                    page_title = 'Unsubscribe?',
+                    style = '',
+                    header = html_common.get_header(),
+                    page = page,
+                ).encode('utf-8')
+            elif action == 'mute':
+                cursor.executemany('''UPDATE subscribed_channels
+                                      SET muted = 1
+                                      WHERE yt_channel_id = ?''', [(ci,) for ci in params['channel_ids']])
+            elif action == 'unmute':
+                cursor.executemany('''UPDATE subscribed_channels
+                                      SET muted = 0
+                                      WHERE yt_channel_id = ?''', [(ci,) for ci in params['channel_ids']])
+
+            else:
+                start_response('400 Bad Request', ())
+                return b'400 Bad Request'
 
     start_response('303 See Other', [('Location', util.URL_ORIGIN + '/subscription_manager'),] )
     return b''
@@ -507,7 +532,7 @@ def post_subscription_manager_page(env, start_response):
 
 
 sidebar_tag_item_template = Template('''
-<li>
+<li class="sidebar-list-item">
     <span class="sidebar-item-name">$tag_name</span>
     <form method="POST" class="sidebar-item-refresh">
         <input type="submit" value="Check">
@@ -519,7 +544,7 @@ sidebar_tag_item_template = Template('''
 
 
 sidebar_channel_item_template = Template('''
-<li>
+<li class="sidebar-list-item $mute_class">
     <a href="$channel_url" class="sidebar-item-name" title="$channel_name">$channel_name</a>
     <form method="POST" class="sidebar-item-refresh">
         <input type="submit" value="Check">
@@ -549,11 +574,12 @@ def get_subscriptions_page(env, start_response):
 
 
             sub_list_html = ''
-            for channel_name, channel_id in _get_subscribed_channels(cursor):
+            for channel_name, channel_id, muted in _get_subscribed_channels(cursor):
                 sub_list_html += sidebar_channel_item_template.substitute(
                     channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
                     channel_name = html.escape(channel_name),
                     channel_id = channel_id,
+                    mute_class = 'muted' if muted else '',
                 )
 
 
