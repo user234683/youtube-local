@@ -1,5 +1,5 @@
 import base64
-from youtube import util, yt_data_extract, html_common
+from youtube import util, yt_data_extract, html_common, subscriptions
 
 import http_errors
 import urllib
@@ -241,6 +241,12 @@ def channel_videos_html(polymer_json, current_page=1, current_sort=3, number_of_
     microformat = get_microformat(response)
     channel_url = microformat['urlCanonical'].rstrip('/')
     channel_id = channel_url[channel_url.rfind('/')+1:]
+    if subscriptions.is_subscribed(channel_id):
+        action_name = 'Unsubscribe'
+        action = 'unsubscribe'
+    else:
+        action_name = 'Subscribe'
+        action = 'subscribe'
 
     items = get_grid_items(response)
     items_html = grid_items_html(items, {'author': microformat['title']})
@@ -256,6 +262,8 @@ def channel_videos_html(polymer_json, current_page=1, current_sort=3, number_of_
         items               = items_html,
         page_buttons        = html_common.page_buttons_html(current_page, math.ceil(number_of_videos/30), util.URL_ORIGIN + "/channel/" + channel_id + "/videos", current_query_string),
         number_of_results   = '{:,}'.format(number_of_videos) + " videos",
+        action_name = action_name,
+        action = action,
     )
 
 def channel_playlists_html(polymer_json, current_sort=3):
@@ -263,6 +271,13 @@ def channel_playlists_html(polymer_json, current_sort=3):
     microformat = get_microformat(response)
     channel_url = microformat['urlCanonical'].rstrip('/')
     channel_id = channel_url[channel_url.rfind('/')+1:]
+
+    if subscriptions.is_subscribed(channel_id):
+        action_name = 'Unsubscribe'
+        action = 'unsubscribe'
+    else:
+        action_name = 'Subscribe'
+        action = 'subscribe'
 
     items = get_grid_items(response)
     items_html = grid_items_html(items, {'author': microformat['title']})
@@ -278,6 +293,8 @@ def channel_playlists_html(polymer_json, current_sort=3):
         items               = items_html,
         page_buttons        = '',
         number_of_results   = '',
+        action_name = action_name,
+        action = action,
     )
 
 # Example channel where tabs do not have definite index: https://www.youtube.com/channel/UC4gQ8i3FD7YbhOgqUkeQEJg
@@ -323,6 +340,16 @@ def channel_about_page(polymer_json):
             continue
         else:
             stats += stat_template.substitute(stat_value=stat_value)
+
+
+    channel_id = channel_metadata['channelId']
+    if subscriptions.is_subscribed(channel_id):
+        action_name = 'Unsubscribe'
+        action = 'unsubscribe'
+    else:
+        action_name = 'Subscribe'
+        action = 'subscribe'
+
     try:
         description = yt_data_extract.format_text_runs(yt_data_extract.get_formatted_text(channel_metadata['description']))
     except KeyError:
@@ -335,8 +362,10 @@ def channel_about_page(polymer_json):
         description         = description,
         links               = channel_links,
         stats               = stats,
-        channel_id          = channel_metadata['channelId'],
+        channel_id          = channel_id,
         channel_tabs        = channel_tabs_html(channel_metadata['channelId'], 'About'),
+        action_name = action_name,
+        action = action,
     )
 
 def channel_search_page(polymer_json, query, current_page=1, number_of_videos = 1000, current_query_string=''):
@@ -345,7 +374,14 @@ def channel_search_page(polymer_json, query, current_page=1, number_of_videos = 
     channel_url = microformat['urlCanonical'].rstrip('/')
     channel_id = channel_url[channel_url.rfind('/')+1:]
 
-    
+    if subscriptions.is_subscribed(channel_id):
+        action_name = 'Unsubscribe'
+        action = 'unsubscribe'
+    else:
+        action_name = 'Subscribe'
+        action = 'subscribe'
+
+
     try:
         items = tab_with_content(response['contents']['twoColumnBrowseResultsRenderer']['tabs'])['sectionListRenderer']['contents']
     except KeyError:
@@ -364,6 +400,8 @@ def channel_search_page(polymer_json, query, current_page=1, number_of_videos = 
         page_buttons        = html_common.page_buttons_html(current_page, math.ceil(number_of_videos/29), util.URL_ORIGIN + "/channel/" + channel_id + "/search", current_query_string),
         number_of_results   = '',
         sort_buttons        = '',
+        action_name = action_name,
+        action = action,
     )
 def get_channel_search_json(channel_id, query, page):
     params = proto.string(2, 'search') + proto.string(15, str(page))

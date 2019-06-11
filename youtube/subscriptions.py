@@ -68,6 +68,20 @@ def with_open_db(function, *args, **kwargs):
         with connection as cursor:
             return function(cursor, *args, **kwargs)
 
+def is_subscribed(channel_id):
+    if not os.path.exists(database_path):
+        return False
+
+    with open_database() as connection:
+        with connection as cursor:
+            result = cursor.execute('''SELECT EXISTS(
+                                           SELECT 1
+                                           FROM subscribed_channels
+                                           WHERE yt_channel_id=?
+                                           LIMIT 1
+                                       )''', [channel_id]).fetchone()
+            return bool(result[0])
+
 
 def _subscribe(cursor, channels):
     ''' channels is a list of (channel_id, channel_name) '''

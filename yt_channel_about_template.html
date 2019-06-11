@@ -56,11 +56,11 @@ $header
             <img class="avatar" src="$avatar">
             <div class="metadata">
                 <h2 class="title">$channel_title</h2>
-                <form method="POST" action="/youtube.com/subscriptions" class="subscribe">
-                    <input type="submit" value="Subscribe">
+                <form method="POST" action="/youtube.com/subscriptions" class="subscribe-unsubscribe">
+                    <input type="submit" value="$action_name">
                     <input type="hidden" name="channel_id" value="$channel_id">
                     <input type="hidden" name="channel_name" value="$channel_title">
-                    <input type="hidden" name="action" value="subscribe">
+                    <input type="hidden" name="action" value="$action">
                 </form>
             </div>
             <nav class="channel-tabs">
