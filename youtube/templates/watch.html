@@ -2,10 +2,10 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <title>$page_title</title>
-        <link href="/youtube.com/shared.css" type="text/css" rel="stylesheet">
-        <link href="/youtube.com/comments.css" type="text/css" rel="stylesheet">
-        <link href="/youtube.com/favicon.ico" type="image/x-icon" rel="icon">
+        <title>{{ title }}</title>
+        <link href="/youtube.com/static/shared.css" type="text/css" rel="stylesheet">
+        <link href="/youtube.com/static/comments.css" type="text/css" rel="stylesheet">
+        <link href="/youtube.com/static/favicon.ico" type="image/x-icon" rel="icon">
         <link title="Youtube local" href="/youtube.com/opensearch.xml" rel="search" type="application/opensearchdescription+xml">
         <style type="text/css">
             main{
@@ -153,52 +153,70 @@
         </style>
     </head>
     <body>
-$header
+{{ header|safe }}
         <main>
                 <div id="left">
                 </div>
-                <article class="full-item">          
+                <article class="full-item">
 
                     <video width="640" height="360" controls autofocus>
-$video_sources
+{% for video_source in video_sources %}
+                        <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
+{% endfor %}
+
+{% for source in subtitle_sources %}
+    {% if source['on'] %}
+                        <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
+    {% else %}
+                        <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
+    {% endif %}
+{% endfor %}
+
                     </video>
 
-                    <h2 class="title">$video_title</h2>
-$is_unlisted
+                    <h2 class="title">{{ title }}</h2>
+{% if unlisted %}
+                    <span class="is-unlisted">Unlisted</span>
+{% endif %}
+                    <address>Uploaded by <a href="{{ uploader_channel_url }}">{{ uploader }}</a></address>
+                    <span class="views">{{ views }} views</span>
 
-                    <address>Uploaded by <a href="$uploader_channel_url">$uploader</a></address>
-                    <span class="views">$views views</span>
 
-
-                    <time datetime="$upload_date">Published on $upload_date</time>
-                    <span class="likes-dislikes">$likes likes $dislikes dislikes</span>
+                    <time datetime="$upload_date">Published on {{ upload_date }}</time>
+                    <span class="likes-dislikes">{{ likes }} likes {{ dislikes }} dislikes</span>
                     <div class="download-dropdown">
                         <button class="download-dropdown-label">Download</button>
                         <div class="download-dropdown-content">
-$download_options
+{% for format in download_formats %}
+                            <a href="{{ format['url'] }}">
+                                <span>{{ format['ext'] }}</span>
+                                <span>{{ format['resolution'] }}</span>
+                                <span>{{ format['note'] }}</span>
+                            </a>
+{% endfor  %}
                         </div>
                     </div>
-                    <input class="checkbox" name="video_info_list" value="$video_info" form="playlist-edit" type="checkbox">
+                    <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
 
-                    <span class="description">$description</span>
+                    <span class="description">{{ description }}</span>
                     <div class="music-list">
-$music_list
+{{ music_list|safe }}
                     </div>
-$comments
+{{ comments|safe }}
                 </article>
 
-            
-            
+
+
 
                 <nav id="related">
-$related
+{{ related|safe }}
                 </nav>
 
         </main>
-    
-    
-    
-    
-    
+
+
+
+
+
     </body>
 </html>
