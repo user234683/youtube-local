@@ -160,8 +160,8 @@ def extract_info(downloader, *args, **kwargs):
 def get_watch_page():
     video_id = request.args['v']
     if len(video_id) < 11:
-        abort(404)
-        abort(Response('Incomplete video id (too short): ' + video_id))
+        flask.abort(404)
+        flask.abort(flask.Response('Incomplete video id (too short): ' + video_id))
 
     lc = request.args.get('lc', '')
     if settings.route_tor:
