@@ -1,13 +1,6 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="utf-8">
-        <title>{{ title }}</title>
-        <link href="/youtube.com/static/shared.css" type="text/css" rel="stylesheet">
-        <link href="/youtube.com/static/comments.css" type="text/css" rel="stylesheet">
-        <link href="/youtube.com/static/favicon.ico" type="image/x-icon" rel="icon">
-        <link title="Youtube local" href="/youtube.com/opensearch.xml" rel="search" type="application/opensearchdescription+xml">
-        <style type="text/css">
+{% extends "base.html" %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block style %}
             main{
                 display:grid;
                 grid-template-columns: minmax(0px, 3fr) 640px 40px 500px minmax(0px,2fr);
@@ -150,11 +143,9 @@
                         grid-template-columns: 60px 90px auto;
                         max-height: 1.2em;
                     }
-        </style>
-    </head>
-    <body>
-{{ header|safe }}
-        <main>
+{% endblock style %}
+
+{% block main %}
                 <div id="left">
                 </div>
                 <article class="full-item">
@@ -212,11 +203,4 @@
 {{ related|safe }}
                 </nav>
 
-        </main>
-
-
-
-
-
-    </body>
-</html>
+{% endblock main %}

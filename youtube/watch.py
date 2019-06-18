@@ -1,5 +1,5 @@
 from youtube import yt_app
-from youtube import util, html_common, comments
+from youtube import util, html_common, comments, local_playlist
 import settings
 
 from flask import request
@@ -214,9 +214,8 @@ def get_watch_page():
             'note': yt_dl_downloader._format_note(format),
         })
 
-
     return flask.render_template('watch.html',
-        header                  = html_common.get_header(),
+        header_playlist_names   = local_playlist.get_playlist_names(),
         uploader_channel_url    = '/' + info['uploader_url'],
         upload_date             = upload_date,
         views           = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("view_count", None)),
