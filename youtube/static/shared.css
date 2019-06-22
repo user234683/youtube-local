@@ -219,6 +219,12 @@ address{
         max-height:2.4em;
         overflow:hidden;
     }
+        .medium-item .stats > *::after{
+            content: " | ";
+        }
+        .medium-item .stats > *:last-child::after{
+            content: "";
+        }
     
     .medium-item .description{
         grid-column: 2 / span 2;

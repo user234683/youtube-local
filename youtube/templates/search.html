@@ -1,0 +1,54 @@
+{% set search_box_value = query %}
+{% extends "base.html" %}
+{% block page_title %}{{ query + ' - Search' }}{% endblock %}
+{% import "common_elements.html" as common_elements %}
+{% block style %}
+            main{
+                display:grid;
+                grid-template-columns: minmax(0px, 1fr) 800px minmax(0px,2fr);
+                max-width:100vw;
+            }
+                
+
+            #number-of-results{
+                font-weight:bold;
+            }
+            #result-info{
+                grid-row: 1;
+                grid-column:2;
+                align-self:center;
+            }
+            .page-button-row{
+                grid-column: 2;
+                justify-self: center;
+            }
+
+
+            .item-list{
+                grid-row: 2;
+                grid-column: 2;
+            }
+            .badge{
+                background-color:#cccccc;
+            }
+{% endblock style %}
+
+{% block main %}
+            <div id="result-info">
+                <div id="number-of-results">Approximately {{ '{:,}'.format(estimated_results) }} results ({{ '{:,}'.format(estimated_pages) }} pages)</div>
+{% if corrections['type'] == 'showing_results_for' %}
+                <div>Showing results for <a>{{ corrections['corrected_query']|safe }}</a></div>
+                <div>Search instead for <a href="{{ corrections['original_query_url'] }}">{{ corrections['original_query'] }}</a></div>
+{% elif corrections['type'] == 'did_you_mean' %}
+                <div>Did you mean <a href="{{ corrections['corrected_query_url'] }}">{{ corrections['corrected_query']|safe }}</a></div>
+{% endif %}
+            </div>
+            <div class="item-list">
+                {% for info in results %}
+                    {{ common_elements.item(info) }}
+                {% endfor %}
+            </div>
+            <nav class="page-button-row">
+                {{ common_elements.page_buttons(estimated_pages, '/https://www.youtube.com/search', parameters_dictionary) }}
+            </nav>
+{% endblock main %}

@@ -2,13 +2,14 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <title>{% block page_title %}{% endblock %}</title>
+        <title>{% block page_title %}{{ title }}{% endblock %}</title>
         <link href="/youtube.com/static/shared.css" type="text/css" rel="stylesheet">
         <link href="/youtube.com/static/comments.css" type="text/css" rel="stylesheet">
         <link href="/youtube.com/static/favicon.ico" type="image/x-icon" rel="icon">
         <link title="Youtube local" href="/youtube.com/opensearch.xml" rel="search" type="application/opensearchdescription+xml">
         <style type="text/css">
 {% block style %}
+{{ style }}
 {% endblock %}
         </style>
     </head>
@@ -105,6 +106,7 @@
         </header>
         <main>
 {% block main %}
+{{ main }}
 {% endblock %}
         </main>
     </body>

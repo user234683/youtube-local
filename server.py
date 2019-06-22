@@ -6,7 +6,7 @@ from youtube import yt_app
 from youtube import util
 
 # these are just so the files get run - they import yt_app and add routes to it
-from youtube import watch
+from youtube import watch, search
 
 import settings
 

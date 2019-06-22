@@ -1,16 +1,12 @@
-from youtube import util, html_common, yt_data_extract, proto
+from youtube import util, yt_data_extract, proto, local_playlist
+from youtube import yt_app
 
 import json
 import urllib
-import html
-from string import Template
 import base64
 from math import ceil
-
-
-with open("yt_search_results_template.html", "r") as file:
-    yt_search_results_template = file.read()
-
+from flask import request
+import flask
 
 # Sort: 1
     # Upload date: 2
@@ -58,41 +54,32 @@ def get_search_json(query, page, autocorrect, sort, filters):
     content = util.fetch_url(url, headers=headers, report_text="Got search results")
     info = json.loads(content)
     return info
-    
 
-showing_results_for = Template('''
-                <div>Showing results for <a>$corrected_query</a></div>
-                <div>Search instead for <a href="$original_query_url">$original_query</a></div>
-''')
-did_you_mean = Template('''
-                <div>Did you mean <a href="$corrected_query_url">$corrected_query</a></div>
-''')    
-def get_search_page(env, start_response):
-    start_response('200 OK', [('Content-type','text/html'),])
-    parameters = env['parameters']
-    if len(parameters) == 0:
-        return html_common.yt_basic_template.substitute(
-            page_title = "Search",
-            header = html_common.get_header(),
-            style = '',
-            page = '',
-        ).encode('utf-8')
-    query = parameters["query"][0]
-    page = parameters.get("page", "1")[0]
-    autocorrect = int(parameters.get("autocorrect", "1")[0])
-    sort = int(parameters.get("sort", "0")[0])
+
+@yt_app.route('/search')
+def get_search_page():
+    if len(request.args) == 0:
+        return flask.render_template('base.html', title="Search")
+
+    if 'query' not in request.args:
+        abort(400)
+
+    query = request.args.get("query")
+    page = request.args.get("page", "1")
+    autocorrect = int(request.args.get("autocorrect", "1"))
+    sort = int(request.args.get("sort", "0"))
     filters = {}
-    filters['time'] = int(parameters.get("time", "0")[0])
-    filters['type'] = int(parameters.get("type", "0")[0])
-    filters['duration'] = int(parameters.get("duration", "0")[0])
+    filters['time'] = int(request.args.get("time", "0"))
+    filters['type'] = int(request.args.get("type", "0"))
+    filters['duration'] = int(request.args.get("duration", "0"))
     info = get_search_json(query, page, autocorrect, sort, filters)
     
     estimated_results = int(info[1]['response']['estimatedResults'])
     estimated_pages = ceil(estimated_results/20)
     results = info[1]['response']['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents']
-    
-    corrections = ''
-    result_list_html = ""
+
+    parsed_results = []
+    corrections = {'type': None}
     for renderer in results:
         type = list(renderer.keys())[0]
         if type == 'shelfRenderer':
@@ -102,41 +89,39 @@ def get_search_page(env, start_response):
             corrected_query_string = parameters.copy()
             corrected_query_string['query'] = [renderer['correctedQueryEndpoint']['searchEndpoint']['query']]
             corrected_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(corrected_query_string, doseq=True)
-            corrections = did_you_mean.substitute(
-                corrected_query_url = corrected_query_url,
-                corrected_query = yt_data_extract.format_text_runs(renderer['correctedQuery']['runs']),
-            )
+
+            corrections = {
+                'type': 'did_you_mean',
+                'corrected_query': yt_data_extract.format_text_runs(renderer['correctedQuery']['runs']),
+                'corrected_query_url': corrected_query_url,
+            }
             continue
         if type == 'showingResultsForRenderer':
             renderer = renderer[type]
             no_autocorrect_query_string = parameters.copy()
             no_autocorrect_query_string['autocorrect'] = ['0']
             no_autocorrect_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
-            corrections = showing_results_for.substitute(
-                corrected_query = yt_data_extract.format_text_runs(renderer['correctedQuery']['runs']),
-                original_query_url = no_autocorrect_query_url,
-                original_query = html.escape(renderer['originalQuery']['simpleText']),
-            )
+
+            corrections = {
+                'type': 'showing_results_for',
+                'corrected_query': yt_data_extract.format_text_runs(renderer['correctedQuery']['runs']),
+                'original_query_url': no_autocorrect_query_url,
+                'original_query': renderer['originalQuery']['simpleText'],
+            }
             continue
-        result_list_html += html_common.renderer_html(renderer, current_query_string=env['QUERY_STRING'])
-        
-    page = int(page)
-    if page <= 5:
-        page_start = 1
-        page_end = min(9, estimated_pages)
-    else:
-        page_start = page - 4
-        page_end = min(page + 4, estimated_pages)
-        
-    
-    result = Template(yt_search_results_template).substitute(
-        header              = html_common.get_header(query),
-        results             = result_list_html, 
-        page_title          = query + " - Search", 
-        search_box_value    = html.escape(query),
-        number_of_results   = '{:,}'.format(estimated_results),
-        number_of_pages     = '{:,}'.format(estimated_pages),
-        page_buttons        = html_common.page_buttons_html(page, estimated_pages, util.URL_ORIGIN + "/search", env['QUERY_STRING']),
-        corrections         = corrections
-        )
-    return result.encode('utf-8')
+
+        info = yt_data_extract.parse_info_prepare_for_html(renderer)
+        if info['type'] != 'unsupported':
+            parsed_results.append(info)
+
+    return flask.render_template('search.html',
+        header_playlist_names = local_playlist.get_playlist_names(),
+        query = query,
+        estimated_results = estimated_results,
+        estimated_pages = estimated_pages,
+        corrections = corrections,
+        results = parsed_results,
+        parameters_dictionary = request.args,
+    )
+
+
