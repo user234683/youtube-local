@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "common_elements.html" as common_elements %}
 {% block page_title %}{{ title }}{% endblock %}
 {% block style %}
             main{
@@ -200,7 +201,9 @@
 
 
                 <nav id="related">
-{{ related|safe }}
+                    {% for info in related %}
+                        {{ common_elements.item(info) }}
+                    {% endfor %}
                 </nav>
 
 {% endblock main %}

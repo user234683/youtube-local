@@ -1,5 +1,5 @@
 from youtube import yt_app
-from youtube import util, html_common, comments, local_playlist
+from youtube import util, html_common, comments, local_playlist, yt_data_extract
 import settings
 
 from flask import request
@@ -13,16 +13,17 @@ import gevent
 import os
 
 
-def get_related_items_html(info):
-    result = ""
+def get_related_items(info):
+    results = []
     for item in info['related_vids']:
         if 'list' in item:  # playlist:
-            item = watch_page_related_playlist_info(item)
-            result += html_common.playlist_item_html(item, html_common.small_playlist_item_template)
+            result = watch_page_related_playlist_info(item)
         else:
-            item = watch_page_related_video_info(item)
-            result += html_common.video_item_html(item, html_common.small_video_item_template)
-    return result
+            result = watch_page_related_video_info(item)
+        yt_data_extract.prefix_urls(result)
+        yt_data_extract.add_extra_html_info(result)
+        results.append(result)
+    return results
 
     
 # json of related items retrieved directly from the watch page has different names for everything
@@ -35,6 +36,8 @@ def watch_page_related_video_info(item):
     except KeyError:
         result['views'] = ''
     result['thumbnail'] = util.get_thumbnail_url(item['id'])
+    result['item_size'] = 'small'
+    result['type'] = 'video'
     return result
     
 def watch_page_related_playlist_info(item):
@@ -44,6 +47,8 @@ def watch_page_related_playlist_info(item):
         'id': item['list'],
         'first_video_id': item['video_id'],
         'thumbnail': util.get_thumbnail_url(item['video_id']),
+        'item_size': 'small',
+        'type': 'playlist',
     }
 
 def get_video_sources(info):
@@ -192,9 +197,9 @@ def get_watch_page():
     upload_date = upload_month + "/" + upload_day + "/" + upload_year
     
     if settings.enable_related_videos:
-        related_videos_html = get_related_items_html(info)
+        related_videos = get_related_items(info)
     else:
-        related_videos_html = ''
+        related_videos = []
 
 
     if settings.gather_googlevideo_domains:
@@ -225,9 +230,9 @@ def get_watch_page():
         video_info              = json.dumps(video_info),
         video_sources           = get_video_sources(info),
         subtitle_sources        = get_subtitle_sources(info),
+        related                 = related_videos,
 
         # TODO: refactor these
-        related                 = related_videos_html,
         comments                = comments_html,
         music_list              = get_music_list_html(info['music_list']),
 
