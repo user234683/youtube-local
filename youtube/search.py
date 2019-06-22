@@ -86,7 +86,7 @@ def get_search_page():
             continue
         if type == 'didYouMeanRenderer':
             renderer = renderer[type]
-            corrected_query_string = parameters.copy()
+            corrected_query_string = request.args.to_dict(flat=False)
             corrected_query_string['query'] = [renderer['correctedQueryEndpoint']['searchEndpoint']['query']]
             corrected_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(corrected_query_string, doseq=True)
 
@@ -98,7 +98,7 @@ def get_search_page():
             continue
         if type == 'showingResultsForRenderer':
             renderer = renderer[type]
-            no_autocorrect_query_string = parameters.copy()
+            no_autocorrect_query_string = request.args.to_dict(flat=False)
             no_autocorrect_query_string['autocorrect'] = ['0']
             no_autocorrect_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
 
