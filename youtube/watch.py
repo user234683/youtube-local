@@ -82,7 +82,7 @@ def get_subtitle_sources(info):
                     default_found = True
                     default = source
                 else:
-                    result.append(source)
+                    sources.append(source)
                 break
 
     # Put it at the end to avoid browser bug when there are too many languages
