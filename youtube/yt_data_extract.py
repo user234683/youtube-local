@@ -200,12 +200,12 @@ def renderer_info(renderer, additional_info={}):
 
     info.update(additional_info)
 
-    if type.startswith('compact'):
+    if type.startswith('compact') or type.startswith('playlist') or type.startswith('grid'):
         info['item_size'] = 'small'
     else:
         info['item_size'] = 'medium'
 
-    if type in ('compactVideoRenderer', 'videoRenderer', 'gridVideoRenderer'):
+    if type in ('compactVideoRenderer', 'videoRenderer', 'playlistVideoRenderer', 'gridVideoRenderer'):
         info['type'] = 'video'
     elif type in ('playlistRenderer', 'compactPlaylistRenderer', 'gridPlaylistRenderer',
                   'radioRenderer', 'compactRadioRenderer', 'gridRadioRenderer',
@@ -213,6 +213,8 @@ def renderer_info(renderer, additional_info={}):
         info['type'] = 'playlist'
     elif type == 'channelRenderer':
         info['type'] = 'channel'
+    elif type == 'playlistHeaderRenderer':
+        info['type'] = 'playlist_metadata'
     else:
         info['type'] = 'unsupported'
         return info

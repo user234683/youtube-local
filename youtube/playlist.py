@@ -1,4 +1,5 @@
-from youtube import util, yt_data_extract, html_common, template, proto
+from youtube import util, yt_data_extract, proto
+from youtube import yt_app
 
 import base64
 import urllib
@@ -6,10 +7,8 @@ import json
 import string
 import gevent
 import math
-
-with open("yt_playlist_template.html", "r") as file:
-    yt_playlist_template = template.Template(file.read())
-
+from flask import request
+import flask
 
 
 
@@ -76,14 +75,15 @@ def get_videos(playlist_id, page):
     return info
 
 
-playlist_stat_template = string.Template('''
-<div>$stat</div>''')
-def get_playlist_page(env, start_response):
-    start_response('200 OK', [('Content-type','text/html'),])
-    parameters = env['parameters']
-    playlist_id = parameters['list'][0]
-    page = parameters.get("page", "1")[0]
-    if page == "1":
+@yt_app.route('/playlist')
+def get_playlist_page():
+    if 'list' not in request.args:
+        abort(400)
+
+    playlist_id = request.args.get('list')
+    page = request.args.get('page', '1')
+
+    if page == '1':
         first_page_json = playlist_first_page(playlist_id)
         this_page_json = first_page_json
     else:
@@ -98,26 +98,20 @@ def get_playlist_page(env, start_response):
         video_list = this_page_json['response']['contents']['singleColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['playlistVideoListRenderer']['contents']
     except KeyError:    # other pages
         video_list = this_page_json['response']['continuationContents']['playlistVideoListContinuation']['contents']
-    videos_html = ''
-    for video_json in video_list:
-        info = yt_data_extract.renderer_info(video_json['playlistVideoRenderer'])
-        videos_html += html_common.video_item_html(info, html_common.small_video_item_template)
+
+    parsed_video_list = [yt_data_extract.parse_info_prepare_for_html(video_json) for video_json in video_list]
 
 
-    metadata = yt_data_extract.renderer_info(first_page_json['response']['header']['playlistHeaderRenderer'])
+    metadata = yt_data_extract.renderer_info(first_page_json['response']['header'])
+    yt_data_extract.prefix_urls(metadata)
+
     video_count = int(metadata['size'].replace(',', ''))
-    page_buttons = html_common.page_buttons_html(int(page), math.ceil(video_count/20), util.URL_ORIGIN + "/playlist", env['QUERY_STRING'])
+    metadata['size'] += ' videos'
 
-    html_ready = html_common.get_html_ready(metadata)
-    html_ready['page_title'] = html_ready['title'] + ' - Page ' + str(page)
+    return flask.render_template('playlist.html',
+        video_list = parsed_video_list,
+        num_pages = math.ceil(video_count/20),
+        parameters_dictionary = request.args,
 
-    stats = ''
-    stats += playlist_stat_template.substitute(stat=html_ready['size'] + ' videos')
-    stats += playlist_stat_template.substitute(stat=html_ready['views'])
-    return yt_playlist_template.substitute(
-        header          = html_common.get_header(),
-        videos          = videos_html,
-        page_buttons    = page_buttons,
-        stats = stats,
-        **html_ready
+        **metadata
     ).encode('utf-8')
