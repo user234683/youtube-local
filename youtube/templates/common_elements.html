@@ -78,7 +78,7 @@
                     {{ get_stats(info) }}
                 </div>
 
-                <span class="description">{{ text_runs(info['description']) }}</span>
+                <span class="description">{{ text_runs(info.get('description', '')) }}</span>
                 <span class="badges">{{ info['badges']|join(' | ') }}</span>
             {% elif info['type'] == 'playlist' %}
                 <a class="playlist-thumbnail-box" href="{{ info['url'] }}" title="{{ info['title'] }}">
