@@ -36,19 +36,11 @@ import json
 
 
 
-
-
 def get_plain_text(node):
     try:
-        return html.escape(node['simpleText'])
+        return node['simpleText']
     except KeyError:
-        return unformmated_text_runs(node['runs'])
-        
-def unformmated_text_runs(runs):
-    result = ''
-    for text_run in runs:
-        result += html.escape(text_run["text"])
-    return result
+        return ''.join(text_run['text'] for text_run in node['runs'])
 
 def format_text_runs(runs):
     if isinstance(runs, str):
@@ -78,14 +70,19 @@ def get_url(node):
 
 
 def get_text(node):
+    if node == {}:
+        return ''
     try:
         return node['simpleText']
     except KeyError:
-            pass
+        pass
     try:
         return node['runs'][0]['text']
     except IndexError: # empty text runs
         return ''
+    except KeyError:
+        print(node)
+        raise
 
 def get_formatted_text(node):
     try:
@@ -200,7 +197,7 @@ def renderer_info(renderer, additional_info={}):
 
     info.update(additional_info)
 
-    if type.startswith('compact') or type.startswith('playlist') or type.startswith('grid'):
+    if type.startswith('compact') or type.startswith('playlist'):
         info['item_size'] = 'small'
     else:
         info['item_size'] = 'medium'
@@ -271,13 +268,8 @@ def renderer_info(renderer, additional_info={}):
         raise
 
 
-
-    #print(renderer)
-    #raise NotImplementedError('Unknown renderer type: ' + type)
-    return ''
-
-def parse_info_prepare_for_html(renderer):
-    item = renderer_info(renderer)
+def parse_info_prepare_for_html(renderer, additional_info={}):
+    item = renderer_info(renderer, additional_info)
     prefix_urls(item)
     add_extra_html_info(item)
 

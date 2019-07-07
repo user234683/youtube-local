@@ -14,7 +14,7 @@
     {%- endif -%}
 {% endmacro %}
 
-{% macro small_item(info) %}
+{% macro small_item(info, include_author=true) %}
     <div class="small-item-box">
         <div class="small-item">
             {% if info['type'] == 'video' %}
@@ -47,11 +47,13 @@
     </div>
 {% endmacro %}
 
-{% macro get_stats(info) %}
-    {% if 'author_url' is in(info) %}
-        <address>By <a href="{{ info['author_url'] }}">{{ info['author'] }}</a></address>
-    {% else %}
-        <address><b>{{ info['author'] }}</b></address>
+{% macro get_stats(info, include_author=true) %}
+    {% if include_author %}
+        {% if 'author_url' is in(info) %}
+            <address>By <a href="{{ info['author_url'] }}">{{ info['author'] }}</a></address>
+        {% else %}
+            <address><b>{{ info['author'] }}</b></address>
+        {% endif %}
     {% endif %}
     {% if 'views' is in(info) %}
         <span class="views">{{ info['views'] }}</span>
@@ -63,7 +65,7 @@
 
 
 
-{% macro medium_item(info) %}
+{% macro medium_item(info, include_author=true) %}
     <div class="medium-item-box">
         <div class="medium-item">
             {% if info['type'] == 'video' %}
@@ -75,7 +77,7 @@
                 <a class="title" href="{{ info['url'] }}" title="{{ info['title'] }}">{{ info['title'] }}</a>
                 
                 <div class="stats">
-                    {{ get_stats(info) }}
+                    {{ get_stats(info, include_author) }}
                 </div>
 
                 <span class="description">{{ text_runs(info.get('description', '')) }}</span>
@@ -91,7 +93,7 @@
                 <a class="title" href="{{ info['url'] }}" title="{{ info['title'] }}">{{ info['title'] }}</a>
                 
                 <div class="stats">
-                    {{ get_stats(info) }}
+                    {{ get_stats(info, include_author) }}
                 </div>
             {% elif info['type'] == 'channel' %}
                 <a class="video-thumbnail-box" href="{{ info['url'] }}" title="{{ info['title'] }}">
@@ -115,11 +117,11 @@
 {% endmacro %}
 
 
-{% macro item(info) %}
+{% macro item(info, include_author=true) %}
     {% if info['item_size'] == 'small' %}
-        {{ small_item(info) }}
+        {{ small_item(info, include_author) }}
     {% elif info['item_size'] == 'medium' %}
-        {{ medium_item(info) }}
+        {{ medium_item(info, include_author) }}
     {% else %}
         Error: Unknown item size
     {% endif %}
