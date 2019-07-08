@@ -156,7 +156,7 @@ def get_watch_page():
     comments_html, info = tasks[0].value, tasks[1].value
 
     if isinstance(info, str): # youtube error
-        return flask.render_template('error.html', header = html_common.get_header, error_mesage = info)
+        return flask.render_template('error.html', error_message = info)
 
     video_info = {
         "duration": util.seconds_to_timestamp(info["duration"]),
