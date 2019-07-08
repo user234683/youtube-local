@@ -110,46 +110,20 @@ def get_subtitle_sources(info):
     return sources
 
 
-def get_music_list_html(music_list):
-    if len(music_list) == 0:
-        music_list_html = ''
-    else:
-        # get the set of attributes which are used by atleast 1 track
-        # so there isn't an empty, extraneous album column which no tracks use, for example
-        used_attributes = set()
-        for track in music_list:
-            used_attributes = used_attributes | track.keys()
+def get_ordered_music_list_attributes(music_list):
+    # get the set of attributes which are used by atleast 1 track
+    # so there isn't an empty, extraneous album column which no tracks use, for example
+    used_attributes = set()
+    for track in music_list:
+        used_attributes = used_attributes | track.keys()
 
-        # now put them in the right order
-        ordered_attributes = []
-        for attribute in ('Artist', 'Title', 'Album'):
-            if attribute.lower() in used_attributes:
-                ordered_attributes.append(attribute)
+    # now put them in the right order
+    ordered_attributes = []
+    for attribute in ('Artist', 'Title', 'Album'):
+        if attribute.lower() in used_attributes:
+            ordered_attributes.append(attribute)
 
-        music_list_html = '''<hr>
-<table>
-<caption>Music</caption>
-<tr>
-'''
-        # table headings
-        for attribute in ordered_attributes:
-            music_list_html += "<th>" + attribute + "</th>\n"
-        music_list_html += '''</tr>\n'''
-
-        for track in music_list:
-            music_list_html += '''<tr>\n'''
-            for attribute in ordered_attributes:
-                try:
-                    value = track[attribute.lower()]
-                except KeyError:
-                    music_list_html += '''<td></td>'''
-                else:
-                    music_list_html += '''<td>''' + html.escape(value) + '''</td>'''
-            music_list_html += '''</tr>\n'''
-        music_list_html += '''</table>\n'''
-    return music_list_html
-
-
+    return ordered_attributes
 
 
 def extract_info(downloader, *args, **kwargs):
@@ -231,10 +205,11 @@ def get_watch_page():
         video_sources           = get_video_sources(info),
         subtitle_sources        = get_subtitle_sources(info),
         related                 = related_videos,
+        music_list              = info['music_list'],
+        music_attributes        = get_ordered_music_list_attributes(info['music_list']),
 
         # TODO: refactor these
         comments                = comments_html,
-        music_list              = get_music_list_html(info['music_list']),
 
         title       = info['title'],
         uploader    = info['uploader'],

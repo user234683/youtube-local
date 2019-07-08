@@ -185,14 +185,31 @@
                                 <span>{{ format['resolution'] }}</span>
                                 <span>{{ format['note'] }}</span>
                             </a>
-{% endfor  %}
+{% endfor %}
                         </div>
                     </div>
                     <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
 
                     <span class="description">{{ description }}</span>
                     <div class="music-list">
-{{ music_list|safe }}
+                        {% if music_list.__len__() != 0 %}
+                            <hr>
+                            <table>
+                                <caption>Music</caption>
+                                <tr>
+                                    {% for attribute in music_attributes %}
+                                        <th>{{ attribute }}</th>
+                                    {% endfor %}
+                                </tr>
+                                {% for track in music_list %}
+                                    <tr>
+                                        {% for attribute in music_attributes %}
+                                            <td>{{ track.get(attribute.lower(), '') }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </table>
+                        {% endif %}
                     </div>
 {{ comments|safe }}
                 </article>
