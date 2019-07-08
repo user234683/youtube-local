@@ -105,7 +105,7 @@
                 <span>{{ info['subscriber_count'] }}</span>
                 <span>{{ info['size'] }}</span>
 
-                <span class="description">{{ text_runs(info['description']) }}</span>
+                <span class="description">{{ text_runs(info.get('description', '')) }}</span>
             {% else %}
                 Error: unsupported item type
             {% endif %}
