@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% import "common_elements.html" as common_elements %}
+{% import "comments.html" as comments %}
 {% block page_title %}{{ title }}{% endblock %}
 {% block style %}
             main{
@@ -211,7 +212,10 @@
                             </table>
                         {% endif %}
                     </div>
-{{ comments|safe }}
+
+                {% if comments_info %}
+                    {{ comments.video_comments(comments_info) }}
+                {% endif %}
                 </article>
 
 

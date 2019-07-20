@@ -153,7 +153,7 @@ def get_watch_page():
         gevent.spawn(extract_info, yt_dl_downloader, "https://www.youtube.com/watch?v=" + video_id, download=False)
     )
     gevent.joinall(tasks)
-    comments_html, info = tasks[0].value, tasks[1].value
+    comments_info, info = tasks[0].value, tasks[1].value
 
     if isinstance(info, str): # youtube error
         return flask.render_template('error.html', error_message = info)
@@ -207,9 +207,7 @@ def get_watch_page():
         related                 = related_videos,
         music_list              = info['music_list'],
         music_attributes        = get_ordered_music_list_attributes(info['music_list']),
-
-        # TODO: refactor these
-        comments                = comments_html,
+        comments_info           = comments_info,
 
         title       = info['title'],
         uploader    = info['uploader'],

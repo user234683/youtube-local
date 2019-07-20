@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% import "comments.html" as comments %}
+
+{% block page_title %}{{ 'Replies' if comments_info['is_replies'] else 'Comments page ' + comments_info['page_number'] }}{% endblock %}
+
+
+{% block style %}
+    main{
+        display:grid;
+        grid-template-columns: 3fr 2fr;
+    }
+    #left{
+        background-color:#bcbcbc;
+        
+        display: grid;
+        grid-column: 1;
+        grid-row: 1;
+        grid-template-columns: 1fr 640px;
+        grid-template-rows: 0fr 0fr 0fr;
+    }
+        .comments-area{
+            grid-column:2;
+        }
+            .comment{
+                width:640px;
+            }
+{% endblock style %}
+
+
+{% block main %}
+    <div id="left">
+        <section class="comments-area">
+            {% if not comments_info['is_replies'] %}
+                <section class="video-metadata">
+                    <a class="video-metadata-thumbnail-box" href="{{ comments_info['video_url'] }}" title="{{ comments_info['video_title'] }}">
+                        <img class="video-metadata-thumbnail-img" src="{{ comments_info['video_thumbnail'] }}" height="180px" width="320px">
+                    </a>
+                    <a class="title" href="{{ comments_info['video_url'] }}" title="{{ comments_info['video_title'] }}">{{ comments_info['video_title'] }}</a>
+
+                    <h2>Comments page {{ comments_info['page_number'] }}</h2>
+                    <span>Sorted by {{ comments_info['sort_text'] }}</span>
+                </section>
+            {% endif %}
+
+
+            <form action="{{ form_action }}" method="post" class="comment-form">
+                <div id="comment-account-options">
+                    <label for="account-selection">Account:</label>
+                    <select id="account-selection" name="channel_id">
+                        {% for account in accounts %}
+                            <option value="{{ account['channel_id'] }}">{{ account['display_name'] }}</option>
+                        {% endfor %}
+                    </select>
+                    <a href="/https://youtube.com/login" target="_blank">Add account</a>
+                </div>
+                <textarea name="comment_text"></textarea>
+                {% if include_video_id_input %}
+                    <input type="hidden" name="video_id" value="{{ comments_info['video_id'] }}">
+                {% endif %}
+                <button type="submit" class="post-comment-button">{{ 'Post reply' if comments_info['is_replies'] else 'Post comment' }}</button>
+            </form>
+
+            {% if not comments_info['is_replies'] %}
+                <div class="comment-links">
+                    {% for link_text, link_url in comments_info['comment_links'] %}
+                        <a class="sort-button" href="{{ link_url }}">{{ link_text }}</a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="comments">
+                {% for comment in comments_info['comments'] %}
+                    {{ comments.render_comment(comment, comments_info['include_avatars']) }}
+                {% endfor %}
+            </div>
+            {% if 'more_comments_url' is in comments_info %}
+                <a class="page-button more-comments" href="{{ comments_info['more_comments_url'] }}">More comments</a>
+            {% endif %}
+        </section>
+    </div>
+{% endblock main %}
+
+

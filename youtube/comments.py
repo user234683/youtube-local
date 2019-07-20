@@ -1,57 +1,14 @@
-from youtube import proto, util, html_common, yt_data_extract, accounts
+from youtube import proto, util, yt_data_extract, accounts
+from youtube import yt_app
 import settings
 
 import json
 import base64
-from string import Template
-import urllib.request
 import urllib
-import html
 import re
 
-comment_area_template = Template('''
-<section class="comment-area">
-$video-metadata
-$comment-links
-$comment-box
-$comments
-$more-comments-button    
-</section>
-''')
-comment_template = Template('''
-                <div class="comment-container">
-                    <div class="comment">
-                        <a class="author-avatar" href="$author_url" title="$author">
-$avatar
-                        </a>
-                        <address>
-                            <a class="author" href="$author_url" title="$author">$author</a>
-                        </address>
-                        <a class="permalink" href="$permalink" title="permalink">
-                            <time datetime="$datetime">$published</time>
-                        </a>
-                        <span class="text">$text</span>
-
-                        <span class="likes">$likes</span>
-                        <div class="bottom-row">
-$replies
-$action_buttons
-                        </div>
-                    </div>
-
-                </div>
-''')
-comment_avatar_template = Template('''                            <img class="author-avatar-img" src="$author_avatar">''')
-
-reply_link_template = Template('''
-                    <a href="$url" class="replies">$view_replies_text</a>
-''')
-with open("yt_comments_template.html", "r") as file:
-    yt_comments_template = Template(file.read())
-
-
-#                        <a class="replies-link" href="$replies_url">$replies_link_text</a>
-
+import flask
+from flask import request
 
 # Here's what I know about the secret key (starting with ASJN_i)
 # *The secret key definitely contains the following information (or perhaps the information is stored at youtube's servers):
@@ -102,6 +59,7 @@ def ctoken_metadata(ctoken):
     result['is_replies'] = False
     if (3 in offset_information) and (2 in proto.parse(offset_information[3])):
         result['is_replies'] = True
+        result['sort'] = None
     else:
         try:
             result['sort'] = proto.parse(offset_information[4])[6]
@@ -109,12 +67,6 @@ def ctoken_metadata(ctoken):
             result['sort'] = 0
     return result
 
-def get_ids(ctoken):
-    params = proto.parse(proto.b64_to_bytes(ctoken))
-    video_id = proto.parse(params[2])[2]
-    params = proto.parse(params[6])
-    params = proto.parse(params[3])
-    return params[2].decode('ascii'), video_id.decode('ascii')
 
 mobile_headers = {
     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
@@ -143,112 +95,65 @@ def request_comments(ctoken, replies=False):
         f.write(content)'''
     return content
 
+
 def single_comment_ctoken(video_id, comment_id):
     page_params = proto.string(2, video_id) + proto.string(6, proto.percent_b64encode(proto.string(15, comment_id)))
 
     result = proto.nested(2, page_params) + proto.uint(3,6)
     return base64.urlsafe_b64encode(result).decode('ascii')
-    
 
-def parse_comments_ajax(content, replies=False):
-    try:
-        content = json.loads(util.uppercase_escape(content.decode('utf-8')))
-        #print(content)
-        comments_raw = content['content']['continuation_contents']['contents']
-        ctoken = util.default_multi_get(content, 'content', 'continuation_contents', 'continuations', 0, 'continuation', default='')
-        
-        comments = []
-        for comment_raw in comments_raw:
-            replies_url = ''
-            if not replies:
-                if comment_raw['replies'] is not None:
-                    reply_ctoken = comment_raw['replies']['continuations'][0]['continuation']
-                    comment_id, video_id = get_ids(reply_ctoken)
-                    replies_url = util.URL_ORIGIN + '/comments?parent_id=' + comment_id + "&video_id=" + video_id
-                comment_raw = comment_raw['comment']
-            comment = {
-            'author': comment_raw['author']['runs'][0]['text'],
-            'author_url': comment_raw['author_endpoint']['url'],
-            'author_channel_id': '',
-            'author_id': '',
-            'author_avatar': comment_raw['author_thumbnail']['url'],
-            'likes': comment_raw['like_count'],
-            'published': comment_raw['published_time']['runs'][0]['text'],
-            'text': comment_raw['content']['runs'],
-            'reply_count': '',
-            'replies_url': replies_url,
-            }
-            comments.append(comment)
-    except Exception as e:
-        print('Error parsing comments: ' + str(e))
-        comments = ()
-        ctoken = ''
 
-    return {'ctoken': ctoken, 'comments': comments}
 
-reply_count_regex = re.compile(r'(\d+)')
-def parse_comments_polymer(content, replies=False):
+def parse_comments_polymer(content):
     try:
         video_title = ''
         content = json.loads(util.uppercase_escape(content.decode('utf-8')))
         url = content[1]['url']
         ctoken = urllib.parse.parse_qs(url[url.find('?')+1:])['ctoken'][0]
-        video_id = ctoken_metadata(ctoken)['video_id']
-        #print(content)
+        metadata = ctoken_metadata(ctoken)
+
         try:
             comments_raw = content[1]['response']['continuationContents']['commentSectionContinuation']['items']
         except KeyError:
             comments_raw = content[1]['response']['continuationContents']['commentRepliesContinuation']['contents']
-            replies = True
 
         ctoken = util.default_multi_get(content, 1, 'response', 'continuationContents', 'commentSectionContinuation', 'continuations', 0, 'nextContinuationData', 'continuation', default='')
-        
-        comments = []
-        for comment_raw in comments_raw:
-            replies_url = ''
-            view_replies_text = ''
-            try:
-                comment_raw = comment_raw['commentThreadRenderer']
-            except KeyError:
-                pass
-            else:
-                if 'commentTargetTitle' in comment_raw:
-                    video_title = comment_raw['commentTargetTitle']['runs'][0]['text']
 
-                parent_id = comment_raw['comment']['commentRenderer']['commentId']
-                # TODO: move this stuff into the comments_html function
-                if 'replies' in comment_raw:
-                    #reply_ctoken = comment_raw['replies']['commentRepliesRenderer']['continuations'][0]['nextContinuationData']['continuation']
-                    #comment_id, video_id = get_ids(reply_ctoken)
-                    replies_url = util.URL_ORIGIN + '/comments?parent_id=' + parent_id + "&video_id=" + video_id
-                    view_replies_text = yt_data_extract.get_plain_text(comment_raw['replies']['commentRepliesRenderer']['moreText'])
-                    match = reply_count_regex.search(view_replies_text)
+        comments = []
+        for comment_json in comments_raw:
+            number_of_replies = 0
+            try:
+                comment_thread = comment_json['commentThreadRenderer']
+            except KeyError:
+                comment_renderer = comment_json['commentRenderer']
+            else:
+                if 'commentTargetTitle' in comment_thread:
+                    video_title = comment_thread['commentTargetTitle']['runs'][0]['text']
+
+                if 'replies' in comment_thread:
+                    view_replies_text = yt_data_extract.get_plain_text(comment_thread['replies']['commentRepliesRenderer']['moreText'])
+                    view_replies_text = view_replies_text.replace(',', '')
+                    match = re.search(r'(\d+)', view_replies_text)
                     if match is None:
-                        view_replies_text = '1 reply'
+                        number_of_replies = 1
                     else:
-                        view_replies_text = match.group(1) + " replies"
-                elif not replies:
-                    view_replies_text = "Reply"
-                    replies_url = util.URL_ORIGIN + '/post_comment?parent_id=' + parent_id + "&video_id=" + video_id
-                comment_raw = comment_raw['comment']
-            
-            comment_raw = comment_raw['commentRenderer']
+                        number_of_replies = int(match.group(1))
+                comment_renderer = comment_thread['comment']['commentRenderer']
+
             comment = {
-            'author_id': comment_raw.get('authorId', ''),
-            'author_avatar': comment_raw['authorThumbnail']['thumbnails'][0]['url'],
-            'likes': comment_raw['likeCount'],
-            'published': yt_data_extract.get_plain_text(comment_raw['publishedTimeText']),
-            'text': comment_raw['contentText'].get('runs', ''),
-            'view_replies_text': view_replies_text,
-            'replies_url': replies_url,
-            'video_id': video_id,
-            'comment_id': comment_raw['commentId'],
+                'author_id': comment_renderer.get('authorId', ''),
+                'author_avatar': comment_renderer['authorThumbnail']['thumbnails'][0]['url'],
+                'likes': comment_renderer['likeCount'],
+                'published': yt_data_extract.get_plain_text(comment_renderer['publishedTimeText']),
+                'text': comment_renderer['contentText'].get('runs', ''),
+                'number_of_replies': number_of_replies,
+                'comment_id': comment_renderer['commentId'],
             }
 
-            if 'authorText' in comment_raw:     # deleted channels have no name or channel link
-                comment['author'] = yt_data_extract.get_plain_text(comment_raw['authorText'])
-                comment['author_url'] = comment_raw['authorEndpoint']['commandMetadata']['webCommandMetadata']['url']
-                comment['author_channel_id'] = comment_raw['authorEndpoint']['browseEndpoint']['browseId']
+            if 'authorText' in comment_renderer:     # deleted channels have no name or channel link
+                comment['author'] = yt_data_extract.get_plain_text(comment_renderer['authorText'])
+                comment['author_url'] = comment_renderer['authorEndpoint']['commandMetadata']['webCommandMetadata']['url']
+                comment['author_channel_id'] = comment_renderer['authorEndpoint']['browseEndpoint']['browseId']
             else:
                 comment['author'] = ''
                 comment['author_url'] = ''
@@ -260,172 +165,104 @@ def parse_comments_polymer(content, replies=False):
         comments = ()
         ctoken = ''
 
-    return {'ctoken': ctoken, 'comments': comments, 'video_title': video_title}
+    return {
+        'ctoken': ctoken,
+        'comments': comments,
+        'video_title': video_title,
+        'video_id': metadata['video_id'],
+        'offset': metadata['offset'],
+        'is_replies': metadata['is_replies'],
+        'sort': metadata['sort'],
+    }
 
+def post_process_comments_info(comments_info):
+    for comment in comments_info['comments']:
+        comment['author_url'] = util.URL_ORIGIN + comment['author_url']
+        comment['author_avatar'] = '/' + comment['author_avatar']
 
+        comment['permalink'] = util.URL_ORIGIN + '/watch?v=' + comments_info['video_id'] + '&lc=' + comment['comment_id']
 
-def get_comments_html(comments):
-    html_result = ''
-    for comment in comments:
-        replies = ''
-        if comment['replies_url']:
-            replies = reply_link_template.substitute(url=comment['replies_url'], view_replies_text=html.escape(comment['view_replies_text']))
-        if settings.enable_comment_avatars:
-            avatar = comment_avatar_template.substitute(
-                author_url = util.URL_ORIGIN + comment['author_url'],
-                author_avatar = '/' + comment['author_avatar'],
-            )
-        else:
-            avatar = ''
         if comment['author_channel_id'] in accounts.accounts:
-            delete_url = (util.URL_ORIGIN + '/delete_comment?video_id='
-                + comment['video_id']
+            comment['delete_url'] = (util.URL_ORIGIN + '/delete_comment?video_id='
+                + comments_info['video_id']
                 + '&channel_id='+ comment['author_channel_id']
                 + '&author_id=' + comment['author_id']
                 + '&comment_id=' + comment['comment_id'])
 
-            action_buttons = '''<a href="''' + delete_url + '''" target="_blank">Delete</a>'''
+        num_replies = comment['number_of_replies']
+        if num_replies == 0:
+            comment['replies_url'] = util.URL_ORIGIN + '/post_comment?parent_id=' + comment['comment_id'] + "&video_id=" + comments_info['video_id']
         else:
-            action_buttons = ''
+            comment['replies_url'] = util.URL_ORIGIN + '/comments?parent_id=' + comment['comment_id'] + "&video_id=" + comments_info['video_id']
 
-        permalink = util.URL_ORIGIN + '/watch?v=' + comment['video_id'] + '&lc=' + comment['comment_id']
-        html_result += comment_template.substitute(
-            author=comment['author'],
-            author_url = util.URL_ORIGIN + comment['author_url'],
-            avatar = avatar,
-            likes = str(comment['likes']) + ' likes' if str(comment['likes']) != '0' else '',
-            published = comment['published'],
-            text = yt_data_extract.format_text_runs(comment['text']),
-            datetime = '',  #TODO
-            replies = replies,
-            action_buttons = action_buttons,
-            permalink = permalink,
-        )
-    return html_result
-    
+        if num_replies == 0:
+            comment['view_replies_text'] = 'Reply'
+        elif num_replies == 1:
+            comment['view_replies_text'] = '1 reply'
+        else:
+            comment['view_replies_text'] = str(num_replies) + ' replies'
+
+
+        if comment['likes'] == 1:
+            comment['likes_text'] = '1 like'
+        else:
+            comment['likes_text'] = str(comment['likes']) + ' likes'
+
+    comments_info['include_avatars'] = settings.enable_comment_avatars
+    if comments_info['ctoken'] != '':
+        comments_info['more_comments_url'] = util.URL_ORIGIN + '/comments?ctoken=' + comments_info['ctoken']
+
+    comments_info['page_number'] = page_number = str(int(comments_info['offset']/20) + 1)
+
+    if not comments_info['is_replies']:
+        comments_info['sort_text'] = 'top' if comments_info['sort'] == 0 else 'newest'
+
+
+    comments_info['video_url'] = util.URL_ORIGIN + '/watch?v=' + comments_info['video_id']
+    comments_info['video_thumbnail'] = '/i.ytimg.com/vi/'+ comments_info['video_id'] + '/mqdefault.jpg'
+
+
 def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
     if settings.enable_comments:
+        comments_info = parse_comments_polymer(request_comments(make_comment_ctoken(video_id, sort, offset, lc, secret_key)))
+        post_process_comments_info(comments_info)
+
         post_comment_url = util.URL_ORIGIN + "/post_comment?video_id=" + video_id
-        post_comment_link = '''<a class="sort-button" href="''' + post_comment_url + '''">Post comment</a>'''
-
         other_sort_url = util.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(video_id, sort=1 - sort, lc=lc)
-        other_sort_name = 'newest' if sort == 0 else 'top'
-        other_sort_link = '''<a class="sort-button" href="''' + other_sort_url + '''">Sort by ''' + other_sort_name + '''</a>'''
+        other_sort_text = 'Sort by ' + ('newest' if sort == 0 else 'top')
+        comments_info['comment_links'] = [('Post comment', post_comment_url), (other_sort_text, other_sort_url)]
 
-        comment_links = '''<div class="comment-links">\n'''
-        comment_links += other_sort_link + '\n' + post_comment_link + '\n'
-        comment_links += '''</div>'''
-        
-        comment_info = parse_comments_polymer(request_comments(make_comment_ctoken(video_id, sort, offset, lc, secret_key)))
-        ctoken = comment_info['ctoken']
+        return comments_info
 
-        if ctoken == '':
-            more_comments_button = ''
-        else:
-            more_comments_button = more_comments_template.substitute(url = util.URL_ORIGIN + '/comments?ctoken=' + ctoken)
+    return {}
 
-        result = '''<section class="comments-area">\n'''
-        result += comment_links + '\n'
-        result += '<div class="comments">\n'
-        result += get_comments_html(comment_info['comments']) + '\n'
-        result += '</div>\n'
-        result += more_comments_button + '\n'
-        result += '''</section>'''
-        return result
-    return ''
 
-more_comments_template = Template('''<a class="page-button more-comments" href="$url">More comments</a>''')
-video_metadata_template = Template('''<section class="video-metadata">
-    <a class="video-metadata-thumbnail-box" href="$url" title="$title">
-        <img class="video-metadata-thumbnail-img" src="$thumbnail" height="180px" width="320px">
-    </a>
-    <a class="title" href="$url" title="$title">$title</a>
 
-    <h2>Comments page $page_number</h2>
-    <span>Sorted by $sort</span>
-</section>
-''')
-account_option_template = Template('''
-            <option value="$channel_id">$display_name</option>''')
-
-def comment_box_account_options():
-    return ''.join(account_option_template.substitute(channel_id=channel_id, display_name=display_name) for channel_id, display_name in accounts.account_list_data())
-
-comment_box_template = Template('''
-<form action="$form_action" method="post" class="comment-form">
-    <div id="comment-account-options">
-        <label for="account-selection">Account:</label>
-        <select id="account-selection" name="channel_id">
-$options
-        </select>
-        <a href="''' + util.URL_ORIGIN + '''/login" target="_blank">Add account</a>
-    </div>
-    <textarea name="comment_text"></textarea>
-    $video_id_input
-    <button type="submit" class="post-comment-button">$post_text</button>
-</form>''')
-def get_comments_page(env, start_response):
-    start_response('200 OK',  [('Content-type','text/html'),] )
-    parameters = env['parameters']
-    ctoken = util.default_multi_get(parameters, 'ctoken', 0, default='')
+@yt_app.route('/comments')
+def get_comments_page():
+    ctoken = request.args.get('ctoken', '')
     replies = False
     if not ctoken:
-        video_id = parameters['video_id'][0]
-        parent_id = parameters['parent_id'][0]
+        video_id = request.args['video_id']
+        parent_id = request.args['parent_id']
 
         ctoken = comment_replies_ctoken(video_id, parent_id)
         replies = True
 
-    comment_info = parse_comments_polymer(request_comments(ctoken, replies), replies)
+    comments_info = parse_comments_polymer(request_comments(ctoken, replies))
+    post_process_comments_info(comments_info)
 
-    metadata = ctoken_metadata(ctoken)
-    if replies:
-        page_title = 'Replies'
-        video_metadata = ''
-        comment_box = comment_box_template.substitute(form_action='', video_id_input='', post_text='Post reply', options=comment_box_account_options())
-        comment_links = ''
-    else:
-        page_number = str(int(metadata['offset']/20) + 1)
-        page_title = 'Comments page ' + page_number
-        
-        video_metadata = video_metadata_template.substitute(
-            page_number = page_number,
-            sort = 'top' if metadata['sort'] == 0 else 'newest',
-            title = html.escape(comment_info['video_title']),
-            url = util.URL_ORIGIN + '/watch?v=' + metadata['video_id'],
-            thumbnail = '/i.ytimg.com/vi/'+ metadata['video_id'] + '/mqdefault.jpg',
-        )
-        comment_box = comment_box_template.substitute(
-            form_action= util.URL_ORIGIN + '/post_comment',
-            video_id_input='''<input type="hidden" name="video_id" value="''' + metadata['video_id'] + '''">''',
-            post_text='Post comment',
-            options=comment_box_account_options(),
-        )
-
-        other_sort_url = util.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(metadata['video_id'], sort=1 - metadata['sort'])
-        other_sort_name = 'newest' if metadata['sort'] == 0 else 'top'
-        other_sort_link = '''<a class="sort-button" href="''' + other_sort_url + '''">Sort by ''' + other_sort_name + '''</a>'''
+    if not replies:
+        other_sort_url = util.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(comments_info['video_id'], sort=1 - comments_info['sort'])
+        other_sort_text = 'Sort by ' + ('newest' if comments_info['sort'] == 0 else 'top')
+        comments_info['comment_links'] = [(other_sort_text, other_sort_url)]
 
 
-        comment_links = '''<div class="comment-links">\n'''
-        comment_links += other_sort_link + '\n'
-        comment_links += '''</div>'''
+    return flask.render_template('comments_page.html',
+        comments_info = comments_info,
 
-    comments_html = get_comments_html(comment_info['comments'])
-    ctoken = comment_info['ctoken']
-    if ctoken == '':
-        more_comments_button = ''
-    else:
-        more_comments_button = more_comments_template.substitute(url = util.URL_ORIGIN + '/comments?ctoken=' + ctoken)
-    comments_area = '<section class="comments-area">\n'
-    comments_area += video_metadata + comment_box + comment_links + '\n'
-    comments_area += '<div class="comments">\n'
-    comments_area += comments_html + '\n'
-    comments_area += '</div>\n'
-    comments_area += more_comments_button + '\n'
-    comments_area += '</section>\n'
-    return yt_comments_template.substitute(
-        header = html_common.get_header(),
-        comments_area = comments_area,
-        page_title = page_title,
-    ).encode('utf-8')
+        form_action = '' if replies else util.URL_ORIGIN + '/post_comment',
+        include_video_id_input = not replies,
+        accounts = accounts.account_list_data(),
+    )
+
