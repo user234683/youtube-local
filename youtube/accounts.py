@@ -1,5 +1,6 @@
 # Contains functions having to do with logging in
-from youtube import util, html_common
+from youtube import util
+from youtube import yt_app
 import settings
 
 import urllib
@@ -8,6 +9,9 @@ import re
 import http.cookiejar
 import io
 import os
+
+import flask
+from flask import request
 
 try:
     with open(os.path.join(settings.data_dir, 'accounts.txt'), 'r', encoding='utf-8') as f:
@@ -18,7 +22,7 @@ except FileNotFoundError:
 
 def account_list_data():
     '''Returns iterable of (channel_id, account_display_name)'''
-    return ( (channel_id, account['display_name']) for channel_id, account in accounts.items() )
+    return [ (channel_id, account['display_name']) for channel_id, account in accounts.items() ]
 
 def save_accounts():
     to_save = {channel_id: account for channel_id, account in accounts.items() if account['save']}
@@ -51,91 +55,20 @@ def _add_account(username, password, save, use_tor):
         return True
     return False
 
-def add_account(env, start_response):
-    parameters = env['parameters']
-    if 'save' in parameters and parameters['save'][0] == "on":
-        save_account = True
+@yt_app.route('/login', methods=['POST'])
+def add_account():
+    save_account = request.values.get('save', 'off') == 'on'
+    use_tor = request.values.get('use_tor', 'off') == 'on'
+
+    if _add_account(request.values['username'], request.values['password'], save_account, use_tor ):
+        return 'Account successfully added'
     else:
-        save_account = False
+        return 'Failed to add account'
 
-    if 'use_tor' in parameters and parameters['use_tor'][0] == "on":
-        use_tor = True
-    else:
-        use_tor = False
 
-    if _add_account(parameters['username'][0], parameters['password'][0], save_account, use_tor ):
-        start_response('200 OK',  [('Content-type', 'text/plain'),] )
-        return b'Account successfully added'
-    else:
-        start_response('200 OK',  [('Content-type', 'text/plain'),] )
-        return b'Failed to add account'
-
-def get_account_login_page(env, start_response):
-    start_response('200 OK',  [('Content-type','text/html'),] )
-
-    style = ''' 
-    main{
-        display: grid;
-        grid-template-columns: minmax(0px, 3fr) 640px 40px 500px minmax(0px,2fr);
-        align-content: start;
-        grid-row-gap: 40px;
-    }
-
-    main form{
-        margin-top:20px;
-        grid-column:2;
-        display:grid;
-        justify-items: start;
-        align-content: start;
-        grid-row-gap: 10px;
-    }
-
-    #username, #password{
-        grid-column:2;
-        width: 250px;
-    }
-    #add-account-button{
-        margin-top:20px;
-    }
-    #tor-note{
-        grid-row:2;
-        grid-column:2;
-        background-color: #dddddd;
-        padding: 10px;
-    }
-    '''
-
-    page = '''
-    <form action="''' + util.URL_ORIGIN + '''/login" method="POST">
-        <div class="form-field">
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username">
-        </div>
-        <div class="form-field">
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password">
-        </div>
-        <div id="save-account-checkbox">
-            <input type="checkbox" id="save-account" name="save" checked>
-            <label for="save-account">Save account info to disk (password will not be saved, only the login cookie)</label>
-        </div>
-        <div>
-            <input type="checkbox" id="use-tor" name="use_tor">
-            <label for="use-tor">Use Tor when logging in (WARNING: This will lock your Google account under normal circumstances, see note below)</label>
-        </div>
-        <input type="submit" value="Add account" id="add-account-button">
-    </form>
-    <div id="tor-note"><b>Note on using Tor to log in</b><br>
-Using Tor to log in should only be done if the account was created using a proxy/VPN/Tor to begin with and hasn't been logged in using your IP. Otherwise, it's pointless since Google already knows who the account belongs to. When logging into a google account, it must be logged in using an IP address geographically close to the area where the account was created or where it is logged into regularly. If the account was created using an IP address in America and is logged into from an IP in Russia, Google will block the Russian IP from logging in, assume someone knows your password, lock the account, and make you change your password. If creating an account using Tor, you must remember the IP (or geographic region) it was created in, and only log in using that geographic region for the exit node. This can be accomplished by <a href="https://tor.stackexchange.com/questions/733/can-i-exit-from-a-specific-country-or-node">putting the desired IP in the torrc file</a> to force Tor to use that exit node. Using the login cookie to post comments through Tor is perfectly safe, however.
-    </div>
-    '''
-
-    return html_common.yt_basic_template.substitute(
-        page_title = "Login",
-        style = style,
-        header = html_common.get_header(),
-        page = page,
-    ).encode('utf-8')
+@yt_app.route('/login', methods=['GET'])
+def get_account_login_page():
+    return flask.render_template('login.html')
 
 
 
@@ -249,6 +182,7 @@ def _login(username, password, cookiejar, use_tor):
             'f.req': json.dumps(f_req),
             'flowName': 'GlifWebSignIn',
             'flowEntry': 'ServiceLogin',
+            'bgRequest': '["identifier",""]',
         })
         headers={
             'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
