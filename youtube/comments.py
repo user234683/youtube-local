@@ -258,11 +258,16 @@ def get_comments_page():
         comments_info['comment_links'] = [(other_sort_text, other_sort_url)]
 
 
+    comment_posting_box_info = {
+        'form_action': '' if replies else util.URL_ORIGIN + '/post_comment',
+        'video_id': comments_info['video_id'],
+        'accounts': accounts.account_list_data(),
+        'include_video_id_input': not replies,
+        'replying': replies,
+    }
+
     return flask.render_template('comments_page.html',
         comments_info = comments_info,
-
-        form_action = '' if replies else util.URL_ORIGIN + '/post_comment',
-        include_video_id_input = not replies,
-        accounts = accounts.account_list_data(),
+        comment_posting_box_info = comment_posting_box_info,
     )
 

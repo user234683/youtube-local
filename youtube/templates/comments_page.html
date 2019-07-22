@@ -42,23 +42,7 @@
                 </section>
             {% endif %}
 
-
-            <form action="{{ form_action }}" method="post" class="comment-form">
-                <div id="comment-account-options">
-                    <label for="account-selection">Account:</label>
-                    <select id="account-selection" name="channel_id">
-                        {% for account in accounts %}
-                            <option value="{{ account[0] }}">{{ account[1] }}</option>
-                        {% endfor %}
-                    </select>
-                    <a href="/https://youtube.com/login" target="_blank">Add account</a>
-                </div>
-                <textarea name="comment_text"></textarea>
-                {% if include_video_id_input %}
-                    <input type="hidden" name="video_id" value="{{ comments_info['video_id'] }}">
-                {% endif %}
-                <button type="submit" class="post-comment-button">{{ 'Post reply' if comments_info['is_replies'] else 'Post comment' }}</button>
-            </form>
+            {{ comments.comment_posting_box(comment_posting_box_info) }}
 
             {% if not comments_info['is_replies'] %}
                 <div class="comment-links">

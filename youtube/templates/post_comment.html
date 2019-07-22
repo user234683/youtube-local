@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% import "comments.html" as comments %}
+
+{% block page_title %}{{ 'Post reply' if replying else 'Post comment' }}{% endblock %}
+
+{% block style %}
+    main{
+        display: grid;
+        grid-template-columns: 3fr 2fr;
+    }
+    .left{
+        display:grid;
+        grid-template-columns: 1fr 640px;
+    }
+    textarea{
+        width: 460px;
+        height: 85px;
+    }
+    .comment-form{
+        grid-column:2;
+        justify-content:start;
+    }
+{% endblock style %}
+
+{% block main %}
+    <div class="left">
+        {{ comments.comment_posting_box(comment_posting_box_info) }}
+    </div>
+{% endblock %}
+

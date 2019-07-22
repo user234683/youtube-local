@@ -45,3 +45,26 @@
         {% endif %}
     </section>
 {% endmacro %}
+
+{% macro comment_posting_box(info) %}
+    <form action="{{ info['form_action'] }}" method="post" class="comment-form">
+        <div id="comment-account-options">
+            <label for="account-selection">Account:</label>
+            <select id="account-selection" name="channel_id">
+                {% for account in info['accounts'] %}
+                    <option value="{{ account[0] }}">{{ account[1] }}</option>
+                {% endfor %}
+            </select>
+            <a href="/https://youtube.com/login" target="_blank">Add account</a>
+        </div>
+        <textarea name="comment_text"></textarea>
+        {% if info['include_video_id_input'] %}
+            <input type="hidden" name="video_id" value="{{ info['video_id'] }}">
+        {% endif %}
+        <button type="submit" class="post-comment-button">{{ 'Post reply' if info['replying'] else 'Post comment' }}</button>
+    </form>
+{% endmacro %}
+
+
+
+
