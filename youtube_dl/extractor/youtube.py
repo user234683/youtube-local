@@ -1701,7 +1701,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
 
 
         # Is it unlisted?
-        unlisted = (self._search_regex('''<meta itemprop="unlisted" content="(\w*)">''', video_webpage, 'is_unlisted', default='False') == "True")
+        unlisted = ('<span id="watch-privacy-icon"' in video_webpage)
 
         # Related videos
         related_vid_info = self._search_regex(r"""'RELATED_PLAYER_ARGS':\s*(\{.*?\})""", video_webpage, "related_player_args", default='')
