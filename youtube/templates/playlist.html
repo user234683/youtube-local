@@ -1,5 +1,5 @@
+{% set page_title = title + ' - Page ' + parameters_dictionary.get('page', '1') %}
 {% extends "base.html" %}
-{% block page_title %}{{ title + ' - Page ' + parameters_dictionary.get('page', '1') }}{% endblock %}
 {% import "common_elements.html" as common_elements %}
 {% block style %}
     main{

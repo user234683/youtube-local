@@ -1,6 +1,5 @@
+{% set page_title = (title if (title is defined) else 'Status') %}
 {% extends "base.html" %}
-
-{% block page_title %}{{ title if (title is defined) else 'Status'}}{% endblock %}
 
 {% block main %}
     {{ message }}

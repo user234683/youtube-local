@@ -1,8 +1,6 @@
+{% set page_title = ('Replies' if comments_info['is_replies'] else 'Comments page ' + comments_info['page_number']) %}
 {% extends "base.html" %}
 {% import "comments.html" as comments %}
-
-{% block page_title %}{{ 'Replies' if comments_info['is_replies'] else 'Comments page ' + comments_info['page_number'] }}{% endblock %}
-
 
 {% block style %}
     main{

@@ -1,7 +1,6 @@
+{% set page_title = 'Post reply' if replying else 'Post comment' %}
 {% extends "base.html" %}
 {% import "comments.html" as comments %}
-
-{% block page_title %}{{ 'Post reply' if replying else 'Post comment' }}{% endblock %}
 
 {% block style %}
     main{
