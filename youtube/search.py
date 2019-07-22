@@ -1,10 +1,12 @@
 from youtube import util, yt_data_extract, proto, local_playlist
 from youtube import yt_app
+import settings
 
 import json
 import urllib
 import base64
 from math import ceil
+import mimetypes
 from flask import request
 import flask
 
@@ -124,4 +126,8 @@ def get_search_page():
         parameters_dictionary = request.args,
     )
 
-
+@yt_app.route('/opensearch.xml')
+def get_search_engine_xml():
+    with open("youtube/opensearch.xml", 'rb') as f:
+        content = f.read().replace(b'$port_number', str(settings.port_number).encode())
+        return flask.Response(content, mimetype='application/xml')
