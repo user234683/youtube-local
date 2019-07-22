@@ -128,11 +128,11 @@ def delete_comment():
 
 @yt_app.route('/comment_delete_success')
 def comment_delete_success():
-    return 'Successfully deleted comment'
+    return flask.render_template('status.html', title='Success', message='Successfully deleted comment')
 
 @yt_app.route('/comment_delete_fail')
 def comment_delete_fail():
-    return 'Failed to delete comment'
+    return flask.render_template('status.html', title='Error', message='Failed to delete comment')
 
 @yt_app.route('/post_comment', methods=['POST'])
 @yt_app.route('/comments', methods=['POST'])
