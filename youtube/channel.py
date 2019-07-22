@@ -1,8 +1,7 @@
 import base64
-from youtube import util, yt_data_extract, html_common
+from youtube import util, yt_data_extract
 from youtube import yt_app
 
-import http_errors
 import urllib
 import json
 from string import Template

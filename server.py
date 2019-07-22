@@ -104,24 +104,6 @@ def site_dispatch(env, start_response):
         else:   # did not break
             yield error_code('404 Not Found', start_response)
             return
-        '''
-    except http_errors.Code200 as e:    # Raised in scenarios where a simple status message is to be returned, such as a terminated channel
-        start_response('200 OK', ())
-        yield str(e).encode('utf-8')
-
-    except http_errors.Error404 as e:
-        start_response('404 Not Found', ())
-        yield str(e).encode('utf-8')
-
-    except urllib.error.HTTPError as e:
-        start_response(str(e.code) + ' ' + e.reason, ())
-        yield b'While fetching url, the following error occured:\n' + str(e).encode('utf-8')
-
-    except socket.error as e:
-        start_response('502 Bad Gateway', ())
-        print(str(e))
-        yield b'502 Bad Gateway'
-        '''
     except Exception:
         start_response('500 Internal Server Error', ())
         yield b'500 Internal Server Error'

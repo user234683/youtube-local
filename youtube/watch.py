@@ -1,5 +1,5 @@
 from youtube import yt_app
-from youtube import util, html_common, comments, local_playlist, yt_data_extract
+from youtube import util, comments, local_playlist, yt_data_extract
 import settings
 
 from flask import request
