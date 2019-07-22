@@ -214,3 +214,14 @@ def get_watch_page():
         description = info['description'],
         unlisted    = info['unlisted'],
     )
+
+
+@yt_app.route('/api/<path:dummy>')
+def get_captions(dummy):
+    result = util.fetch_url('https://www.youtube.com' + request.full_path)
+    result = result.replace(b"align:start position:0%", b"")
+    return result
+
+
+
+
