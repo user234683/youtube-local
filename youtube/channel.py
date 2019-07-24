@@ -166,7 +166,7 @@ def extract_info(polymer_json, tab):
 
 
     # stuff from microformat (info given by youtube for every page on channel)
-    info['description'] = microformat['description']
+    info['short_description'] = microformat['description']
     info['channel_name'] = microformat['title']
     info['avatar'] = microformat['thumbnail']['thumbnails'][0]['url']
     channel_url = microformat['urlCanonical'].rstrip('/')
