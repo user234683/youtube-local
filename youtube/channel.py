@@ -251,8 +251,10 @@ def extract_info(polymer_json, tab):
                 continue
             info['stats'].append(yt_data_extract.get_plain_text(stat))
 
-
-        info['description'] = yt_data_extract.get_text(channel_metadata['description'])
+        if 'description' in channel_metadata:
+            info['description'] = yt_data_extract.get_text(channel_metadata['description'])
+        else:
+            info['description'] = ''
 
     else:
         raise NotImplementedError('Unknown or unsupported channel tab: ' + tab)
