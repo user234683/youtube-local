@@ -1,5 +1,5 @@
 import base64
-from youtube import util, yt_data_extract
+from youtube import util, yt_data_extract, local_playlist
 from youtube import yt_app
 
 import urllib
@@ -307,6 +307,7 @@ def get_channel_page(channel_id, tab='videos'):
     if tab in ('videos', 'search'):
         info['number_of_videos'] = number_of_videos
         info['number_of_pages'] = math.ceil(number_of_videos/30)
+        info['header_playlist_names'] = local_playlist.get_playlist_names()
     if tab in ('videos', 'playlists'):
         info['current_sort'] = sort
     elif tab == 'search':
@@ -346,6 +347,7 @@ def get_channel_page_general_url(base_url, tab, request):
     if tab in ('videos', 'search'):
         info['number_of_videos'] = 1000
         info['number_of_pages'] = math.ceil(1000/30)
+        info['header_playlist_names'] = local_playlist.get_playlist_names()
     if tab in ('videos', 'playlists'):
         info['current_sort'] = sort
     elif tab == 'search':
