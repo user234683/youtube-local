@@ -141,7 +141,7 @@ def get_channel_search_json(channel_id, query, page):
 
     return polymer_json
 
-def extract_info(polymer_json, tab, html_prepare=True):
+def extract_info(polymer_json, tab):
     response = polymer_json[1]['response']
     try:
         microformat = response['microformat']['microformatDataRenderer']
@@ -174,10 +174,10 @@ def extract_info(polymer_json, tab, html_prepare=True):
     info['channel_id'] = channel_id
     info['channel_url'] = 'https://www.youtube.com/channel/' + channel_id
 
+    info['items'] = []
 
     # empty channel
     if 'contents' not in response and 'continuationContents' not in response:
-        info['items'] = []
         return info
 
 
@@ -225,10 +225,7 @@ def extract_info(polymer_json, tab, html_prepare=True):
 
         # TODO: Fix this URL prefixing shit
         additional_info = {'author': info['channel_name'], 'author_url': '/channel/' + channel_id}
-        if html_prepare:
-            info['items'] = [yt_data_extract.parse_info_prepare_for_html(renderer, additional_info) for renderer in items]
-        elif items is not None:
-            info['items'] = [yt_data_extract.renderer_info(renderer, additional_info) for renderer in items]
+        info['items'] = [yt_data_extract.renderer_info(renderer, additional_info) for renderer in items]
 
     elif tab == 'about':
         channel_metadata = tab_content['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['channelAboutFullMetadataRenderer']
@@ -260,13 +257,17 @@ def extract_info(polymer_json, tab, html_prepare=True):
     else:
         raise NotImplementedError('Unknown or unsupported channel tab: ' + tab)
 
-
-    if html_prepare:
-        info['avatar'] = '/' + info['avatar']
-        info['channel_url'] = '/' + info['channel_url']
-
-
     return info
+
+def post_process_channel_info(info):
+    info['avatar'] = '/' + info['avatar']
+    info['channel_url'] = '/' + info['channel_url']
+    for item in info['items']:
+        yt_data_extract.prefix_urls(item)
+        yt_data_extract.add_extra_html_info(item)
+
+
+
 
 
 playlist_sort_codes = {'2': "da", '3': "dd", '4': "lad"}
@@ -306,6 +307,7 @@ def get_channel_page(channel_id, tab='videos'):
 
 
     info = extract_info(json.loads(polymer_json), tab)
+    post_process_channel_info(info)
     if tab in ('videos', 'search'):
         info['number_of_videos'] = number_of_videos
         info['number_of_pages'] = math.ceil(number_of_videos/30)
@@ -346,6 +348,7 @@ def get_channel_page_general_url(base_url, tab, request):
 
 
     info = extract_info(json.loads(polymer_json), tab)
+    post_process_channel_info(info)
     if tab in ('videos', 'search'):
         info['number_of_videos'] = 1000
         info['number_of_pages'] = math.ceil(1000/30)
