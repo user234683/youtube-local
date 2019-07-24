@@ -88,11 +88,9 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1):
     url = "https://www.youtube.com/browse_ajax?ctoken=" + ctoken
 
     print("Sending channel tab ajax request")
-    content = util.fetch_url(url, util.desktop_ua + headers_1)
+    content = util.fetch_url(url, util.desktop_ua + headers_1, debug_name='channel_tab')
     print("Finished recieving channel tab response")
 
-    '''with open('debug/channel_debug', 'wb') as f:
-        f.write(content)'''
     return content
 
 def get_number_of_videos(channel_id):
@@ -103,15 +101,13 @@ def get_number_of_videos(channel_id):
 
     # Sometimes retrieving playlist info fails with 403 for no discernable reason
     try:
-        response = util.fetch_url(url, util.mobile_ua + headers_pbj)
+        response = util.fetch_url(url, util.mobile_ua + headers_pbj, debug_name='number_of_videos')
     except urllib.error.HTTPError as e:
         if e.code != 403:
             raise
         print("Couldn't retrieve number of videos")
         return 1000
 
-    '''with open('debug/playlist_debug_metadata', 'wb') as f:
-        f.write(response)'''
     response = response.decode('utf-8')
     print("Got response for number of videos")
 
@@ -135,9 +131,7 @@ def get_channel_search_json(channel_id, query, page):
     ctoken = proto.string(2, channel_id) + proto.string(3, params) + proto.string(11, query)
     ctoken = base64.urlsafe_b64encode(proto.nested(80226972, ctoken)).decode('ascii')
 
-    polymer_json = util.fetch_url("https://www.youtube.com/browse_ajax?ctoken=" + ctoken, util.desktop_ua + headers_1)
-    '''with open('debug/channel_search_debug', 'wb') as f:
-        f.write(polymer_json)'''
+    polymer_json = util.fetch_url("https://www.youtube.com/browse_ajax?ctoken=" + ctoken, util.desktop_ua + headers_1, debug_name='channel_search')
 
     return polymer_json
 
@@ -293,9 +287,9 @@ def get_channel_page(channel_id, tab='videos'):
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
 
     elif tab == 'about':
-        polymer_json = util.fetch_url('https://www.youtube.com/channel/' + channel_id + '/about?pbj=1', util.desktop_ua + headers_1)
+        polymer_json = util.fetch_url('https://www.youtube.com/channel/' + channel_id + '/about?pbj=1', util.desktop_ua + headers_1, debug_name='channel_about')
     elif tab == 'playlists':
-        polymer_json = util.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], util.desktop_ua + headers_1)
+        polymer_json = util.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], util.desktop_ua + headers_1, debug_name='channel_playlists')
     elif tab == 'search':
         tasks = (
             gevent.spawn(get_number_of_videos, channel_id ), 
@@ -336,13 +330,11 @@ def get_channel_page_general_url(base_url, tab, request):
     query = request.args.get('query', '')
 
     if tab == 'videos':
-        polymer_json = util.fetch_url(base_url + '/videos?pbj=1&view=0', util.desktop_ua + headers_1)
-        with open('debug/channel_debug', 'wb') as f:
-            f.write(polymer_json)
+        polymer_json = util.fetch_url(base_url + '/videos?pbj=1&view=0', util.desktop_ua + headers_1, debug_name='gen_channel_videos')
     elif tab == 'about':
-        polymer_json = util.fetch_url(base_url + '/about?pbj=1', util.desktop_ua + headers_1)
+        polymer_json = util.fetch_url(base_url + '/about?pbj=1', util.desktop_ua + headers_1, debug_name='gen_channel_about')
     elif tab == 'playlists':
-        polymer_json = util.fetch_url(base_url+ '/playlists?pbj=1&view=1', util.desktop_ua + headers_1)
+        polymer_json = util.fetch_url(base_url+ '/playlists?pbj=1&view=1', util.desktop_ua + headers_1, debug_name='gen_channel_playlists')
     elif tab == 'search':
         raise NotImplementedError()
     else:

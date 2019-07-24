@@ -47,9 +47,7 @@ headers_1 = (
 
 def playlist_first_page(playlist_id, report_text = "Retrieved playlist"):
     url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&pbj=1'
-    content = util.fetch_url(url, util.mobile_ua + headers_1, report_text=report_text)
-    '''with open('debug/playlist_debug', 'wb') as f:
-        f.write(content)'''
+    content = util.fetch_url(url, util.mobile_ua + headers_1, report_text=report_text, debug_name='playlist_first_page')
     content = json.loads(util.uppercase_escape(content.decode('utf-8')))
 
     return content
@@ -67,9 +65,7 @@ def get_videos(playlist_id, page):
         'X-YouTube-Client-Version': '2.20180508',
     }
 
-    content = util.fetch_url(url, headers, report_text="Retrieved playlist")
-    '''with open('debug/playlist_debug', 'wb') as f:
-        f.write(content)'''
+    content = util.fetch_url(url, headers, report_text="Retrieved playlist", debug_name='playlist_videos')
 
     info = json.loads(util.uppercase_escape(content.decode('utf-8')))
     return info

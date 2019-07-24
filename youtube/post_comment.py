@@ -35,13 +35,11 @@ def _post_comment(text, video_id, session_token, cookiejar):
     data = urllib.parse.urlencode(data_dict).encode()
 
 
-    content = util.fetch_url("https://m.youtube.com/service_ajax?name=createCommentEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
+    content = util.fetch_url("https://m.youtube.com/service_ajax?name=createCommentEndpoint", headers=headers, data=data, cookiejar_send=cookiejar, debug_name='post_comment')
 
     code = json.loads(content)['code']
     print("Comment posting code: " + code)
     return code
-    '''with open('debug/post_comment_response', 'wb') as f:
-        f.write(content)'''
 
 
 def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookiejar):
@@ -66,13 +64,11 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
     }
     data = urllib.parse.urlencode(data_dict).encode()
 
-    content = util.fetch_url("https://m.youtube.com/service_ajax?name=createCommentReplyEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
+    content = util.fetch_url("https://m.youtube.com/service_ajax?name=createCommentReplyEndpoint", headers=headers, data=data, cookiejar_send=cookiejar, debug_name='post_reply')
 
     code = json.loads(content)['code']
     print("Comment posting code: " + code)
     return code
-    '''with open('debug/post_comment_response', 'wb') as f:
-        f.write(content)'''
 
 def _delete_comment(video_id, comment_id, author_id, session_token, cookiejar):
     headers = {

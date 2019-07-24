@@ -5,6 +5,7 @@ import brotli
 import urllib.parse
 import re
 import time
+import os
 
 # The trouble with the requests library: It ships its own certificate bundle via certifi
 #  instead of using the system certificate store, meaning self-signed certificates
@@ -103,7 +104,7 @@ def decode_content(content, encoding_header):
             content = gzip.decompress(content)
     return content
 
-def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookiejar_send=None, cookiejar_receive=None, use_tor=True, return_response=False):
+def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookiejar_send=None, cookiejar_receive=None, use_tor=True, return_response=False, debug_name=None):
     '''
     When cookiejar_send is set to a CookieJar object,
      those cookies will be sent in the request (but cookies in response will not be merged into it)
@@ -159,6 +160,14 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookieja
     if report_text:
         print(report_text, '    Latency:', round(response_time - start_time,3), '    Read time:', round(read_finish - response_time,3))
     content = decode_content(content, response.getheader('Content-Encoding', default='identity'))
+
+    if settings.debugging_save_responses and debug_name is not None:
+        save_dir = os.path.join(settings.data_dir, 'debug')
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        with open(os.path.join(save_dir, debug_name), 'wb') as f:
+            f.write(content)
 
     if return_response:
         return content, response

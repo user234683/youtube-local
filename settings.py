@@ -24,9 +24,12 @@ default_comment_sorting = 0
 
 # developer use to debug 403s
 gather_googlevideo_domains = False
+
+# save all responses from youtube for debugging
+debugging_save_responses = False
 '''
 exec(default_settings)
-allowed_targets = set(("route_tor", "port_number", "allow_foreign_addresses", "subtitles_mode", "subtitles_language", "enable_related_videos", "enable_comments", "enable_comment_avatars", "default_comment_sorting", "gather_googlevideo_domains"))
+allowed_targets = set(("route_tor", "port_number", "allow_foreign_addresses", "subtitles_mode", "subtitles_language", "enable_related_videos", "enable_comments", "enable_comment_avatars", "default_comment_sorting", "gather_googlevideo_domains", "debugging_save_responses"))
 
 def log_ignored_line(line_number, message):
     print("settings.txt: Ignoring line " + str(node.lineno) + " (" + message + ")")

@@ -162,10 +162,8 @@ def _login(username, password, cookiejar, use_tor):
     Taken from youtube-dl
     """
 
-    login_page = util.fetch_url(_LOGIN_URL, yt_dl_headers, report_text='Downloaded login page', cookiejar_receive=cookiejar, use_tor=use_tor).decode('utf-8')
-    '''with open('debug/login_page', 'w', encoding='utf-8') as f:
-        f.write(login_page)'''
-    #print(cookiejar.as_lwp_str())
+    login_page = util.fetch_url(_LOGIN_URL, yt_dl_headers, report_text='Downloaded login page', cookiejar_receive=cookiejar, use_tor=use_tor, debug_name='login_page').decode('utf-8')
+
     if login_page is False:
         return
 
@@ -189,10 +187,7 @@ def _login(username, password, cookiejar, use_tor):
             'Google-Accounts-XSRF': 1,
         }
         headers.update(yt_dl_headers)
-        result = util.fetch_url(url, headers, report_text=note, data=data, cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=use_tor).decode('utf-8')
-        #print(cookiejar.as_lwp_str())
-        '''with open('debug/' + note, 'w', encoding='utf-8') as f:
-            f.write(result)'''
+        result = util.fetch_url(url, headers, report_text=note, data=data, cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=use_tor, debug_name=note).decode('utf-8')
         result = re.sub(r'^[^\[]*', '', result)
         return json.loads(result)
 
@@ -321,12 +316,10 @@ def _login(username, password, cookiejar, use_tor):
         return False
 
     try:
-        check_cookie_results = util.fetch_url(check_cookie_url, headers=yt_dl_headers, report_text="Checked cookie", cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=use_tor).decode('utf-8')
+        check_cookie_results = util.fetch_url(check_cookie_url, headers=yt_dl_headers, report_text="Checked cookie", cookiejar_send=cookiejar, cookiejar_receive=cookiejar, use_tor=use_tor, debug_name='check_cookie_results').decode('utf-8')
     except (urllib.error.URLError, compat_http_client.HTTPException, socket.error) as err:
         return False
 
-    '''with open('debug/check_cookie_results', 'w', encoding='utf-8') as f:
-        f.write(check_cookie_results)'''
 
     if 'https://myaccount.google.com/' not in check_cookie_results:
         warn('Unable to log in')
