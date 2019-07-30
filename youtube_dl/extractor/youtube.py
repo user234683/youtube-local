@@ -1874,12 +1874,8 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
         video_details = try_get(
             player_response, lambda x: x['videoDetails'], dict) or {}
 
-        # title
-        if 'title' in video_info:
-            video_title = video_info['title'][0]
-        elif 'title' in player_response:
-            video_title = video_details['title']
-        else:
+        video_title = video_info.get('title', [None])[0] or video_details.get('title')
+        if not video_title:
             self._downloader.report_warning('Unable to extract video title')
             video_title = '_'
 
@@ -1908,11 +1904,7 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
             ''', replace_url, video_description)
             video_description = clean_html(video_description)
         else:
-            fd_mobj = re.search(r'<meta name="description" content="([^"]+)"', video_webpage)
-            if fd_mobj:
-                video_description = unescapeHTML(fd_mobj.group(1))
-            else:
-                video_description = ''
+            video_description = self._html_search_meta('description', video_webpage) or video_details.get('shortDescription')
 
         if not smuggled_data.get('force_singlefeed', False):
             if not self._downloader.params.get('noplaylist'):
