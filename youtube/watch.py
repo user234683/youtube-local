@@ -170,7 +170,7 @@ def get_watch_page():
     upload_day = info["upload_date"][6:8]
     upload_date = upload_month + "/" + upload_day + "/" + upload_year
     
-    if settings.enable_related_videos:
+    if settings.related_videos_mode:
         related_videos = get_related_items(info)
     else:
         related_videos = []

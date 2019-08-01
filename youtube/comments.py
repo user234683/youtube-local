@@ -221,7 +221,7 @@ def post_process_comments_info(comments_info):
 
 
 def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
-    if settings.enable_comments:
+    if settings.comments_mode:
         comments_info = parse_comments_polymer(request_comments(make_comment_ctoken(video_id, sort, offset, lc, secret_key)))
         post_process_comments_info(comments_info)
 
