@@ -7,6 +7,7 @@ import json
 import html
 import gevent
 import urllib
+import math
 
 import flask
 from flask import request
@@ -62,7 +63,7 @@ def download_thumbnails(playlist_name, ids):
             
         
 
-def get_local_playlist_videos(name):
+def get_local_playlist_videos(name, offset=0, amount=50):
     try:
         thumbnails = set(os.listdir(os.path.join(thumbnails_directory, name)))
     except FileNotFoundError:
@@ -89,7 +90,7 @@ def get_local_playlist_videos(name):
             if not video_json.strip() == '':
                 print('Corrupt playlist video entry: ' + video_json)
     gevent.spawn(download_thumbnails, name, missing_thumbnails)
-    return videos
+    return videos[offset:offset+amount], len(videos)
 
 def get_playlist_names():
     try:
@@ -122,6 +123,8 @@ def remove_from_playlist(name, video_info_list):
         for file in to_delete:
             os.remove(os.path.join(thumbnails_directory, name, file))
 
+    return len(videos_out)
+
 
 @yt_app.route('/playlists', methods=['GET'])
 @yt_app.route('/playlists/<playlist_name>', methods=['GET'])
@@ -130,18 +133,24 @@ def get_local_playlist_page(playlist_name=None):
         playlists = [(name, util.URL_ORIGIN + '/playlists/' + name) for name in get_playlist_names()]
         return flask.render_template('local_playlists_list.html', playlists=playlists)
     else:
-        videos = get_local_playlist_videos(playlist_name)
+        page = int(request.args.get('page', 1))
+        offset = 50*(page - 1)
+        videos, num_videos = get_local_playlist_videos(playlist_name, offset=offset, amount=50)
         return flask.render_template('local_playlist.html',
             playlist_name = playlist_name,
             videos = videos,
+            num_pages = math.ceil(num_videos/50),
+            parameters_dictionary = request.args,
         )
 
 @yt_app.route('/playlists/<playlist_name>', methods=['POST'])
 def path_edit_playlist(playlist_name):
     '''Called when making changes to the playlist from that playlist's page'''
     if request.values['action'] == 'remove':
-        remove_from_playlist(playlist_name, request.values.getlist('video_info_list'))
-        return flask.redirect(util.URL_ORIGIN + request.path)
+        videos_to_remove = request.values.getlist('video_info_list')
+        number_of_videos_remaining = remove_from_playlist(playlist_name, videos_to_remove)
+        redirect_page_number = min(int(request.values.get('page', 1)), math.ceil(number_of_videos_remaining/50))
+        return flask.redirect(util.URL_ORIGIN + request.path + '?page=' + str(redirect_page_number))
     else:
         flask.abort(400)
 

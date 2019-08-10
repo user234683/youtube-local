@@ -53,5 +53,8 @@
                 {{ common_elements.item(video_info) }}
             {% endfor %}
         </div>
+        <nav class="page-button-row">
+            {{ common_elements.page_buttons(num_pages, '/https://www.youtube.com/playlists/' + playlist_name, parameters_dictionary) }}
+        </nav>
     </div>
 {% endblock main %}
