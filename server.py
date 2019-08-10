@@ -2,9 +2,12 @@ from gevent import monkey
 monkey.patch_all()
 import gevent.socket
 
-from youtube.youtube import youtube
+from youtube import yt_app
 from youtube import util
-import http_errors
+
+# these are just so the files get run - they import yt_app and add routes to it
+from youtube import watch, search, playlist, channel, local_playlist, comments, post_comment
+
 import settings
 
 from gevent.pywsgi import WSGIServer
@@ -22,7 +25,7 @@ def youtu_be(env, start_response):
     id = env['PATH_INFO'][1:]
     env['PATH_INFO'] = '/watch'
     env['QUERY_STRING'] = 'v=' + id
-    return youtube(env, start_response)
+    yield from yt_app(env, start_response)
 
 def proxy_site(env, start_response):
     headers = {
@@ -41,10 +44,10 @@ def proxy_site(env, start_response):
         headers = headers.items()
 
     start_response('200 OK', headers )
-    return content
+    yield content
 
 site_handlers = {
-    'youtube.com':youtube,
+    'youtube.com':yt_app,
     'youtu.be':youtu_be,
     'ytimg.com': proxy_site,
     'yt3.ggpht.com': proxy_site,
@@ -96,29 +99,11 @@ def site_dispatch(env, start_response):
             except KeyError:
                 continue
             else:
-                yield handler(env, start_response)
+                yield from handler(env, start_response)
                 break
         else:   # did not break
             yield error_code('404 Not Found', start_response)
             return
-
-    except http_errors.Code200 as e:    # Raised in scenarios where a simple status message is to be returned, such as a terminated channel
-        start_response('200 OK', ())
-        yield str(e).encode('utf-8')
-
-    except http_errors.Error404 as e:
-        start_response('404 Not Found', ())
-        yield str(e).encode('utf-8')
-
-    except urllib.error.HTTPError as e:
-        start_response(str(e.code) + ' ' + e.reason, ())
-        yield b'While fetching url, the following error occured:\n' + str(e).encode('utf-8')
-
-    except socket.error as e:
-        start_response('502 Bad Gateway', ())
-        print(str(e))
-        yield b'502 Bad Gateway'
-        
     except Exception:
         start_response('500 Internal Server Error', ())
         yield b'500 Internal Server Error'

@@ -1,0 +1,16 @@
+{% set page_title = 'Local playlists' %}
+{% extends "base.html" %}
+
+{% block main %}
+    <ul>
+        {% for playlist_name, playlist_url in playlists %}
+            <li><a href="{{ playlist_url }}">{{ playlist_name }}</a></li>
+        {% endfor %}
+    </ul>
+{% endblock main %}
+
+
+
+
+
+

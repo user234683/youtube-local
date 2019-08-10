@@ -1,4 +1,7 @@
+from youtube import util
+
 import html
+import json
 
 # videos (all of type str):
 
@@ -33,19 +36,11 @@ import html
 
 
 
-
-
 def get_plain_text(node):
     try:
-        return html.escape(node['simpleText'])
+        return node['simpleText']
     except KeyError:
-        return unformmated_text_runs(node['runs'])
-        
-def unformmated_text_runs(runs):
-    result = ''
-    for text_run in runs:
-        result += html.escape(text_run["text"])
-    return result
+        return ''.join(text_run['text'] for text_run in node['runs'])
 
 def format_text_runs(runs):
     if isinstance(runs, str):
@@ -75,14 +70,19 @@ def get_url(node):
 
 
 def get_text(node):
+    if node == {}:
+        return ''
     try:
         return node['simpleText']
     except KeyError:
-            pass
+        pass
     try:
         return node['runs'][0]['text']
     except IndexError: # empty text runs
         return ''
+    except KeyError:
+        print(node)
+        raise
 
 def get_formatted_text(node):
     try:
@@ -138,9 +138,85 @@ dispatch = {
 
 }
 
-def renderer_info(renderer):
+def ajax_info(item_json):
     try:
-        info = {}
+        info = {}          
+        for key, node in item_json.items():
+            try:
+                simple_key, function = dispatch[key]
+            except KeyError:
+                continue
+            info[simple_key] = function(node)
+        return info
+    except KeyError:
+        print(item_json)
+        raise
+
+
+
+def prefix_urls(item):
+    try:
+        item['thumbnail'] = '/' + item['thumbnail'].lstrip('/')
+    except KeyError:
+        pass
+
+    try:
+        item['author_url'] = util.URL_ORIGIN + item['author_url']
+    except KeyError:
+        pass
+
+def add_extra_html_info(item):
+    if item['type'] == 'video':
+        item['url'] = util.URL_ORIGIN + '/watch?v=' + item['id']
+
+        video_info = {}
+        for key in ('id', 'title', 'author', 'duration'):
+            try:
+                video_info[key] = item[key]
+            except KeyError:
+                video_info[key] = ''
+
+        item['video_info'] = json.dumps(video_info)
+
+    elif item['type'] == 'playlist':
+        item['url'] = util.URL_ORIGIN + '/playlist?list=' + item['id']
+    elif item['type'] == 'channel':
+        item['url'] = util.URL_ORIGIN + "/channel/" + item['id']
+
+
+def renderer_info(renderer, additional_info={}):
+    type = list(renderer.keys())[0]
+    renderer = renderer[type]
+    info = {}
+    if type == 'itemSectionRenderer':
+        return renderer_info(renderer['contents'][0], additional_info)
+    
+    if type in ('movieRenderer', 'clarificationRenderer'):
+        info['type'] = 'unsupported'
+        return info
+
+    info.update(additional_info)
+
+    if type.startswith('compact') or (type.startswith('playlist') and type != 'playlistRenderer'):
+        info['item_size'] = 'small'
+    else:
+        info['item_size'] = 'medium'
+
+    if type in ('compactVideoRenderer', 'videoRenderer', 'playlistVideoRenderer', 'gridVideoRenderer'):
+        info['type'] = 'video'
+    elif type in ('playlistRenderer', 'compactPlaylistRenderer', 'gridPlaylistRenderer',
+                  'radioRenderer', 'compactRadioRenderer', 'gridRadioRenderer',
+                  'showRenderer', 'compactShowRenderer', 'gridShowRenderer'):
+        info['type'] = 'playlist'
+    elif type == 'channelRenderer':
+        info['type'] = 'channel'
+    elif type == 'playlistHeaderRenderer':
+        info['type'] = 'playlist_metadata'
+    else:
+        info['type'] = 'unsupported'
+        return info
+
+    try:
         if 'viewCountText' in renderer:     # prefer this one as it contains all the digits
             info['views'] = get_text(renderer['viewCountText'])
         elif 'shortViewCountText' in renderer:
@@ -183,23 +259,20 @@ def renderer_info(renderer):
                 except KeyError:
                     continue
                 info[simple_key] = function(node)
+        if info['type'] == 'video' and 'duration' not in info:
+            info['duration'] = 'Live'
+
         return info
     except KeyError:
         print(renderer)
         raise
-    
-def ajax_info(item_json):
-    try:
-        info = {}          
-        for key, node in item_json.items():
-            try:
-                simple_key, function = dispatch[key]
-            except KeyError:
-                continue
-            info[simple_key] = function(node)
-        return info
-    except KeyError:
-        print(item_json)
-        raise
-    
+
+
+def parse_info_prepare_for_html(renderer, additional_info={}):
+    item = renderer_info(renderer, additional_info)
+    prefix_urls(item)
+    add_extra_html_info(item)
+
+    return item
+
 

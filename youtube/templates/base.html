@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>{{ page_title }}</title>
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; script-src 'none'; media-src 'self' https://*.googlevideo.com">
+        <link href="/youtube.com/static/shared.css" type="text/css" rel="stylesheet">
+        <link href="/youtube.com/static/comments.css" type="text/css" rel="stylesheet">
+        <link href="/youtube.com/static/favicon.ico" type="image/x-icon" rel="icon">
+        <link title="Youtube local" href="/youtube.com/opensearch.xml" rel="search" type="application/opensearchdescription+xml">
+        <style type="text/css">
+{% block style %}
+{{ style }}
+{% endblock %}
+        </style>
+    </head>
+    <body>
+        <header>
+                <form id="site-search" action="/youtube.com/search">
+                    <input type="search" name="query" class="search-box" value="{{ search_box_value }}">
+                    <button type="submit" value="Search" class="search-button">Search</button>
+                    <div class="dropdown">
+                        <button class="dropdown-label">Options</button>
+                        <div class="css-sucks">
+                            <div class="dropdown-content">
+                                <h3>Sort by</h3>
+                                <input type="radio" id="sort_relevance" name="sort" value="0">
+                                <label for="sort_relevance">Relevance</label>
+
+                                <input type="radio" id="sort_upload_date" name="sort" value="2">
+                                <label for="sort_upload_date">Upload date</label>
+
+                                <input type="radio" id="sort_view_count" name="sort" value="3">
+                                <label for="sort_view_count">View count</label>
+
+                                <input type="radio" id="sort_rating" name="sort" value="1">
+                                <label for="sort_rating">Rating</label>
+
+
+                                <h3>Upload date</h3>
+                                <input type="radio" id="time_any" name="time" value="0">
+                                <label for="time_any">Any</label>
+
+                                <input type="radio" id="time_last_hour" name="time" value="1">
+                                <label for="time_last_hour">Last hour</label>
+
+                                <input type="radio" id="time_today" name="time" value="2">
+                                <label for="time_today">Today</label>
+
+                                <input type="radio" id="time_this_week" name="time" value="3">
+                                <label for="time_this_week">This week</label>
+
+                                <input type="radio" id="time_this_month" name="time" value="4">
+                                <label for="time_this_month">This month</label>
+
+                                <input type="radio" id="time_this_year" name="time" value="5">
+                                <label for="time_this_year">This year</label>
+
+                                <h3>Type</h3>
+                                <input type="radio" id="type_any" name="type" value="0">
+                                <label for="type_any">Any</label>
+
+                                <input type="radio" id="type_video" name="type" value="1">
+                                <label for="type_video">Video</label>
+
+                                <input type="radio" id="type_channel" name="type" value="2">
+                                <label for="type_channel">Channel</label>
+
+                                <input type="radio" id="type_playlist" name="type" value="3">
+                                <label for="type_playlist">Playlist</label>
+
+                                <input type="radio" id="type_movie" name="type" value="4">
+                                <label for="type_movie">Movie</label>
+
+                                <input type="radio" id="type_show" name="type" value="5">
+                                <label for="type_show">Show</label>
+
+
+                                <h3>Duration</h3>
+                                <input type="radio" id="duration_any" name="duration" value="0">
+                                <label for="duration_any">Any</label>
+
+                                <input type="radio" id="duration_short" name="duration" value="1">
+                                <label for="duration_short">Short (&lt; 4 minutes)</label>
+
+                                <input type="radio" id="duration_long" name="duration" value="2">
+                                <label for="duration_long">Long (&gt; 20 minutes)</label>
+
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+            <div id="header-right">
+                <form id="playlist-edit" action="/youtube.com/edit_playlist" method="post" target="_self">
+                    <input name="playlist_name" id="playlist-name-selection" list="playlist-options" type="text">
+                    <datalist id="playlist-options">
+                    {% for playlist_name in header_playlist_names %}
+                        <option value="{{ playlist_name }}">{{ playlist_name }}</option>
+                    {% endfor %}
+                    </datalist>
+                    <button type="submit" id="playlist-add-button" name="action" value="add">Add to playlist</button>
+                    <button type="reset" id="item-selection-reset">Clear selection</button>
+                </form>
+                <a href="/youtube.com/playlists" id="local-playlists">Local playlists</a>
+            </div>
+        </header>
+        <main>
+{% block main %}
+{{ main }}
+{% endblock %}
+        </main>
+    </body>
+</html>

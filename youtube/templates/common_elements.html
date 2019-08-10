@@ -1,0 +1,154 @@
+{% macro text_runs(runs) %}
+    {%- if runs[0] is mapping -%}
+        {%- for text_run in runs -%}
+            {%- if text_run.get("bold", false) -%}
+                <b>{{ text_run["text"] }}</b>
+            {%- elif text_run.get('italics', false) -%}
+                <i>{{ text_run["text"] }}</i>
+            {%- else -%}
+                {{ text_run["text"] }}
+            {%- endif -%}
+        {%- endfor -%}
+    {%- else -%}
+        {{ runs }}
+    {%- endif -%}
+{% endmacro %}
+
+{% macro small_item(info, include_author=true) %}
+    <div class="small-item-box">
+        <div class="small-item">
+            {% if info['type'] == 'video' %}
+                <a class="video-thumbnail-box" href="{{ info['url'] }}" title="{{ info['title'] }}">
+                    <img class="video-thumbnail-img" src="{{ info['thumbnail'] }}">
+                    <span class="video-duration">{{ info['duration'] }}</span>
+                </a>
+                <a class="title" href="{{ info['url'] }}" title="{{ info['title'] }}">{{ info['title'] }}</a>
+                
+                <address>{{ info['author'] }}</address>
+                <span class="views">{{ info['views'] }}</span>
+
+            {% elif info['type'] == 'playlist' %}
+                <a class="playlist-thumbnail-box" href="{{ info['url'] }}" title="{{ info['title'] }}">
+                    <img class="playlist-thumbnail-img" src="{{ info['thumbnail'] }}">
+                    <div class="playlist-thumbnail-info">
+                        <span>{{ info['size'] }}</span>
+                    </div>
+                </a>
+                <a class="title" href="{{ info['url'] }}" title="{{ info['title'] }}">{{ info['title'] }}</a>
+                
+                <address>{{ info['author'] }}</address>
+            {% else %}
+                Error: unsupported item type
+            {% endif %}
+        </div>
+        {% if info['type'] == 'video' %}
+            <input class="item-checkbox" type="checkbox" name="video_info_list" value="{{ info['video_info'] }}" form="playlist-edit">
+        {% endif %}
+    </div>
+{% endmacro %}
+
+{% macro get_stats(info, include_author=true) %}
+    {% if include_author %}
+        {% if 'author_url' is in(info) %}
+            <address>By <a href="{{ info['author_url'] }}">{{ info['author'] }}</a></address>
+        {% else %}
+            <address><b>{{ info['author'] }}</b></address>
+        {% endif %}
+    {% endif %}
+    {% if 'views' is in(info) %}
+        <span class="views">{{ info['views'] }}</span>
+    {% endif %}
+    {% if 'published' is in(info) %}
+        <time>{{ info['published'] }}</time>
+    {% endif %}
+{% endmacro %}
+
+
+
+{% macro medium_item(info, include_author=true) %}
+    <div class="medium-item-box">
+        <div class="medium-item">
+            {% if info['type'] == 'video' %}
+                <a class="video-thumbnail-box" href="{{ info['url'] }}" title="{{ info['title'] }}">
+                    <img class="video-thumbnail-img" src="{{ info['thumbnail'] }}">
+                    <span class="video-duration">{{ info['duration'] }}</span>
+                </a>
+
+                <a class="title" href="{{ info['url'] }}" title="{{ info['title'] }}">{{ info['title'] }}</a>
+                
+                <div class="stats">
+                    {{ get_stats(info, include_author) }}
+                </div>
+
+                <span class="description">{{ text_runs(info.get('description', '')) }}</span>
+                <span class="badges">{{ info['badges']|join(' | ') }}</span>
+            {% elif info['type'] == 'playlist' %}
+                <a class="playlist-thumbnail-box" href="{{ info['url'] }}" title="{{ info['title'] }}">
+                    <img class="playlist-thumbnail-img" src="{{ info['thumbnail'] }}">
+                    <div class="playlist-thumbnail-info">
+                        <span>{{ info['size'] }}</span>
+                    </div>
+                </a>
+
+                <a class="title" href="{{ info['url'] }}" title="{{ info['title'] }}">{{ info['title'] }}</a>
+                
+                <div class="stats">
+                    {{ get_stats(info, include_author) }}
+                </div>
+            {% elif info['type'] == 'channel' %}
+                <a class="video-thumbnail-box" href="{{ info['url'] }}" title="{{ info['title'] }}">
+                    <img class="video-thumbnail-img" src="{{ info['thumbnail'] }}">
+                </a>
+
+                <a class="title" href="{{ info['url'] }}">{{ info['title'] }}</a>
+                
+                <span>{{ info['subscriber_count'] }} subscribers</span>
+                <span>{{ info['size'] }} videos</span>
+
+                <span class="description">{{ text_runs(info.get('description', '')) }}</span>
+            {% else %}
+                Error: unsupported item type
+            {% endif %}
+        </div>
+        {% if info['type'] == 'video' %}
+            <input class="item-checkbox" type="checkbox" name="video_info_list" value="{{ info['video_info'] }}" form="playlist-edit">
+        {% endif %}
+    </div>
+{% endmacro %}
+
+
+{% macro item(info, include_author=true) %}
+    {% if info['item_size'] == 'small' %}
+        {{ small_item(info, include_author) }}
+    {% elif info['item_size'] == 'medium' %}
+        {{ medium_item(info, include_author) }}
+    {% else %}
+        Error: Unknown item size
+    {% endif %}
+{% endmacro %}
+
+
+
+{% macro page_buttons(estimated_pages, url, parameters_dictionary) %}
+    {% set current_page = parameters_dictionary.get('page', 1)|int %}
+    {% set parameters_dictionary = parameters_dictionary.to_dict() %}
+    {% if current_page is le(5) %}
+        {% set page_start = 1 %}
+        {% set page_end = [9, estimated_pages]|min %}
+    {% else %}
+        {% set page_start = current_page - 4 %}
+        {% set page_end = [current_page + 4, estimated_pages]|min %}
+    {% endif %}
+
+    {% for page in range(page_start, page_end+1) %}
+        {% if page == current_page %}
+            <div class="page-button">{{ page }}</div>
+        {% else %}
+            {# IMPORTANT: Jinja SUCKS #}
+            {# https://stackoverflow.com/questions/36886650/how-to-add-a-new-entry-into-a-dictionary-object-while-using-jinja2 #}
+            {% set _ = parameters_dictionary.__setitem__('page', page) %}
+            <a class="page-button" href="{{ url + '?' + parameters_dictionary|urlencode }}">{{ page }}</a>
+        {% endif %}
+    {% endfor %}
+
+{% endmacro %}

@@ -1,0 +1,70 @@
+{% import "common_elements.html" as common_elements %}
+
+{% macro render_comment(comment, include_avatar) %}
+    <div class="comment-container">
+        <div class="comment">
+            <a class="author-avatar" href="{{ comment['author_url'] }}" title="{{ comment['author'] }}">
+                {% if include_avatar %}
+                    <img class="author-avatar-img" src="{{ comment['author_avatar'] }}">
+                {% endif %}
+            </a>
+            <address>
+                <a class="author" href="{{ comment['author_url'] }}" title="{{ comment['author'] }}">{{ comment['author'] }}</a>
+            </address>
+            <a class="permalink" href="{{ comment['permalink'] }}" title="permalink">
+                <time datetime="">{{ comment['published'] }}</time>
+            </a>
+            <span class="text">{{ common_elements.text_runs(comment['text']) }}</span>
+
+            <span class="likes">{{ comment['likes_text'] if comment['likes'] else ''}}</span>
+            <div class="bottom-row">
+                <a href="{{ comment['replies_url'] }}" class="replies">{{ comment['view_replies_text'] }}</a>
+                {% if 'delete_url' is in comment %}
+                    <a href="{{ comment['delete_url'] }}" target="_blank">Delete</a>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+{% endmacro %}
+
+{% macro video_comments(comments_info) %}
+    <section class="comments-area">
+        <div class="comment-links">
+            {% for link_text, link_url in comments_info['comment_links'] %}
+                <a class="sort-button" href="{{ link_url }}">{{ link_text }}</a>
+            {% endfor %}
+        </div>
+        <div class="comments">
+            {% for comment in comments_info['comments'] %}
+                {{ render_comment(comment, comments_info['include_avatars']) }}
+            {% endfor %}
+        </div>
+        {% if 'more_comments_url' is in comments_info %}
+            <a class="page-button more-comments" href="{{ comments_info['more_comments_url'] }}">More comments</a>
+        {% endif %}
+    </section>
+{% endmacro %}
+
+{% macro comment_posting_box(info) %}
+    <form action="{{ info['form_action'] }}" method="post" class="comment-form">
+        <div id="comment-account-options">
+            <label for="account-selection">Account:</label>
+            <select id="account-selection" name="channel_id">
+                {% for account in info['accounts'] %}
+                    <option value="{{ account[0] }}">{{ account[1] }}</option>
+                {% endfor %}
+            </select>
+            <a href="/https://youtube.com/login" target="_blank">Add account</a>
+        </div>
+        <textarea name="comment_text"></textarea>
+        {% if info['include_video_id_input'] %}
+            <input type="hidden" name="video_id" value="{{ info['video_id'] }}">
+        {% endif %}
+        <button type="submit" class="post-comment-button">{{ 'Post reply' if info['replying'] else 'Post comment' }}</button>
+    </form>
+{% endmacro %}
+
+
+
+

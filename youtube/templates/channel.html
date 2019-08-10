@@ -1,0 +1,160 @@
+{% set page_title = channel_name + ' - Channel' %}
+{% extends "base.html" %}
+{% import "common_elements.html" as common_elements %}
+{% block style %}
+    main{
+        display:grid;
+{% if current_tab == 'about' %}
+        grid-template-rows: 0fr 0fr 1fr;
+        grid-template-columns: 0fr 1fr;
+{% else %}
+        grid-template-rows: repeat(5, 0fr);
+        grid-template-columns: auto 1fr;
+{% endif %}
+    }
+        main .avatar{
+            grid-row:1;
+            grid-column:1;
+            height:200px;
+            width:200px;
+        }
+        main .summary{
+            grid-row:1;
+            grid-column:2;
+            margin-left: 5px;
+        }
+        main .channel-tabs{
+            grid-row:2;
+            grid-column: 1 / span 2;
+            
+            display:grid;
+            grid-auto-flow: column;
+            justify-content:start;
+            
+            background-color: #aaaaaa;
+            padding: 3px;
+            padding-left: 6px;
+        }
+        #links-metadata{
+            display: grid;
+            grid-auto-flow: column;
+            grid-column-gap: 10px;
+            grid-column: 1/span 2;
+            justify-content: start;
+            padding-top: 8px;
+            padding-bottom: 8px;
+            padding-left: 6px;
+            background-color: #bababa;
+            margin-bottom: 10px;
+        }
+            #number-of-results{
+                font-weight:bold;
+            }
+        .item-grid{
+            padding-left: 20px;
+            grid-row:4;
+            grid-column: 1 / span 2;
+        }
+        .item-list{
+            width:1000px;
+            grid-column: 1 / span 2;
+        }
+        .page-button-row{
+            grid-column: 1 / span 2;
+        }
+        .tab{
+            padding: 5px 75px;
+        }
+        .channel-info{
+            grid-row: 3;
+            grid-column: 1 / span 3;
+        }
+        .channel-info ul{
+            padding-left: 40px;
+        }
+        .channel-info h3{
+            margin-left: 40px;
+        }
+        .channel-info .description{
+            white-space: pre-wrap;
+            min-width: 0;
+            margin-left: 40px;
+        }
+        .medium-item img{
+            max-width: 168px;
+        }
+{% endblock style %}
+
+{% block main %}     
+    <img class="avatar" src="{{ avatar }}">
+    <div class="summary">
+        <h2 class="title">{{ channel_name }}</h2>
+        <p class="short-description">{{ short_description }}</p>
+    </div>
+    <nav class="channel-tabs">
+        {% for tab_name in ('Videos', 'Playlists', 'About') %}
+            {% if tab_name.lower() == current_tab %}
+                <a class="tab page-button">{{ tab_name }}</a>
+            {% else %}
+                <a class="tab page-button" href="{{ channel_url + '/' + tab_name.lower() }}">{{ tab_name }}</a>
+            {% endif %}
+        {% endfor %}
+
+        <form class="channel-search" action="{{ channel_url + '/search' }}">
+            <input type="search" name="query" class="search-box" value="{{ search_box_value }}">
+            <button type="submit" value="Search" class="search-button">Search</button>
+        </form>
+    </nav>
+    {% if current_tab == 'about' %}
+        <div class="channel-info">
+            <ul>
+                {% for stat in stats %}
+                    <li>{{ stat }}</li>
+                {% endfor %}
+            </ul>
+            <hr>
+            <h3>Description</h3>
+            <div class="description">{{ common_elements.text_runs(description) }}</div>
+            <hr>
+            <ul>
+                {% for text, url in links %}
+                    <li><a href="{{ url }}">{{ text }}</a></li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <div id="links-metadata">
+            {% if current_tab == 'videos' %}
+                {% set sorts = [('1', 'views'), ('2', 'oldest'), ('3', 'newest')] %}
+                <div id="number-of-results">{{ number_of_videos }} videos</div>
+            {% elif current_tab == 'playlists' %}
+                {% set sorts = [('2', 'oldest'), ('3', 'newest'), ('4', 'last video added')] %}
+            {% else %}
+                {% set sorts = [] %}
+            {% endif %}
+
+            {% for sort_number, sort_name in sorts %}
+                {% if sort_number == current_sort.__str__() %}
+                    <a class="sort-button">{{ 'Sorted by ' + sort_name }}</a>
+                {% else %}
+                    <a class="sort-button" href="{{ channel_url + '/' + current_tab + '?sort=' + sort_number }}">{{ 'Sort by ' + sort_name }}</a>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if current_tab != 'about' %}
+            <nav class="{{ 'item-list' if current_tab == 'search' else 'item-grid' }}">
+                {% for item_info in items %}
+                    {{ common_elements.item(item_info, include_author=false) }}
+                {% endfor %}
+            </nav>
+
+            {% if current_tab != 'playlists' %}
+                <nav class="page-button-row">
+                    {{ common_elements.page_buttons(number_of_pages, channel_url + '/' + current_tab, parameters_dictionary) }}
+                </nav>
+            {% endif %}
+        {% endif %}
+
+    {% endif %}
+{% endblock main %}

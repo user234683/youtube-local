@@ -1,5 +1,6 @@
 # Contains functions having to do with posting/editing/deleting comments
-from youtube import util, html_common, proto, comments, accounts
+from youtube import util, proto, comments, accounts
+from youtube import yt_app
 import settings
 
 import urllib
@@ -7,6 +8,9 @@ import json
 import re
 import traceback
 import os
+
+import flask
+from flask import request
 
 def _post_comment(text, video_id, session_token, cookiejar):
     headers = {
@@ -31,13 +35,11 @@ def _post_comment(text, video_id, session_token, cookiejar):
     data = urllib.parse.urlencode(data_dict).encode()
 
 
-    content = util.fetch_url("https://m.youtube.com/service_ajax?name=createCommentEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
+    content = util.fetch_url("https://m.youtube.com/service_ajax?name=createCommentEndpoint", headers=headers, data=data, cookiejar_send=cookiejar, debug_name='post_comment')
 
     code = json.loads(content)['code']
     print("Comment posting code: " + code)
     return code
-    '''with open('debug/post_comment_response', 'wb') as f:
-        f.write(content)'''
 
 
 def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookiejar):
@@ -62,13 +64,11 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
     }
     data = urllib.parse.urlencode(data_dict).encode()
 
-    content = util.fetch_url("https://m.youtube.com/service_ajax?name=createCommentReplyEndpoint", headers=headers, data=data, cookiejar_send=cookiejar)
+    content = util.fetch_url("https://m.youtube.com/service_ajax?name=createCommentReplyEndpoint", headers=headers, data=data, cookiejar_send=cookiejar, debug_name='post_reply')
 
     code = json.loads(content)['code']
     print("Comment posting code: " + code)
     return code
-    '''with open('debug/post_comment_response', 'wb') as f:
-        f.write(content)'''
 
 def _delete_comment(video_id, comment_id, author_id, session_token, cookiejar):
     headers = {
@@ -109,108 +109,73 @@ def get_session_token(video_id, cookiejar):
     else:
         raise Exception("Couldn't find xsrf_token")
 
-def delete_comment(env, start_response):
-    parameters = env['parameters']
-    video_id = parameters['video_id'][0]
-    cookiejar = accounts.account_cookiejar(parameters['channel_id'][0])
+@yt_app.route('/delete_comment', methods=['POST'])
+def delete_comment():
+    video_id = request.values['video_id']
+    cookiejar = accounts.account_cookiejar(request.values['channel_id'])
     token = get_session_token(video_id, cookiejar)
 
-    code = _delete_comment(video_id, parameters['comment_id'][0], parameters['author_id'][0], token, cookiejar)
+    code = _delete_comment(video_id, request.values['comment_id'], request.values['author_id'], token, cookiejar)
 
     if code == "SUCCESS":
-        start_response('303 See Other',  [('Location', util.URL_ORIGIN + '/comment_delete_success'),] )
+        return flask.redirect(util.URL_ORIGIN + '/comment_delete_success', 303)
     else:
-        start_response('303 See Other',  [('Location', util.URL_ORIGIN + '/comment_delete_fail'),] )
+        return flask.redirect(util.URL_ORIGIN + '/comment_delete_fail', 303)
 
-def post_comment(env, start_response):
-    parameters = env['parameters']
-    video_id = parameters['video_id'][0]
-    channel_id = parameters['channel_id'][0]
+@yt_app.route('/comment_delete_success')
+def comment_delete_success():
+    return flask.render_template('status.html', title='Success', message='Successfully deleted comment')
+
+@yt_app.route('/comment_delete_fail')
+def comment_delete_fail():
+    return flask.render_template('status.html', title='Error', message='Failed to delete comment')
+
+@yt_app.route('/post_comment', methods=['POST'])
+@yt_app.route('/comments', methods=['POST'])
+def post_comment():
+    video_id = request.values['video_id']
+    channel_id = request.values['channel_id']
     cookiejar = accounts.account_cookiejar(channel_id)
     token = get_session_token(video_id, cookiejar)
 
-    if 'parent_id' in parameters:
-        code = _post_comment_reply(parameters['comment_text'][0], parameters['video_id'][0], parameters['parent_id'][0], token, cookiejar)
-        start_response('303 See Other',  (('Location', util.URL_ORIGIN + '/comments?' + env['QUERY_STRING']),) )
-
+    if 'parent_id' in request.values:
+        code = _post_comment_reply(request.values['comment_text'], request.values['video_id'], request.values['parent_id'], token, cookiejar)
+        return flask.redirect(util.URL_ORIGIN + '/comments?' + request.query_string.decode('utf-8'), 303)
     else:
-        code = _post_comment(parameters['comment_text'][0], parameters['video_id'][0], token, cookiejar)
-        start_response('303 See Other',  (('Location', util.URL_ORIGIN + '/comments?ctoken=' + comments.make_comment_ctoken(video_id, sort=1)),) )
+        code = _post_comment(request.values['comment_text'], request.values['video_id'], token, cookiejar)
+        return flask.redirect(util.URL_ORIGIN + '/comments?ctoken=' + comments.make_comment_ctoken(video_id, sort=1), 303)
 
-    return b''
+@yt_app.route('/delete_comment', methods=['GET'])
+def get_delete_comment_page():
+    parameters = [(parameter_name, request.args[parameter_name]) for parameter_name in ('video_id', 'channel_id', 'author_id', 'comment_id')]
+    return flask.render_template('delete_comment.html', parameters = parameters)
 
-def get_delete_comment_page(env, start_response):
-    start_response('200 OK', [('Content-type','text/html'),])
-    parameters = env['parameters']
 
-    style = '''
-    main{
-        display: grid;
-        grid-template-columns: minmax(0px, 3fr) 640px 40px 500px minmax(0px,2fr);
-        align-content: start;
-    }
-    main > div, main > form{
-        margin-top:20px;
-        grid-column:2;
-    }
-    '''
-
-    page = '''
-    <div>Are you sure you want to delete this comment?</div>
-    <form action="" method="POST">'''
-    for parameter in ('video_id', 'channel_id', 'author_id', 'comment_id'):
-        page += '''\n        <input type="hidden" name="''' + parameter + '''" value="''' + parameters[parameter][0] + '''">'''
-    page += '''
-        <input type="submit" value="Yes, delete it">
-    </form>'''
-    return html_common.yt_basic_template.substitute(
-        page_title = "Delete comment?",
-        style = style,
-        header = html_common.get_header(),
-        page = page,
-    ).encode('utf-8')
-
-def get_post_comment_page(env, start_response):
-    start_response('200 OK', [('Content-type','text/html'),])
-    parameters = env['parameters']
-    video_id = parameters['video_id'][0]
-    parent_id = util.default_multi_get(parameters, 'parent_id', 0, default='')
+@yt_app.route('/post_comment', methods=['GET'])
+def get_post_comment_page():
+    video_id = request.args['video_id']
+    parent_id = request.args.get('parent_id', '')
     
-    style = ''' main{
-    display: grid;
-    grid-template-columns: 3fr 2fr;
-}
-.left{
-    display:grid;
-    grid-template-columns: 1fr 640px;
-}
-textarea{
-    width: 460px;
-    height: 85px;
-}
-.comment-form{
-    grid-column:2;
-    justify-content:start;
-}'''
     if parent_id:   # comment reply
-        comment_box = comments.comment_box_template.substitute(
-            form_action = util.URL_ORIGIN + '/comments?parent_id=' + parent_id + "&video_id=" + video_id,
-            video_id_input = '',
-            post_text = "Post reply",
-            options=comments.comment_box_account_options(),
-        )
+        form_action = util.URL_ORIGIN + '/comments?parent_id=' + parent_id + "&video_id=" + video_id
+        replying = True
     else:
-        comment_box = comments.comment_box_template.substitute(
-            form_action = util.URL_ORIGIN + '/post_comment',
-            video_id_input = '''<input type="hidden" name="video_id" value="''' + video_id + '''">''',
-            post_text = "Post comment",
-            options=comments.comment_box_account_options(),
-        )
-        
-    page = '''<div class="left">\n''' + comment_box + '''</div>\n'''
-    return html_common.yt_basic_template.substitute(
-        page_title = "Post comment reply" if parent_id else "Post a comment",
-        style = style,
-        header = html_common.get_header(),
-        page = page,
-    ).encode('utf-8')
+        form_action = ''
+        replying = False
+
+
+    comment_posting_box_info = {
+        'form_action': form_action,
+        'video_id': video_id,
+        'accounts': accounts.account_list_data(),
+        'include_video_id_input': not replying,
+        'replying': replying,
+    }
+    return flask.render_template('post_comment.html',
+        comment_posting_box_info = comment_posting_box_info,
+        replying = replying,
+    )
+
+
+
+
