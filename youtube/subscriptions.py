@@ -1,21 +1,18 @@
-from youtube import util, yt_data_extract, html_common, channel
+from youtube import util, yt_data_extract, channel
+from youtube import yt_app
 import settings
-from string import Template
+
 import sqlite3
 import os
 import time
 import gevent
-import html
 import json
 import traceback
 import contextlib
 import defusedxml.ElementTree
 
-with open('yt_subscriptions_template.html', 'r', encoding='utf-8') as f:
-    subscriptions_template = Template(f.read())
-
-with open('yt_subscription_manager_template.html', 'r', encoding='utf-8') as f:
-    subscription_manager_template = Template(f.read())
+import flask
+from flask import request
 
 
 thumbnails_directory = os.path.join(settings.data_dir, "subscription_thumbnails")
@@ -272,16 +269,15 @@ def _get_upstream_videos(channel_id):
 
     videos = []
 
-    json_channel_videos = channel.get_grid_items(channel.get_channel_tab(channel_id)[1]['response'])
-    for i, json_video in enumerate(json_channel_videos):
-        info = yt_data_extract.renderer_info(json_video['gridVideoRenderer'])
-        if 'description' not in info:
-            info['description'] = ''
+    channel_videos = channel.extract_info(json.loads(channel.get_channel_tab(channel_id)), 'videos')['items']
+    for i, video_item in enumerate(channel_videos):
+        if 'description' not in video_item:
+            video_item['description'] = ''
         try:
-            info['time_published'] = youtube_timestamp_to_posix(info['published']) - i  # subtract a few seconds off the videos so they will be in the right order
+            video_item['time_published'] = youtube_timestamp_to_posix(video_item['published']) - i  # subtract a few seconds off the videos so they will be in the right order
         except KeyError:
-            print(info)
-        videos.append((channel_id, info['id'], info['title'], info['duration'], info['time_published'], info['description']))
+            print(video_item)
+        videos.append((channel_id, video_item['id'], video_item['title'], video_item['duration'], video_item['time_published'], video_item['description']))
 
     now = time.time()
     download_thumbnails_if_necessary(video[1] for video in videos if (now - video[4]) < 30*24*3600) # Don't download thumbnails from videos older than a month
@@ -380,7 +376,7 @@ def import_subscriptions(env, start_response):
 
 
 
-sub_list_item_template = Template('''
+"""sub_list_item_template = Template('''
 <li class="sub-list-item $mute_class">
     <input class="sub-list-checkbox" name="channel_ids" value="$channel_id" form="subscription-manager-form" type="checkbox">
     <a href="$channel_url" class="sub-list-item-name" title="$channel_name">$channel_name</a>
@@ -394,7 +390,7 @@ tag_group_template = Template('''
 $sub_list
     </ol>
 </li>
-''')
+''')"""
 def get_subscription_manager_page(env, start_response):
     with open_database() as connection:
         with connection as cursor:
@@ -473,8 +469,8 @@ def list_from_comma_separated_tags(string):
     return [tag.strip() for tag in string.split(',') if tag.strip()]
 
 
-unsubscribe_list_item_template = Template('''
-<li><a href="$channel_url" title="$channel_name">$channel_name</a></li>''')
+"""unsubscribe_list_item_template = Template('''
+<li><a href="$channel_url" title="$channel_name">$channel_name</a></li>''')"""
 def post_subscription_manager_page(env, start_response):
     params = env['parameters']
     action = params['action'][0]
@@ -531,97 +527,69 @@ def post_subscription_manager_page(env, start_response):
     return b''
 
 
-
-sidebar_tag_item_template = Template('''
-<li class="sidebar-list-item">
-    <span class="sidebar-item-name">$tag_name</span>
-    <form method="POST" class="sidebar-item-refresh">
-        <input type="submit" value="Check">
-        <input type="hidden" name="action" value="refresh">
-        <input type="hidden" name="type" value="tag">
-        <input type="hidden" name="tag_name" value="$tag_name">
-    </form>
-</li>''')
-
-
-sidebar_channel_item_template = Template('''
-<li class="sidebar-list-item $mute_class">
-    <a href="$channel_url" class="sidebar-item-name" title="$channel_name">$channel_name</a>
-    <form method="POST" class="sidebar-item-refresh">
-        <input type="submit" value="Check">
-        <input type="hidden" name="action" value="refresh">
-        <input type="hidden" name="type" value="channel">
-        <input type="hidden" name="channel_id" value="$channel_id">
-    </form>
-</li>''')
-
-def get_subscriptions_page(env, start_response):
+@yt_app.route('/subscriptions', methods=['GET'])
+@yt_app.route('/feed/subscriptions', methods=['GET'])
+def get_subscriptions_page():
     with open_database() as connection:
         with connection as cursor:
-            items_html = '''<nav class="item-grid">\n'''
-
-            for item in _get_videos(cursor, 60, 0):
-                if item['id'] in downloading_thumbnails:
-                    item['thumbnail'] = util.get_thumbnail_url(item['id'])
+            videos = []
+            for video in _get_videos(cursor, 60, 0):
+                if video['id'] in downloading_thumbnails:
+                    video['thumbnail'] = util.get_thumbnail_url(video['id'])
                 else:
-                    item['thumbnail'] = util.URL_ORIGIN + '/data/subscription_thumbnails/' + item['id'] + '.jpg'
-                items_html += html_common.video_item_html(item, html_common.small_video_item_template)
-            items_html += '''\n</nav>'''
+                    video['thumbnail'] = util.URL_ORIGIN + '/data/subscription_thumbnails/' + video['id'] + '.jpg'
+                video['type'] = 'video'
+                video['item_size'] = 'small'
+                videos.append(video)
+
+            tags = _get_all_tags(cursor)
 
 
-            tag_list_html = ''
-            for tag_name in _get_all_tags(cursor):
-                tag_list_html += sidebar_tag_item_template.substitute(tag_name = tag_name)
-
-
-            sub_list_html = ''
+            subscription_list = []
             for channel_name, channel_id, muted in _get_subscribed_channels(cursor):
-                sub_list_html += sidebar_channel_item_template.substitute(
-                    channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
-                    channel_name = html.escape(channel_name),
-                    channel_id = channel_id,
-                    mute_class = 'muted' if muted else '',
-                )
+                subscription_list.append({
+                    'channel_url': util.URL_ORIGIN + '/channel/' + channel_id,
+                    'channel_name': channel_name,
+                    'channel_id': channel_id,
+                    'muted': muted,
+                })
 
+    return flask.render_template('subscriptions.html',
+        videos = videos,
+        tags = tags,
+        subscription_list = subscription_list,
+    )
 
-
-    start_response('200 OK', [('Content-type','text/html'),])
-    return subscriptions_template.substitute(
-        header = html_common.get_header(),
-        items = items_html,
-        tags = tag_list_html,
-        sub_list = sub_list_html,
-        page_buttons = '',
-    ).encode('utf-8')
-
-def post_subscriptions_page(env, start_response):
-    params = env['parameters']
-    action = params['action'][0]
+@yt_app.route('/subscriptions', methods=['POST'])
+@yt_app.route('/feed/subscriptions', methods=['POST'])
+def post_subscriptions_page():
+    action = request.values['action']
     if action == 'subscribe':
-        if len(params['channel_id']) != len(params['channel_name']):
-            start_response('400 Bad Request', ())
-            return b'400 Bad Request, length of channel_id != length of channel_name'
-        with_open_db(_subscribe, zip(params['channel_id'], params['channel_name']))
+        if len(request.values.getlist('channel_id')) != len(request.values('channel_name')):
+            return '400 Bad Request, length of channel_id != length of channel_name', 400
+        with_open_db(_subscribe, zip(request.values.getlist('channel_id'), request.values.getlist('channel_name')))
 
     elif action == 'unsubscribe':
-        with_open_db(_unsubscribe, params['channel_id'])
+        with_open_db(_unsubscribe, request.values.getlist('channel_id'))
 
     elif action == 'refresh':
-        type = params['type'][0]
+        type = request.values['type']
         if type == 'all':
             check_all_channels()
         elif type == 'tag':
-            check_tags(params['tag_name'])
+            check_tags(request.values.getlist('tag_name'))
         elif type == 'channel':
-            check_specific_channels(params['channel_id'])
+            check_specific_channels(request.values.getlist('channel_id'))
         else:
-            start_response('400 Bad Request', ())
-            return b'400 Bad Request'
-
-        start_response('204 No Content', ())
-        return b''
+            flask.abort(400)
     else:
-        start_response('400 Bad Request', ())
-        return b'400 Bad Request'
-    start_response('204 No Content', ())
-    return b''
+        flask.abort(400)
+
+    return '', 204
+
+
+@yt_app.route('/data/subscription_thumbnails/<thumbnail>')
+def serve_subscription_thumbnail(thumbnail):
+    # .. is necessary because flask always uses the application directory at ./youtube, not the working directory
+    return flask.send_from_directory(os.path.join('..', thumbnails_directory), thumbnail)
+

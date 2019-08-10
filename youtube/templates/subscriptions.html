@@ -1,0 +1,97 @@
+{% set page_title = 'Subscriptions' %}
+{% extends "base.html" %}
+{% import "common_elements.html" as common_elements %}
+
+{% block style %}
+    main{
+        display:flex;
+        flex-direction: row;
+    }
+    .item-grid{
+        flex-grow: 1;
+    }
+    .subscriptions-sidebar{
+        flex-basis: 300px;
+        background-color: #dadada;
+        border-left: 2px;
+    }
+        .sidebar-links{
+            display:flex;
+            justify-content: space-between;
+            padding-left:10px;
+            padding-right: 10px;
+        }
+
+        .sidebar-list{
+            list-style: none;
+            padding-left:10px;
+            padding-right: 10px;
+        }
+            .sidebar-list-item{
+                display:flex;
+                justify-content: space-between;
+                margin-bottom: 5px;
+            }
+                .sub-refresh-list .sidebar-item-name{
+                    text-overflow: clip;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    max-width: 200px;
+                }
+            .muted{
+                background-color: #888888;
+            }
+{% endblock style %}
+
+{% block main %}
+    <nav class="item-grid">
+        {% for video_info in videos %}
+            {{ common_elements.item(video_info, include_author=false) }}
+        {% endfor %}
+    </nav>
+
+    <div class="subscriptions-sidebar">
+        <div class="sidebar-links">
+            <a href="/youtube.com/subscription_manager" class="sub-manager-link">Subscription Manager</a>
+            <form method="POST" class="refresh-all">
+                <input type="submit" value="Check All">
+                <input type="hidden" name="action" value="refresh">
+                <input type="hidden" name="type" value="all">
+            </form>
+        </div>
+
+        <hr>
+        <ol class="sidebar-list tags">
+            {% for tag in tags %}
+                <li class="sidebar-list-item">
+                    <span class="sidebar-item-name">{{ tag }}</span>
+                    <form method="POST" class="sidebar-item-refresh">
+                        <input type="submit" value="Check">
+                        <input type="hidden" name="action" value="refresh">
+                        <input type="hidden" name="type" value="tag">
+                        <input type="hidden" name="tag_name" value="{{ tag }}">
+                    </form>
+                </li>
+            {% endfor %}
+        </ol>
+
+        <ol class="sidebar-list sub-refresh-list">
+            {% for subscription in subscription_list %}
+                <li class="sidebar-list-item {{ 'muted' if subscription['muted'] else '' }}">
+                    <a href="{{ subscription['channel_url'] }}" class="sidebar-item-name" title="{{ subscription['channel_name'] }}">{{ subscription['channel_name'] }}</a>
+                    <form method="POST" class="sidebar-item-refresh">
+                        <input type="submit" value="Check">
+                        <input type="hidden" name="action" value="refresh">
+                        <input type="hidden" name="type" value="channel">
+                        <input type="hidden" name="channel_id" value="{{ subscription['channel_id'] }}">
+                    </form>
+                </li>
+            {% endfor %}
+        </ol>
+
+    </div>
+
+    <nav class="page-button-row">
+        {# TODO #}
+    </nav>
+{% endblock main %}
