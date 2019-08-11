@@ -326,28 +326,38 @@ def check_specific_channels(channel_ids):
 
 
 
+@yt_app.route('/import_subscriptions', methods=['POST'])
+def import_subscriptions():
 
-def import_subscriptions(env, start_response):
-    content_type = env['parameters']['subscriptions_file'][0]
-    file = env['parameters']['subscriptions_file'][1]
+    # check if the post request has the file part
+    if 'subscriptions_file' not in request.files:
+        #flash('No file part')
+        return flask.redirect(util.URL_ORIGIN + request.full_path)
+    file = request.files['subscriptions_file']
+    # if user does not select file, browser also
+    # submit an empty part without filename
+    if file.filename == '':
+        #flash('No selected file')
+        return flask.redirect(util.URL_ORIGIN + request.full_path)
 
-    file = file.decode('utf-8')
 
-    if content_type == 'application/json':
+    mime_type = file.mimetype
+
+    if mime_type == 'application/json':
+        file = file.read().decode('utf-8')
         try:
             file = json.loads(file)
         except json.decoder.JSONDecodeError:
             traceback.print_exc()
-            start_response('400 Bad Request', () )
-            return b'400 Bad Request: Invalid json file'
+            return '400 Bad Request: Invalid json file', 400
 
         try:
             channels = ( (item['snippet']['resourceId']['channelId'], item['snippet']['title']) for item in file)
         except (KeyError, IndexError):
             traceback.print_exc()
-            start_response('400 Bad Request', () )
-            return b'400 Bad Request: Unknown json structure'
-    elif content_type in ('application/xml', 'text/xml', 'text/x-opml'):
+            return '400 Bad Request: Unknown json structure', 400
+    elif mime_type in ('application/xml', 'text/xml', 'text/x-opml'):
+        file = file.read().decode('utf-8')
         try:
             root = defusedxml.ElementTree.fromstring(file)
             assert root.tag == 'opml'
@@ -363,57 +373,36 @@ def import_subscriptions(env, start_response):
                 channels.append( (channel_id, channel_name) )
 
         except (AssertionError, IndexError, defusedxml.ElementTree.ParseError) as e:
-            start_response('400 Bad Request', () )
-            return b'400 Bad Request: Unable to read opml xml file, or the file is not the expected format'
+            return '400 Bad Request: Unable to read opml xml file, or the file is not the expected format', 400
     else:
-            start_response('400 Bad Request', () )
-            return b'400 Bad Request: Unsupported file format: ' + html.escape(content_type).encode('utf-8') + b'. Only subscription.json files (from Google Takeouts) and XML OPML files exported from Youtube\'s subscription manager page are supported'
+            return '400 Bad Request: Unsupported file format: ' + mime_type + '. Only subscription.json files (from Google Takeouts) and XML OPML files exported from Youtube\'s subscription manager page are supported', 400
 
     with_open_db(_subscribe, channels)
 
-    start_response('303 See Other', [('Location', util.URL_ORIGIN + '/subscription_manager'),] )
-    return b''
+    return flask.redirect(util.URL_ORIGIN + '/subscription_manager', 303)
 
 
 
-"""sub_list_item_template = Template('''
-<li class="sub-list-item $mute_class">
-    <input class="sub-list-checkbox" name="channel_ids" value="$channel_id" form="subscription-manager-form" type="checkbox">
-    <a href="$channel_url" class="sub-list-item-name" title="$channel_name">$channel_name</a>
-    <span class="tag-list">$tags</span>
-</li>''')
-
-tag_group_template = Template('''
-<li class="tag-group">
-    <h2 class="tag-group-name">$tag</h2>
-    <ol class="sub-list">
-$sub_list
-    </ol>
-</li>
-''')"""
-def get_subscription_manager_page(env, start_response):
+@yt_app.route('/subscription_manager', methods=['GET'])
+def get_subscription_manager_page():
+    group_by_tags = request.args.get('group_by_tags', '0') == '1'
     with open_database() as connection:
         with connection as cursor:
-            if env['parameters'].get('group_by_tags', '0')[0] == '1':
+            if group_by_tags:
+                tag_groups = []
 
-                sort_name = "Don't group"
-                sort_link = util.URL_ORIGIN + '/subscription_manager'
-
-                main_list_html = '<ul class="tag-group-list">'
                 for tag in _get_all_tags(cursor):
-                    sub_list_html = ''
+                    sub_list = []
                     for channel_id, channel_name, muted in _channels_with_tag(cursor, tag, order=True, include_muted_status=True):
-                        sub_list_html += sub_list_item_template.substitute(
-                            channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
-                            channel_name = html.escape(channel_name),
-                            channel_id = channel_id,
-                            tags = ', '.join(t for t in _get_tags(cursor, channel_id) if t != tag),
-                            mute_class = 'muted' if muted else '',
-                        )
-                    main_list_html += tag_group_template.substitute(
-                        tag = tag,
-                        sub_list = sub_list_html,
-                    )
+                        sub_list.append({
+                            'channel_url': util.URL_ORIGIN + '/channel/' + channel_id,
+                            'channel_name': channel_name,
+                            'channel_id': channel_id,
+                            'muted': muted,
+                            'tags': [t for t in _get_tags(cursor, channel_id) if t != tag],
+                        })
+
+                    tag_groups.append( (tag, sub_list) )
 
                 # Channels with no tags
                 channel_list = cursor.execute('''SELECT yt_channel_id, channel_name, muted
@@ -423,109 +412,74 @@ def get_subscription_manager_page(env, start_response):
                                                  )
                                                  ORDER BY channel_name COLLATE NOCASE''').fetchall()
                 if channel_list:
-                    sub_list_html = ''
+                    sub_list = []
                     for channel_id, channel_name, muted in channel_list:
-                        sub_list_html += sub_list_item_template.substitute(
-                            channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
-                            channel_name = html.escape(channel_name),
-                            channel_id = channel_id,
-                            tags = '',
-                            mute_class = 'muted' if muted else '',
-                        )
-                    main_list_html += tag_group_template.substitute(
-                        tag = "No tags",
-                        sub_list = sub_list_html,
-                    )
-                main_list_html += '</ul>'
+                        sub_list.append({
+                            'channel_url': util.URL_ORIGIN + '/channel/' + channel_id,
+                            'channel_name': channel_name,
+                            'channel_id': channel_id,
+                            'muted': muted,
+                            'tags': [],
+                        })
 
+                    tag_groups.append( ('No tags', sub_list) )
             else:
-
-                sort_name = "Group by tags"
-                sort_link = util.URL_ORIGIN + '/subscription_manager?group_by_tags=1'
-
-                main_list_html = '<ol class="sub-list">'
+                sub_list = []
                 for channel_name, channel_id, muted in _get_subscribed_channels(cursor):
-                    main_list_html += sub_list_item_template.substitute(
-                        channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
-                        channel_name = html.escape(channel_name),
-                        channel_id = channel_id,
-                        tags = ', '.join(_get_tags(cursor, channel_id)),
-                        mute_class = 'muted' if muted else '',
-                    )
-                main_list_html += '</ol>'
+                    sub_list.append({
+                        'channel_url': util.URL_ORIGIN + '/channel/' + channel_id,
+                        'channel_name': channel_name,
+                        'channel_id': channel_id,
+                        'muted': muted,
+                        'tags': _get_tags(cursor, channel_id),
+                    })
 
 
 
-    start_response('200 OK', [('Content-type','text/html'),])
-    return subscription_manager_template.substitute(
-        header = html_common.get_header(),
-        main_list = main_list_html,
-        sort_name = sort_name,
-        sort_link = sort_link,
-        page_buttons = '',
-    ).encode('utf-8')
+
+    if group_by_tags:
+        return flask.render_template('subscription_manager.html',
+            group_by_tags = True,
+            tag_groups = tag_groups,
+        )
+    else:
+        return flask.render_template('subscription_manager.html',
+            group_by_tags = False,
+            sub_list = sub_list,
+        )
 
 def list_from_comma_separated_tags(string):
     return [tag.strip() for tag in string.split(',') if tag.strip()]
 
 
-"""unsubscribe_list_item_template = Template('''
-<li><a href="$channel_url" title="$channel_name">$channel_name</a></li>''')"""
-def post_subscription_manager_page(env, start_response):
-    params = env['parameters']
-    action = params['action'][0]
+@yt_app.route('/subscription_manager', methods=['POST'])
+def post_subscription_manager_page():
+    action = request.values['action']
 
     with open_database() as connection:
         with connection as cursor:
             if action == 'add_tags':
-                _add_tags(cursor, params['channel_ids'], [tag.lower() for tag in list_from_comma_separated_tags(params['tags'][0])])
+                _add_tags(cursor, request.values.getlist('channel_ids'), [tag.lower() for tag in list_from_comma_separated_tags(request.values['tags'])])
             elif action == 'remove_tags':
-                _remove_tags(cursor, params['channel_ids'], [tag.lower() for tag in list_from_comma_separated_tags(params['tags'][0])])
+                _remove_tags(cursor, request.values.getlist('channel_ids'), [tag.lower() for tag in list_from_comma_separated_tags(request.values['tags'])])
             elif action == 'unsubscribe':
-                _unsubscribe(cursor, params['channel_ids'])
+                _unsubscribe(cursor, request.values.getlist('channel_ids'))
             elif action == 'unsubscribe_verify':
-                page = '''
-                <span>Are you sure you want to unsubscribe from these channels?</span>
-                <form class="subscriptions-import-form" action="/youtube.com/subscription_manager" method="POST">'''
+                unsubscribe_list = _get_channel_names(cursor, request.values.getlist('channel_ids'))
+                return flask.render_template('unsubscribe_verify.html', unsubscribe_list = unsubscribe_list)
 
-                for channel_id in params['channel_ids']:
-                    page += '<input type="hidden" name="channel_ids" value="' + channel_id + '">\n'
-
-                page += '''
-                    <input type="hidden" name="action" value="unsubscribe">
-                    <input type="submit" value="Yes, unsubscribe">
-                </form>
-                <ul>'''
-                for channel_id, channel_name in _get_channel_names(cursor, params['channel_ids']):
-                    page += unsubscribe_list_item_template.substitute(
-                        channel_url = util.URL_ORIGIN + '/channel/' + channel_id,
-                        channel_name = html.escape(channel_name),
-                    )
-                page += '''</ul>'''
-
-                start_response('200 OK', [('Content-type','text/html'),])
-                return html_common.yt_basic_template.substitute(
-                    page_title = 'Unsubscribe?',
-                    style = '',
-                    header = html_common.get_header(),
-                    page = page,
-                ).encode('utf-8')
             elif action == 'mute':
                 cursor.executemany('''UPDATE subscribed_channels
                                       SET muted = 1
-                                      WHERE yt_channel_id = ?''', [(ci,) for ci in params['channel_ids']])
+                                      WHERE yt_channel_id = ?''', [(ci,) for ci in request.values.getlist('channel_ids')])
             elif action == 'unmute':
                 cursor.executemany('''UPDATE subscribed_channels
                                       SET muted = 0
-                                      WHERE yt_channel_id = ?''', [(ci,) for ci in params['channel_ids']])
-
+                                      WHERE yt_channel_id = ?''', [(ci,) for ci in request.values.getlist('channel_ids')])
             else:
-                start_response('400 Bad Request', ())
-                return b'400 Bad Request'
+                flask.abort(400)
 
-    start_response('303 See Other', [('Location', util.URL_ORIGIN + '/subscription_manager'),] )
-    return b''
-
+    return flask.redirect(util.URL_ORIGIN + request.full_path, 303)
 
 @yt_app.route('/subscriptions', methods=['GET'])
 @yt_app.route('/feed/subscriptions', methods=['GET'])
