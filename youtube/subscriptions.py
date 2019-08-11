@@ -519,7 +519,7 @@ def get_subscriptions_page():
 def post_subscriptions_page():
     action = request.values['action']
     if action == 'subscribe':
-        if len(request.values.getlist('channel_id')) != len(request.values('channel_name')):
+        if len(request.values.getlist('channel_id')) != len(request.values.getlist('channel_name')):
             return '400 Bad Request, length of channel_id != length of channel_name', 400
         with_open_db(_subscribe, zip(request.values.getlist('channel_id'), request.values.getlist('channel_name')))
 

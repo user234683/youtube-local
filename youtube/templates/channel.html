@@ -23,6 +23,9 @@
             grid-column:2;
             margin-left: 5px;
         }
+            .summary subscribe-unsubscribe, .summary short-description{
+                margin-top: 10px;
+            }
         main .channel-tabs{
             grid-row:2;
             grid-column: 1 / span 2;
@@ -90,6 +93,12 @@
     <div class="summary">
         <h2 class="title">{{ channel_name }}</h2>
         <p class="short-description">{{ short_description }}</p>
+        <form method="POST" action="/youtube.com/subscriptions" class="subscribe-unsubscribe">
+            <input type="submit" value="{{ 'Unsubscribe' if subscribed else 'Subscribe' }}">
+            <input type="hidden" name="channel_id" value="{{ channel_id }}">
+            <input type="hidden" name="channel_name" value="{{ channel_name }}">
+            <input type="hidden" name="action" value="{{ 'unsubscribe' if subscribed else 'subscribe' }}">
+        </form>
     </div>
     <nav class="channel-tabs">
         {% for tab_name in ('Videos', 'Playlists', 'About') %}

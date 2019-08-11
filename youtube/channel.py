@@ -1,5 +1,5 @@
 import base64
-from youtube import util, yt_data_extract, local_playlist
+from youtube import util, yt_data_extract, local_playlist, subscriptions
 from youtube import yt_app
 
 import urllib
@@ -312,7 +312,7 @@ def get_channel_page(channel_id, tab='videos'):
         info['current_sort'] = sort
     elif tab == 'search':
         info['search_box_value'] = query
-
+    info['subscribed'] = subscriptions.is_subscribed(info['channel_id'])
 
     return flask.render_template('channel.html',
         parameters_dictionary = request.args,
@@ -352,7 +352,7 @@ def get_channel_page_general_url(base_url, tab, request):
         info['current_sort'] = sort
     elif tab == 'search':
         info['search_box_value'] = query
-
+    info['subscribed'] = subscriptions.is_subscribed(info['channel_id'])
 
     return flask.render_template('channel.html',
         parameters_dictionary = request.args,
