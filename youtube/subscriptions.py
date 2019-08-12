@@ -10,6 +10,7 @@ import json
 import traceback
 import contextlib
 import defusedxml.ElementTree
+import urllib
 
 import flask
 from flask import request
@@ -205,30 +206,11 @@ except FileNotFoundError:
     existing_thumbnails = set()
 
 
-thumbnails_queue = util.RateLimitedQueue()
 check_channels_queue = util.RateLimitedQueue()
-
-
-# Use this to mark a thumbnail acceptable to be retrieved at the request of the browser
-# can't simply check if it's in the queue because items are removed when the download starts, not when it finishes
-downloading_thumbnails = set()
-
 checking_channels = set()
 
 # Just to use for printing channel checking status to console without opening database
 channel_names = dict()
-
-def download_thumbnail_worker():
-    while True:
-        video_id = thumbnails_queue.get()
-        try:
-            success = util.download_thumbnail(thumbnails_directory, video_id)
-            if success:
-                existing_thumbnails.add(video_id)
-        except Exception:
-            traceback.print_exc()
-        finally:
-            downloading_thumbnails.remove(video_id)
 
 def check_channel_worker():
     while True:
@@ -239,19 +221,11 @@ def check_channel_worker():
             checking_channels.remove(channel_id)
 
 for i in range(0,5):
-    gevent.spawn(download_thumbnail_worker)
     gevent.spawn(check_channel_worker)
 
 
 
 
-
-
-def download_thumbnails_if_necessary(thumbnails):
-    for video_id in thumbnails:
-        if video_id not in existing_thumbnails and video_id not in downloading_thumbnails:
-            downloading_thumbnails.add(video_id)
-            thumbnails_queue.put(video_id)
 
 def check_channels_if_necessary(channel_ids):
     for channel_id in channel_ids:
@@ -279,8 +253,6 @@ def _get_upstream_videos(channel_id):
             print(video_item)
         videos.append((channel_id, video_item['id'], video_item['title'], video_item['duration'], video_item['time_published'], video_item['description']))
 
-    now = time.time()
-    download_thumbnails_if_necessary(video[1] for video in videos if (now - video[4]) < 30*24*3600) # Don't download thumbnails from videos older than a month
 
     with open_database() as connection:
         with connection as cursor:
@@ -488,10 +460,7 @@ def get_subscriptions_page():
         with connection as cursor:
             videos = []
             for video in _get_videos(cursor, 60, 0):
-                if video['id'] in downloading_thumbnails:
-                    video['thumbnail'] = util.get_thumbnail_url(video['id'])
-                else:
-                    video['thumbnail'] = util.URL_ORIGIN + '/data/subscription_thumbnails/' + video['id'] + '.jpg'
+                video['thumbnail'] = util.URL_ORIGIN + '/data/subscription_thumbnails/' + video['id'] + '.jpg'
                 video['type'] = 'video'
                 video['item_size'] = 'small'
                 videos.append(video)
@@ -544,6 +513,34 @@ def post_subscriptions_page():
 
 @yt_app.route('/data/subscription_thumbnails/<thumbnail>')
 def serve_subscription_thumbnail(thumbnail):
-    # .. is necessary because flask always uses the application directory at ./youtube, not the working directory
-    return flask.send_from_directory(os.path.join('..', thumbnails_directory), thumbnail)
+    assert thumbnail[-4:] == '.jpg'
+    video_id = thumbnail[0:-4]
+    thumbnail_path = os.path.join(thumbnails_directory, thumbnail)
+
+    if video_id in existing_thumbnails:
+        # .. is necessary because flask always uses the application directory at ./youtube, not the working directory
+        return flask.send_from_directory(os.path.join('..', thumbnails_directory), thumbnail)
+    else:
+        url = "https://i.ytimg.com/vi/" + video_id + "/mqdefault.jpg"
+        try:
+            image = util.fetch_url(url, report_text="Saved thumbnail: " + video_id)
+        except urllib.error.HTTPError as e:
+            print("Failed to download thumbnail for " + video_id + ": " + str(e))
+            abort(e.code)
+        try:
+            f = open(thumbnail_path, 'wb')
+        except FileNotFoundError:
+            os.makedirs(thumbnail_path, exist_ok = True)
+            f = open(thumbnail_path, 'wb')
+        f.write(image)
+        f.close()
+        existing_thumbnails.add(video_id)
+
+        return flask.Response(image, mimetype='image/jpeg')
+
+
+
+
+
+
 
