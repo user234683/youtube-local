@@ -7,9 +7,12 @@
         display:flex;
         flex-direction: row;
     }
-    .item-grid{
+    .video-section{
         flex-grow: 1;
     }
+        .video-section .page-button-row{
+            justify-content: center;
+        }
     .subscriptions-sidebar{
         flex-basis: 300px;
         background-color: #dadada;
@@ -44,11 +47,17 @@
 {% endblock style %}
 
 {% block main %}
-    <nav class="item-grid">
-        {% for video_info in videos %}
-            {{ common_elements.item(video_info, include_author=false) }}
-        {% endfor %}
-    </nav>
+    <div class="video-section">
+        <nav class="item-grid">
+            {% for video_info in videos %}
+                {{ common_elements.item(video_info, include_author=false) }}
+            {% endfor %}
+        </nav>
+
+        <nav class="page-button-row">
+            {{ common_elements.page_buttons(num_pages, '/youtube.com/subscriptions', parameters_dictionary) }}
+        </nav>
+    </div>
 
     <div class="subscriptions-sidebar">
         <div class="sidebar-links">
@@ -91,7 +100,4 @@
 
     </div>
 
-    <nav class="page-button-row">
-        {# TODO #}
-    </nav>
 {% endblock main %}

@@ -11,6 +11,7 @@ import traceback
 import contextlib
 import defusedxml.ElementTree
 import urllib
+import math
 
 import flask
 from flask import request
@@ -121,7 +122,16 @@ def _unsubscribe(cursor, channel_ids):
     gevent.spawn(delete_thumbnails, to_delete)
     cursor.executemany("DELETE FROM subscribed_channels WHERE yt_channel_id=?", ((channel_id, ) for channel_id in channel_ids))
 
-def _get_videos(cursor, number, offset, tag = None):
+def _get_videos(cursor, number_per_page, offset, tag = None):
+    '''Returns a full page of videos with an offset, and a value good enough to be used as the total number of videos'''
+    # We ask for the next 9 pages from the database
+    # Then the actual length of the results tell us if there are more than 9 pages left, and if not, how many there actually are
+    # This is done since there are only 9 page buttons on display at a time
+    # If there are more than 9 pages left, we give a fake value in place of the real number of results if the entire database was queried without limit
+    # This fake value is sufficient to get the page button generation macro to display 9 page buttons
+    # If we wish to display more buttons this logic must change
+    # We cannot use tricks with the sql id for the video since we frequently have filters and other restrictions in place on the results anyway
+    # TODO: This is probably not the ideal solution
     if tag is not None:
         db_videos = cursor.execute('''SELECT video_id, title, duration, channel_name
                                       FROM videos
@@ -129,21 +139,29 @@ def _get_videos(cursor, number, offset, tag = None):
                                       INNER JOIN tag_associations on videos.sql_channel_id = tag_associations.sql_channel_id
                                       WHERE tag = ?
                                       ORDER BY time_published DESC
-                                      LIMIT ? OFFSET ?''', (tag, number, offset))
+                                      LIMIT ? OFFSET ?''', (tag, number_per_page*9, offset)).fetchall()
     else:
         db_videos = cursor.execute('''SELECT video_id, title, duration, channel_name
                                       FROM videos
                                       INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
                                       ORDER BY time_published DESC
-                                      LIMIT ? OFFSET ?''', (number, offset))
+                                      LIMIT ? OFFSET ?''', (number_per_page*9, offset)).fetchall()
 
-    for db_video in db_videos:
-        yield {
+    pseudo_number_of_videos = offset + len(db_videos)
+
+    videos = []
+    for db_video in db_videos[0:number_per_page]:
+        videos.append({
             'id':   db_video[0],
             'title':    db_video[1],
             'duration': db_video[2],
             'author':   db_video[3],
-        }
+        })
+
+    return videos, pseudo_number_of_videos
+
+
+
 
 def _get_subscribed_channels(cursor):
     for item in cursor.execute('''SELECT channel_name, yt_channel_id, muted
@@ -489,16 +507,16 @@ def post_subscription_manager_page():
 @yt_app.route('/subscriptions', methods=['GET'])
 @yt_app.route('/feed/subscriptions', methods=['GET'])
 def get_subscriptions_page():
+    page = int(request.args.get('page', 1))
     with open_database() as connection:
         with connection as cursor:
             tag = request.args.get('tag', None)
-            videos = []
-            for video in _get_videos(cursor, 60, 0, tag):
+            videos, number_of_videos_in_db = _get_videos(cursor, 60, (page - 1)*60, tag)
+            for video in videos:
                 video['thumbnail'] = util.URL_ORIGIN + '/data/subscription_thumbnails/' + video['id'] + '.jpg'
                 video['type'] = 'video'
                 video['item_size'] = 'small'
                 yt_data_extract.add_extra_html_info(video)
-                videos.append(video)
 
             tags = _get_all_tags(cursor)
 
@@ -514,6 +532,8 @@ def get_subscriptions_page():
 
     return flask.render_template('subscriptions.html',
         videos = videos,
+        num_pages = math.ceil(number_of_videos_in_db/60),
+        parameters_dictionary = request.args,
         tags = tags,
         subscription_list = subscription_list,
     )
