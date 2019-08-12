@@ -553,7 +553,7 @@ def serve_subscription_thumbnail(thumbnail):
         try:
             f = open(thumbnail_path, 'wb')
         except FileNotFoundError:
-            os.makedirs(thumbnail_path, exist_ok = True)
+            os.makedirs(thumbnails_directory, exist_ok = True)
             f = open(thumbnail_path, 'wb')
         f.write(image)
         f.close()
