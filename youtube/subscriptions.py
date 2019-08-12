@@ -535,6 +535,7 @@ def get_subscriptions_page():
         num_pages = math.ceil(number_of_videos_in_db/60),
         parameters_dictionary = request.args,
         tags = tags,
+        current_tag = tag,
         subscription_list = subscription_list,
     )
 

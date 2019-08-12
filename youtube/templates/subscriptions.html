@@ -71,9 +71,19 @@
 
         <hr>
         <ol class="sidebar-list tags">
+            {% if current_tag %}
+                <li class="sidebar-list-item">
+                    <a href="/youtube.com/subscriptions" class="sidebar-item-name">Any tag</a>
+                </li>
+            {% endif %}
+
             {% for tag in tags %}
                 <li class="sidebar-list-item">
-                    <a href="?tag={{ tag|urlencode }}" class="sidebar-item-name">{{ tag }}</a>
+                    {% if tag == current_tag %}
+                        <span class="sidebar-item-name">{{ tag }}</span>
+                    {% else %}
+                        <a href="?tag={{ tag|urlencode }}" class="sidebar-item-name">{{ tag }}</a>
+                    {% endif %}
                     <form method="POST" class="sidebar-item-refresh">
                         <input type="submit" value="Check">
                         <input type="hidden" name="action" value="refresh">
