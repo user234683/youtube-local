@@ -64,7 +64,7 @@
         <ol class="sidebar-list tags">
             {% for tag in tags %}
                 <li class="sidebar-list-item">
-                    <span class="sidebar-item-name">{{ tag }}</span>
+                    <a href="?tag={{ tag|urlencode }}" class="sidebar-item-name">{{ tag }}</a>
                     <form method="POST" class="sidebar-item-refresh">
                         <input type="submit" value="Check">
                         <input type="hidden" name="action" value="refresh">

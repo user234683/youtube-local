@@ -120,12 +120,21 @@ def _unsubscribe(cursor, channel_ids):
     gevent.spawn(delete_thumbnails, to_delete)
     cursor.executemany("DELETE FROM subscribed_channels WHERE yt_channel_id=?", ((channel_id, ) for channel_id in channel_ids))
 
-def _get_videos(cursor, number, offset):
-    db_videos = cursor.execute('''SELECT video_id, title, duration, channel_name
-                                  FROM videos
-                                  INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
-                                  ORDER BY time_published DESC
-                                  LIMIT ? OFFSET ?''', (number, offset))
+def _get_videos(cursor, number, offset, tag = None):
+    if tag is not None:
+        db_videos = cursor.execute('''SELECT video_id, title, duration, channel_name
+                                      FROM videos
+                                      INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
+                                      INNER JOIN tag_associations on videos.sql_channel_id = tag_associations.sql_channel_id
+                                      WHERE tag = ?
+                                      ORDER BY time_published DESC
+                                      LIMIT ? OFFSET ?''', (tag, number, offset))
+    else:
+        db_videos = cursor.execute('''SELECT video_id, title, duration, channel_name
+                                      FROM videos
+                                      INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
+                                      ORDER BY time_published DESC
+                                      LIMIT ? OFFSET ?''', (number, offset))
 
     for db_video in db_videos:
         yield {
@@ -481,8 +490,9 @@ def post_subscription_manager_page():
 def get_subscriptions_page():
     with open_database() as connection:
         with connection as cursor:
+            tag = request.args.get('tag', None)
             videos = []
-            for video in _get_videos(cursor, 60, 0):
+            for video in _get_videos(cursor, 60, 0, tag):
                 video['thumbnail'] = util.URL_ORIGIN + '/data/subscription_thumbnails/' + video['id'] + '.jpg'
                 video['type'] = 'video'
                 video['item_size'] = 'small'
