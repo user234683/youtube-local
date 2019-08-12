@@ -536,30 +536,37 @@ def post_subscriptions_page():
 
 @yt_app.route('/data/subscription_thumbnails/<thumbnail>')
 def serve_subscription_thumbnail(thumbnail):
+    '''Serves thumbnail from disk if it's been saved already. If not, downloads the thumbnail, saves to disk, and serves it.'''
     assert thumbnail[-4:] == '.jpg'
     video_id = thumbnail[0:-4]
     thumbnail_path = os.path.join(thumbnails_directory, thumbnail)
 
     if video_id in existing_thumbnails:
-        # .. is necessary because flask always uses the application directory at ./youtube, not the working directory
-        return flask.send_from_directory(os.path.join('..', thumbnails_directory), thumbnail)
-    else:
-        url = "https://i.ytimg.com/vi/" + video_id + "/mqdefault.jpg"
         try:
-            image = util.fetch_url(url, report_text="Saved thumbnail: " + video_id)
-        except urllib.error.HTTPError as e:
-            print("Failed to download thumbnail for " + video_id + ": " + str(e))
-            abort(e.code)
-        try:
-            f = open(thumbnail_path, 'wb')
+            f = open(thumbnail_path, 'rb')
         except FileNotFoundError:
-            os.makedirs(thumbnails_directory, exist_ok = True)
-            f = open(thumbnail_path, 'wb')
-        f.write(image)
-        f.close()
-        existing_thumbnails.add(video_id)
+            existing_thumbnails.remove(video_id)
+        else:
+            image = f.read()
+            f.close()
+            return flask.Response(image, mimetype='image/jpeg')
 
-        return flask.Response(image, mimetype='image/jpeg')
+    url = "https://i.ytimg.com/vi/" + video_id + "/mqdefault.jpg"
+    try:
+        image = util.fetch_url(url, report_text="Saved thumbnail: " + video_id)
+    except urllib.error.HTTPError as e:
+        print("Failed to download thumbnail for " + video_id + ": " + str(e))
+        abort(e.code)
+    try:
+        f = open(thumbnail_path, 'wb')
+    except FileNotFoundError:
+        os.makedirs(thumbnails_directory, exist_ok = True)
+        f = open(thumbnail_path, 'wb')
+    f.write(image)
+    f.close()
+    existing_thumbnails.add(video_id)
+
+    return flask.Response(image, mimetype='image/jpeg')
 
 
 
