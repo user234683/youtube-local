@@ -486,6 +486,7 @@ def get_subscriptions_page():
                 video['thumbnail'] = util.URL_ORIGIN + '/data/subscription_thumbnails/' + video['id'] + '.jpg'
                 video['type'] = 'video'
                 video['item_size'] = 'small'
+                yt_data_extract.add_extra_html_info(video)
                 videos.append(video)
 
             tags = _get_all_tags(cursor)
