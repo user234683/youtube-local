@@ -27,9 +27,10 @@ def open_database():
         os.makedirs(settings.data_dir)
     connection = sqlite3.connect(database_path, check_same_thread=False)
 
-    # Create tables if they don't exist
     try:
         cursor = connection.cursor()
+        cursor.execute('''PRAGMA foreign_keys = 1''')
+        # Create tables if they don't exist
         cursor.execute('''CREATE TABLE IF NOT EXISTS subscribed_channels (
                               id integer PRIMARY KEY,
                               yt_channel_id text UNIQUE NOT NULL,
