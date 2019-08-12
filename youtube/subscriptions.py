@@ -92,9 +92,32 @@ def _subscribe(cursor, channels):
     cursor.executemany('''INSERT OR IGNORE INTO subscribed_channels (yt_channel_id, channel_name, time_last_checked)
                           VALUES (?, ?, ?)''', channels)
 
-# TODO: delete thumbnails
+
+def delete_thumbnails(to_delete):
+    for thumbnail in to_delete:
+        try:
+            video_id = thumbnail[0:-4]
+            if video_id in existing_thumbnails:
+                os.remove(os.path.join(thumbnails_directory, thumbnail))
+                existing_thumbnails.remove(video_id)
+        except Exception:
+            print('Failed to delete thumbnail: ' + thumbnail)
+            traceback.print_exc()
+
 def _unsubscribe(cursor, channel_ids):
     ''' channel_ids is a list of channel_ids '''
+    to_delete = []
+    for channel_id in channel_ids:
+        rows = cursor.execute('''SELECT video_id
+                                 FROM videos
+                                 WHERE sql_channel_id = (
+                                     SELECT id
+                                     FROM subscribed_channels
+                                     WHERE yt_channel_id=?
+                                 )''', (channel_id,)).fetchall()
+        to_delete += [row[0] + '.jpg' for row in rows]
+
+    gevent.spawn(delete_thumbnails, to_delete)
     cursor.executemany("DELETE FROM subscribed_channels WHERE yt_channel_id=?", ((channel_id, ) for channel_id in channel_ids))
 
 def _get_videos(cursor, number, offset):
