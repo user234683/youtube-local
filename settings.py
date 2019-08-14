@@ -66,6 +66,12 @@ For security reasons, enabling this is not recommended.''',
 1 to sort by newest''',
     }),
 
+    ('autocheck_subscriptions', {
+        'type': bool,
+        'default': 0,
+        'comment': '',
+    }),
+
     ('gather_googlevideo_domains', {
         'type': bool,
         'default': False,
