@@ -382,7 +382,7 @@ def _get_upstream_videos(channel_id):
     # add some quantization and randomness to make pattern analysis by Youtube slightly harder
     quantized_upload_period = average_upload_period - (average_upload_period % (4*3600)) + 4*3600   # round up to nearest 4 hours
     randomized_upload_period = quantized_upload_period*(1 + secrets.randbelow(50)/50*0.5) # randomly between 1x and 1.5x
-    next_check_delay = randomized_upload_period/5    # check at 5x the channel posting rate. might want to fine tune this number
+    next_check_delay = randomized_upload_period/10    # check at 10x the channel posting rate. might want to fine tune this number
     next_check_time = int(time.time() + next_check_delay)
 
     with open_database() as connection:
