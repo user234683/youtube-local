@@ -83,13 +83,15 @@ def channel_ctoken(channel_id, page, sort, tab, view=1):
 
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
 
-def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1):
+def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1, print_status=True):
     ctoken = channel_ctoken(channel_id, page, sort, tab, view).replace('=', '%3D')
     url = "https://www.youtube.com/browse_ajax?ctoken=" + ctoken
 
-    print("Sending channel tab ajax request")
+    if print_status:
+        print("Sending channel tab ajax request")
     content = util.fetch_url(url, util.desktop_ua + headers_1, debug_name='channel_tab')
-    print("Finished recieving channel tab response")
+    if print_status:
+        print("Finished recieving channel tab response")
 
     return content
 

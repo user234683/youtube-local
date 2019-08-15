@@ -354,13 +354,15 @@ def check_channels_if_necessary(channel_ids):
 
 def _get_upstream_videos(channel_id):
     try:
-        print("Checking channel: " + channel_names[channel_id])
+        channel_status_name = channel_names[channel_id]
     except KeyError:
-        print("Checking channel " + channel_id)
+        channel_status_name = channel_id
+
+    print("Checking channel: " + channel_status_name)
 
     videos = []
 
-    channel_videos = channel.extract_info(json.loads(channel.get_channel_tab(channel_id)), 'videos')['items']
+    channel_videos = channel.extract_info(json.loads(channel.get_channel_tab(channel_id, print_status=False)), 'videos')['items']
     for i, video_item in enumerate(channel_videos):
         if 'description' not in video_item:
             video_item['description'] = ''
@@ -387,6 +389,24 @@ def _get_upstream_videos(channel_id):
 
     with open_database() as connection:
         with connection as cursor:
+            # calculate how many new videos there are
+            row = cursor.execute('''SELECT video_id
+                                    FROM videos
+                                    INNER JOIN subscribed_channels ON videos.sql_channel_id = subscribed_channels.id
+                                    WHERE yt_channel_id=?
+                                    ORDER BY time_published DESC
+                                    LIMIT 1''', [channel_id]).fetchone()
+            if row is None:
+                number_of_new_videos = len(videos)
+            else:
+                latest_video_id = row[0]
+                index = 0
+                for video in videos:
+                    if video[1] == latest_video_id:
+                        break
+                    index += 1
+                number_of_new_videos = index
+
             cursor.executemany('''INSERT OR IGNORE INTO videos (sql_channel_id, video_id, title, duration, time_published, description)
                                   VALUES ((SELECT id FROM subscribed_channels WHERE yt_channel_id=?), ?, ?, ?, ?, ?)''', videos)
             cursor.execute('''UPDATE subscribed_channels
@@ -396,6 +416,14 @@ def _get_upstream_videos(channel_id):
             if settings.autocheck_subscriptions:
                 if not _is_muted(cursor, channel_id):
                     autocheck_job_application.put({'channel_id': channel_id, 'channel_name': channel_names[channel_id], 'next_check_time': next_check_time})
+
+    if number_of_new_videos == 0:
+        print('No new videos from ' + channel_status_name)
+    elif number_of_new_videos == 1:
+        print('1 new video from ' + channel_status_name)
+    else:
+        print(str(number_of_new_videos) + ' new videos from ' + channel_status_name)
+
 
 
 def check_all_channels():
