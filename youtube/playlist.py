@@ -101,6 +101,9 @@ def get_playlist_page():
     metadata = yt_data_extract.renderer_info(first_page_json['response']['header'])
     yt_data_extract.prefix_urls(metadata)
 
+    if 'description' not in metadata:
+        metadata['description'] = ''
+
     video_count = int(metadata['size'].replace(',', ''))
     metadata['size'] += ' videos'
 
