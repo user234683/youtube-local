@@ -317,7 +317,7 @@ for i in range(0,5):
 
 
 
-# --- Auto checking system ---
+# --- Auto checking system - Spaghetti code ---
 
 if settings.autocheck_subscriptions:
     # job application format: dict with keys (channel_id, channel_name, next_check_time)
@@ -328,7 +328,10 @@ if settings.autocheck_subscriptions:
         with connection as cursor:
             now = time.time()
             for row in cursor.execute('''SELECT yt_channel_id, channel_name, next_check_time FROM subscribed_channels WHERE next_check_time IS NOT NULL AND muted != 1''').fetchall():
-                if row[2] < now:    # expired, check randomly within the 30 minutes
+
+                # expired, check randomly within the 30 minutes
+                # note: even if it isn't scheduled in the past right now, it might end up being if it's due soon and we dont start dispatching by then, see below where time_until_earliest_job is negative
+                if row[2] < now:
                     next_check_time = now + 3600*secrets.randbelow(60)/60
                     row = (row[0], row[1], next_check_time)
                     _schedule_checking(cursor, row[0], next_check_time)
@@ -347,7 +350,7 @@ if settings.autocheck_subscriptions:
                 earliest_job = autocheck_jobs[earliest_job_index]
                 time_until_earliest_job = earliest_job['next_check_time'] - time.time()
 
-                if time_until_earliest_job <= 0:
+                if time_until_earliest_job <= -5:   # should not happen unless we're running extremely slow
                     print('ERROR: autocheck_dispatcher got job scheduled in the past, skipping and rescheduling: ' + earliest_job['channel_id'] + ', ' + earliest_job['channel_name'] + ', ' + str(earliest_job['next_check_time']))
                     next_check_time = time.time() + 3600*secrets.randbelow(60)/60
                     with_open_db(_schedule_checking, earliest_job['channel_id'], next_check_time)
@@ -359,15 +362,20 @@ if settings.autocheck_subscriptions:
                     del autocheck_jobs[earliest_job_index]
                     continue
 
-                try:
-                    new_job = autocheck_job_application.get(timeout = time_until_earliest_job)  # sleep for time_until_earliest_job time, but allow to be interrupted by new jobs
-                except gevent.queue.Empty: # no new jobs, time to execute the earliest job
-                    channel_names[earliest_job['channel_id']] = earliest_job['channel_name']
-                    checking_channels.add(earliest_job['channel_id'])
-                    check_channels_queue.put(earliest_job['channel_id'])
-                    del autocheck_jobs[earliest_job_index]
-                else: # new job, add it to the list
-                    autocheck_jobs.append(new_job)
+                if time_until_earliest_job > 0: # it can become less than zero (in the past) when it's set to go off while the dispatcher is doing something else at that moment
+                    try:
+                        new_job = autocheck_job_application.get(timeout = time_until_earliest_job)  # sleep for time_until_earliest_job time, but allow to be interrupted by new jobs
+                    except gevent.queue.Empty: # no new jobs
+                        pass
+                    else: # new job, add it to the list
+                        autocheck_jobs.append(new_job)
+                        continue
+
+                # no new jobs, time to execute the earliest job
+                channel_names[earliest_job['channel_id']] = earliest_job['channel_name']
+                checking_channels.add(earliest_job['channel_id'])
+                check_channels_queue.put(earliest_job['channel_id'])
+                del autocheck_jobs[earliest_job_index]
 
 
     gevent.spawn(autocheck_dispatcher)
