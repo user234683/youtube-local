@@ -26,7 +26,9 @@
                 
                 <address>{{ info['author'] }}</address>
                 <span class="views">{{ info['views'] }}</span>
-
+                {% if 'views' is not in(info) and 'published' is in(info) %}
+                    <time>{{ info['published'] }}</time>
+                {% endif %}
             {% elif info['type'] == 'playlist' %}
                 <a class="playlist-thumbnail-box" href="{{ info['url'] }}" title="{{ info['title'] }}">
                     <img class="playlist-thumbnail-img" src="{{ info['thumbnail'] }}">

@@ -13,6 +13,7 @@ import defusedxml.ElementTree
 import urllib
 import math
 import secrets
+import collections
 
 import flask
 from flask import request
@@ -48,6 +49,7 @@ def open_database():
                               title text NOT NULL,
                               duration text,
                               time_published integer NOT NULL,
+                              is_time_published_exact integer DEFAULT 0,
                               description text
                           )''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS tag_associations (
@@ -134,7 +136,7 @@ def _get_videos(cursor, number_per_page, offset, tag = None):
     # We cannot use tricks with the sql id for the video since we frequently have filters and other restrictions in place on the results anyway
     # TODO: This is probably not the ideal solution
     if tag is not None:
-        db_videos = cursor.execute('''SELECT video_id, title, duration, channel_name
+        db_videos = cursor.execute('''SELECT video_id, title, duration, time_published, is_time_published_exact, channel_name
                                       FROM videos
                                       INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
                                       INNER JOIN tag_associations on videos.sql_channel_id = tag_associations.sql_channel_id
@@ -142,7 +144,7 @@ def _get_videos(cursor, number_per_page, offset, tag = None):
                                       ORDER BY time_published DESC
                                       LIMIT ? OFFSET ?''', (tag, number_per_page*9, offset)).fetchall()
     else:
-        db_videos = cursor.execute('''SELECT video_id, title, duration, channel_name
+        db_videos = cursor.execute('''SELECT video_id, title, duration, time_published, is_time_published_exact, channel_name
                                       FROM videos
                                       INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
                                       ORDER BY time_published DESC
@@ -156,7 +158,8 @@ def _get_videos(cursor, number_per_page, offset, tag = None):
             'id':   db_video[0],
             'title':    db_video[1],
             'duration': db_video[2],
-            'author':   db_video[3],
+            'published': exact_timestamp(db_video[3]) if db_video[4] else posix_to_dumbed_down(db_video[3]),
+            'author':   db_video[5],
         })
 
     return videos, pseudo_number_of_videos
@@ -234,15 +237,15 @@ def _schedule_checking(cursor, channel_id, next_check_time):
 def _is_muted(cursor, channel_id):
     return bool(cursor.execute('''SELECT muted FROM subscribed_channels WHERE yt_channel_id=?''', [channel_id]).fetchone()[0])
 
-units = {
-    'year': 31536000,   # 365*24*3600
-    'month': 2592000,   # 30*24*3600
-    'week': 604800,     # 7*24*3600
-    'day':  86400,      # 24*3600
-    'hour': 3600,
-    'minute': 60,
-    'second': 1,
-}
+units = collections.OrderedDict([
+    ('year', 31536000),   # 365*24*3600
+    ('month', 2592000),   # 30*24*3600
+    ('week', 604800),     # 7*24*3600
+    ('day',  86400),      # 24*3600
+    ('hour', 3600),
+    ('minute', 60),
+    ('second', 1),
+])
 def youtube_timestamp_to_posix(dumb_timestamp):
     ''' Given a dumbed down timestamp such as 1 year ago, 3 hours ago,
          approximates the unix time (seconds since 1/1/1970) '''
@@ -251,11 +254,31 @@ def youtube_timestamp_to_posix(dumb_timestamp):
     if dumb_timestamp == "just now":
         return now
     split = dumb_timestamp.split(' ')
-    number, unit = int(split[0]), split[1]
-    if number > 1:
+    quantifier, unit = int(split[0]), split[1]
+    if quantifier > 1:
         unit = unit[:-1]    # remove s from end
-    return now - number*units[unit]
+    return now - quantifier*units[unit]
 
+def posix_to_dumbed_down(posix_time):
+    '''Inverse of youtube_timestamp_to_posix.'''
+    delta = int(time.time() - posix_time)
+    assert delta >= 0
+
+    if delta == 0:
+        return '0 seconds ago'
+
+    for unit_name, unit_time in units.items():
+        if delta >= unit_time:
+            quantifier = round(delta/unit_time)
+            if quantifier == 1:
+                return '1 ' + unit_name + ' ago'
+            else:
+                return str(quantifier) + ' ' + unit_name + 's ago'
+    else:
+        raise Exception()
+
+def exact_timestamp(posix_time):
+    return time.strftime('%m/%d/%y %I:%M %p', time.localtime(posix_time))
 
 try:
     existing_thumbnails = set(os.path.splitext(name)[0] for name in os.listdir(thumbnails_directory))
