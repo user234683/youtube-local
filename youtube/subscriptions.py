@@ -59,6 +59,9 @@ def open_database():
                               sql_channel_id integer NOT NULL REFERENCES subscribed_channels(id) ON UPDATE CASCADE ON DELETE CASCADE,
                               UNIQUE(tag, sql_channel_id)
                           )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS db_info (
+                              version integer DEFAULT 1
+                          )''')
 
         connection.commit()
     except:
