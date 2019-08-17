@@ -14,6 +14,7 @@ import urllib
 import math
 import secrets
 import collections
+import calendar # bullshit! https://bugs.python.org/issue6280
 
 import flask
 from flask import request
@@ -278,7 +279,10 @@ def posix_to_dumbed_down(posix_time):
         raise Exception()
 
 def exact_timestamp(posix_time):
-    return time.strftime('%m/%d/%y %I:%M %p', time.localtime(posix_time))
+    result = time.strftime('%I:%M %p %m/%d/%y', time.localtime(posix_time))
+    if result[0] == '0':    # remove 0 infront of hour (like 01:00 PM)
+        return result[1:]
+    return result
 
 try:
     existing_thumbnails = set(os.path.splitext(name)[0] for name in os.listdir(thumbnails_directory))
@@ -385,15 +389,64 @@ def _get_upstream_videos(channel_id):
 
     videos = []
 
-    channel_videos = channel.extract_info(json.loads(channel.get_channel_tab(channel_id, print_status=False)), 'videos')['items']
+    tasks = (
+        gevent.spawn(channel.get_channel_tab, channel_id, print_status=False), # channel page, need for video duration
+        gevent.spawn(util.fetch_url, 'https://www.youtube.com/feeds/videos.xml?channel_id=' + channel_id) # atoma feed, need for exact published time
+    )
+    gevent.joinall(tasks)
+
+    channel_tab, feed = tasks[0].value, tasks[1].value
+
+    # extract published times from atoma feed
+    times_published = {}
+    try:
+        def remove_bullshit(tag):
+            '''Remove XML namespace bullshit from tagname. https://bugs.python.org/issue18304'''
+            if '}' in tag:
+                return tag[tag.rfind('}')+1:]
+            return tag
+
+        def find_element(base, tag_name):
+            for element in base:
+                if remove_bullshit(element.tag) == tag_name:
+                    return element
+            return None
+
+        root = defusedxml.ElementTree.fromstring(feed.decode('utf-8'))
+        assert remove_bullshit(root.tag) == 'feed'
+        for entry in root:
+            if (remove_bullshit(entry.tag) != 'entry'):
+                continue
+
+            # it's yt:videoId in the xml but the yt: is turned into a namespace which is removed by remove_bullshit
+            video_id_element = find_element(entry, 'videoId')
+            time_published_element = find_element(entry, 'published')
+            assert video_id_element is not None
+            assert time_published_element is not None
+
+            time_published = int(calendar.timegm(time.strptime(time_published_element.text, '%Y-%m-%dT%H:%M:%S+00:00')))
+            times_published[video_id_element.text] = time_published
+
+    except (AssertionError, defusedxml.ElementTree.ParseError) as e:
+        print('Failed to read atoma feed for ' + channel_status_name)
+        traceback.print_exc()
+
+
+    channel_videos = channel.extract_info(json.loads(channel_tab), 'videos')['items']
     for i, video_item in enumerate(channel_videos):
         if 'description' not in video_item:
             video_item['description'] = ''
-        try:
-            video_item['time_published'] = youtube_timestamp_to_posix(video_item['published']) - i  # subtract a few seconds off the videos so they will be in the right order
-        except KeyError:
-            print(video_item)
-        videos.append((channel_id, video_item['id'], video_item['title'], video_item['duration'], video_item['time_published'], video_item['description']))
+
+        if video_item['id'] in times_published:
+            video_item['time_published'] = times_published[video_item['id']]
+            video_item['is_time_published_exact'] = True
+        else:
+            video_item['is_time_published_exact'] = False
+            try:
+                video_item['time_published'] = youtube_timestamp_to_posix(video_item['published']) - i  # subtract a few seconds off the videos so they will be in the right order
+            except KeyError:
+                print(video_item)
+        videos.append((channel_id, video_item['id'], video_item['title'], video_item['duration'], video_item['time_published'], video_item['is_time_published_exact'], video_item['description']))
 
 
     if len(videos) == 0:
@@ -430,8 +483,8 @@ def _get_upstream_videos(channel_id):
                     index += 1
                 number_of_new_videos = index
 
-            cursor.executemany('''INSERT OR IGNORE INTO videos (sql_channel_id, video_id, title, duration, time_published, description)
-                                  VALUES ((SELECT id FROM subscribed_channels WHERE yt_channel_id=?), ?, ?, ?, ?, ?)''', videos)
+            cursor.executemany('''INSERT OR IGNORE INTO videos (sql_channel_id, video_id, title, duration, time_published, is_time_published_exact, description)
+                                  VALUES ((SELECT id FROM subscribed_channels WHERE yt_channel_id=?), ?, ?, ?, ?, ?, ?)''', videos)
             cursor.execute('''UPDATE subscribed_channels
                               SET time_last_checked = ?, next_check_time = ?
                               WHERE yt_channel_id=?''', [int(time.time()), next_check_time, channel_id])
