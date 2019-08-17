@@ -51,7 +51,8 @@ def open_database():
                               duration text,
                               time_published integer NOT NULL,
                               is_time_published_exact integer DEFAULT 0,
-                              description text
+                              description text,
+                              watched integer default 0
                           )''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS tag_associations (
                               id integer PRIMARY KEY,
