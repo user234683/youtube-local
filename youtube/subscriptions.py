@@ -144,13 +144,14 @@ def _get_videos(cursor, number_per_page, offset, tag = None):
                                       FROM videos
                                       INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
                                       INNER JOIN tag_associations on videos.sql_channel_id = tag_associations.sql_channel_id
-                                      WHERE tag = ?
+                                      WHERE tag = ? AND muted = 0
                                       ORDER BY time_published DESC
                                       LIMIT ? OFFSET ?''', (tag, number_per_page*9, offset)).fetchall()
     else:
         db_videos = cursor.execute('''SELECT video_id, title, duration, time_published, is_time_published_exact, channel_name
                                       FROM videos
                                       INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
+                                      WHERE muted = 0
                                       ORDER BY time_published DESC
                                       LIMIT ? OFFSET ?''', (number_per_page*9, offset)).fetchall()
 
