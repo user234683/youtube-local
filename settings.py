@@ -1,12 +1,17 @@
+from youtube import util, yt_app
 import ast
 import re
 import os
 import collections
 
+import flask
+from flask import request
+
 settings_info = collections.OrderedDict([
     ('route_tor', {
         'type': bool,
         'default': False,
+        'label': 'Route Tor',
         'comment': '',
     }),
 
@@ -21,6 +26,7 @@ settings_info = collections.OrderedDict([
         'default': False,
         'comment': '''This will allow others to connect to your Youtube Local instance as a website.
 For security reasons, enabling this is not recommended.''',
+        'hidden': True,
     }),
 
     ('subtitles_mode', {
@@ -29,6 +35,12 @@ For security reasons, enabling this is not recommended.''',
         'comment': '''0 - off by default
 1 - only manually created subtitles on by default
 2 - enable even if automatically generated is all that's available''',
+        'label': 'Default subtitles mode',
+        'options': [
+            (0, 'Off'),
+            (1, 'Manually created only'),
+            (2, 'Automatic if manual unavailable'),
+        ],
     }),
 
     ('subtitles_language', {
@@ -42,7 +54,12 @@ For security reasons, enabling this is not recommended.''',
         'default': 1,
         'comment': '''0 - Related videos disabled
 1 - Related videos always shown
-2 - Related videos hidden; shown by clicking a button'''
+2 - Related videos hidden; shown by clicking a button''',
+        'options': [
+            (0, 'Disabled'),
+            (1, 'Always shown'),
+            (2, 'Shown by clicking button'),
+        ],
     }),
 
     ('comments_mode', {
@@ -51,6 +68,11 @@ For security reasons, enabling this is not recommended.''',
         'comment': '''0 - Video comments disabled
 1 - Video comments always shown
 2 - Video comments hidden; shown by clicking a button''',
+        'options': [
+            (0, 'Disabled'),
+            (1, 'Always shown'),
+            (2, 'Shown by clicking button'),
+        ],
     }),
 
     ('enable_comment_avatars', {
@@ -64,24 +86,31 @@ For security reasons, enabling this is not recommended.''',
         'default': 0,
         'comment': '''0 to sort by top
 1 to sort by newest''',
+        'options': [
+            (0, 'Top'),
+            (1, 'Newest'),
+        ],
     }),
 
     ('gather_googlevideo_domains', {
         'type': bool,
         'default': False,
         'comment': '''Developer use to debug 403s''',
+        'hidden': True,
     }),
 
     ('debugging_save_responses', {
         'type': bool,
         'default': False,
         'comment': '''Save all responses from youtube for debugging''',
+        'hidden': True,
     }),
 
     ('settings_version', {
         'type': int,
         'default': 2,
-        'comment': '''Do not change, remove, or comment out this value, or else your settings may be lost or corrupted'''
+        'comment': '''Do not change, remove, or comment out this value, or else your settings may be lost or corrupted''',
+        'hidden': True,
     }),
 ])
 
@@ -94,6 +123,11 @@ def comment_string(comment):
         result += '# ' + line + '\n'
     return result
 
+def save_settings(settings):
+    with open(settings_file_path, 'w', encoding='utf-8') as file:
+        for setting_name, default_setting_dict in settings_info.items():
+            file.write(comment_string(default_setting_dict['comment']) + setting_name + ' = ' + repr(settings[setting_name]) + '\n\n')
+
 
 def create_missing_settings_string(current_settings):
     result = ''
@@ -104,6 +138,11 @@ def create_missing_settings_string(current_settings):
 
 def create_default_settings_string():
     return settings_to_string({})
+
+def add_missing_settings(settings):
+    result = default_settings()
+    result.update(settings)
+    return result
 
 def default_settings():
     return {key: setting_info['default'] for key, setting_info in settings_info.items()}
@@ -148,21 +187,19 @@ else:
 
 settings_file_path = os.path.join(settings_dir, 'settings.txt')
 
-locals().update(default_settings())
-
 try:
     with open(settings_file_path, 'r', encoding='utf-8') as file:
         settings_text = file.read()
 except FileNotFoundError:
-    with open(settings_file_path, 'w', encoding='utf-8') as file:
-        file.write(create_default_settings_string())
+    settings = default_settings()
+    save_settings(settings)
 else:
     if re.fullmatch(r'\s*', settings_text):     # blank file
-        with open(settings_file_path, 'w', encoding='utf-8') as file:
-            file.write(create_default_settings_string())
+        settings = default_settings()
+        save_settings(settings)
     else:
         # parse settings in a safe way, without exec
-        current_settings = {}
+        settings = {}
         attributes = {
             ast.NameConstant: 'value',
             ast.Num: 'n',
@@ -191,26 +228,21 @@ else:
                 log_ignored_line(node.lineno, "only literals allowed for values")
                 continue
 
-            current_settings[target.id] = node.value.__getattribute__(attributes[type(node.value)])
+            settings[target.id] = node.value.__getattribute__(attributes[type(node.value)])
 
 
-        if 'settings_version' not in current_settings:
+        if 'settings_version' not in settings:
             print('Upgrading settings.txt')
-            new_settings = upgrade_to_2(current_settings)
-            locals().update(new_settings)
-            new_settings_string = settings_to_string(new_settings)
-            with open(settings_file_path, 'w', encoding='utf-8') as file:
-                file.write(new_settings_string)
+            settings = add_missing_settings(upgrade_to_2(settings))
+            save_settings(settings)
 
         # some settings not in the file, add those missing settings to the file
-        elif len(settings_info.keys() - current_settings.keys()) != 0:
+        elif not settings.keys() >= settings_info.keys():
             print('Adding missing settings to settings.txt')
-            append_text = create_missing_settings_string(current_settings)
-            with open(settings_file_path, 'a', encoding='utf-8') as file:
-                file.write('\n\n' + append_text)
-            locals().update(current_settings)
-        else:
-            locals().update(current_settings)
+            settings = add_missing_settings(settings)
+            save_settings(settings)
+
+locals().update(settings)
 
 
 
@@ -219,3 +251,43 @@ if route_tor:
     print("Tor routing is ON")
 else:
     print("Tor routing is OFF - your Youtube activity is NOT anonymous")
+
+
+
+@yt_app.route('/settings', methods=['POST', 'GET'])
+def settings_page():
+    if request.method == 'GET':
+        return flask.render_template('settings.html',
+            settings = [(setting_name, setting_info, settings[setting_name]) for setting_name, setting_info in settings_info.items()]
+        )
+    elif request.method == 'POST':
+        for key, value in request.values.items():
+            if key in settings_info:
+                if settings_info[key]['type'] is bool and value == 'on':
+                    settings[key] = True
+                else:
+                    settings[key] = settings_info[key]['type'](value)
+            else:
+                flask.abort(400)
+
+        # need this bullshit because browsers don't send anything when an input is unchecked
+        expected_inputs = {setting_name for setting_name, setting_info in settings_info.items() if not settings_info[setting_name].get('hidden', False)}
+        missing_inputs = expected_inputs - set(request.values.keys())
+        for setting_name in missing_inputs:
+            assert settings_info[setting_name]['type'] is bool, missing_inputs
+            settings[setting_name] = False
+
+        globals().update(settings)
+        save_settings(settings)
+        return flask.redirect(util.URL_ORIGIN + '/settings', 303)
+    else:
+        flask.abort(400)
+
+
+
+
+
+
+
+
+
