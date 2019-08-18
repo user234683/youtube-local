@@ -4,6 +4,9 @@ h1, h2, h3, h4, h5, h6, div, button{
     
 }
 
+address{
+    font-style:normal;
+}
 
 body{
     margin:0;
@@ -14,76 +17,90 @@ body{
     background-color:#cccccc;
     
     min-height:100vh;
-    
-    display:grid;
-    grid-template-rows: 50px 1fr;
 }
 
     header{
         background-color:#333333;
+        height: 50px;
 
-        grid-row: 1;
-
-        display:grid;
-        grid-template-columns: minmax(0px, 3fr) 640px 40px 500px minmax(0px,2fr);
+        display: flex;
     }
 
-    main{
-        grid-row: 2;
-    }
-
-address{
-    font-style:normal;
-}
-
-
-
-    #site-search{
-        grid-column: 2;
-        display: grid;
-        grid-template-columns: 1fr auto auto;
-
-    }
-
-        #site-search .search-box{
-            align-self:center;
-            height:25px;
-            border:0;
-            
-            grid-column: 1;
+        #home-link{
+            align-self: center;
+            margin-left:10px;
+            color: #ffffff;
         }
-        #site-search .search-button{
-            grid-column: 2;
-            align-self:center;
-            height:25px;
 
-            border-style:solid;
-            border-width:1px;
+
+        #site-search{
+            max-width: 600px;
+            margin-left:10px;
+            display: flex;
+            flex-grow: 1;
         }
-        #site-search .dropdown{
-            margin-left:5px;
-            grid-column: 3;
-            align-self:center;
-            height:25px;
-        }
-            #site-search .dropdown button{
+
+            #site-search .search-box{
+                align-self:center;
+                height:25px;
+                border:0;
+
+                flex-grow: 1;
+            }
+            #site-search .search-button{
                 align-self:center;
                 height:25px;
 
                 border-style:solid;
                 border-width:1px;
             }
-            #site-search .css-sucks{
-                width:0px;
-                height:0px;
+            #site-search .dropdown{
+                margin-left:5px;
+                align-self:center;
+                height:25px;
             }
-                #site-search .dropdown-content{
-                    grid-template-columns: auto auto;
-                    white-space: nowrap;
+                #site-search .dropdown button{
+                    align-self:center;
+                    height:25px;
+
+                    border-style:solid;
+                    border-width:1px;
                 }
-                    #site-search .dropdown-content h3{
-                        grid-column:1 / span 2;
+                #site-search .css-sucks{
+                    width:0px;
+                    height:0px;
+                }
+                    #site-search .dropdown-content{
+                        grid-template-columns: auto auto;
+                        white-space: nowrap;
                     }
+                        #site-search .dropdown-content h3{
+                            grid-column:1 / span 2;
+                        }
+
+        #playlist-edit{
+            margin-left: 10px;
+            align-self: center;
+        }
+            #local-playlists{
+                margin-right:5px;
+                color: #ffffff;
+            }
+            #playlist-name-selection{
+            }
+            #playlist-add-button{
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            #item-selection-reset{
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+
+    main{
+        grid-row: 2;
+    }
+
 
 .dropdown{
     z-index:1;
@@ -97,50 +114,6 @@ address{
         /* making it inline-grid happened to fix it */
         display:inline-grid;
     }
-
-
-
-#header-right{
-    grid-column:4;
-    
-    display:grid;
-    grid-template-columns:auto auto auto 1fr;
-    grid-template-rows: 1fr;
-    width: 540px;
-}
-    #playlist-edit{
-        display:contents;
-    }
-        #local-playlists{
-            grid-column: 1;
-            grid-row:1;
-            align-self: center;
-            margin-right:5px;
-            color: #ffffff;
-        }
-        #playlist-name-selection{
-            grid-column:2;
-            grid-row:1;
-            justify-self:start;
-            align-self: center;
-        }
-        #playlist-add-button{
-            grid-column:3;
-            grid-row:1;
-            align-self: center;
-            padding-left: 10px;
-            padding-right: 10px;
-        }
-        #item-selection-reset{
-            grid-column:4;
-            grid-row:1;
-            align-self: center;
-            justify-self:start;
-            padding-left: 10px;
-            padding-right: 10px;
-        }
-
-
 
 .item-list{
     display: grid;

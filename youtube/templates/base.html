@@ -16,6 +16,7 @@
     </head>
     <body>
         <header>
+                <a href="/youtube.com" id="home-link">Home</a>
                 <form id="site-search" action="/youtube.com/search">
                     <input type="search" name="query" class="search-box" value="{{ search_box_value }}">
                     <button type="submit" value="Search" class="search-button">Search</button>
@@ -91,19 +92,16 @@
                     </div>
                 </form>
 
-            <div id="header-right">
-                <form id="playlist-edit" action="/youtube.com/edit_playlist" method="post" target="_self">
-                    <input name="playlist_name" id="playlist-name-selection" list="playlist-options" type="text">
-                    <datalist id="playlist-options">
-                    {% for playlist_name in header_playlist_names %}
-                        <option value="{{ playlist_name }}">{{ playlist_name }}</option>
-                    {% endfor %}
-                    </datalist>
-                    <button type="submit" id="playlist-add-button" name="action" value="add">Add to playlist</button>
-                    <button type="reset" id="item-selection-reset">Clear selection</button>
-                </form>
-                <a href="/youtube.com/playlists" id="local-playlists">Local playlists</a>
-            </div>
+            <form id="playlist-edit" action="/youtube.com/edit_playlist" method="post" target="_self">
+                <input name="playlist_name" id="playlist-name-selection" list="playlist-options" type="text">
+                <datalist id="playlist-options">
+                {% for playlist_name in header_playlist_names %}
+                    <option value="{{ playlist_name }}">{{ playlist_name }}</option>
+                {% endfor %}
+                </datalist>
+                <button type="submit" id="playlist-add-button" name="action" value="add">Add to playlist</button>
+                <button type="reset" id="item-selection-reset">Clear selection</button>
+            </form>
         </header>
         <main>
 {% block main %}
