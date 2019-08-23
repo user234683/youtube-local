@@ -82,7 +82,6 @@ def get_local_playlist_videos(name, offset=0, amount=50):
             else:
                 info['thumbnail'] = util.get_thumbnail_url(info['id'])
                 missing_thumbnails.append(info['id'])
-            info['item_size'] = 'small'
             info['type'] = 'video'
             yt_data_extract.add_extra_html_info(info)
             videos.append(info)

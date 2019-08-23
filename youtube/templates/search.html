@@ -45,7 +45,7 @@
             </div>
             <div class="item-list">
                 {% for info in results %}
-                    {{ common_elements.item(info) }}
+                    {{ common_elements.item(info, description=true) }}
                 {% endfor %}
             </div>
             <nav class="page-button-row">

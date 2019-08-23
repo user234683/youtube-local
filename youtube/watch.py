@@ -36,7 +36,6 @@ def watch_page_related_video_info(item):
     except KeyError:
         result['views'] = ''
     result['thumbnail'] = util.get_thumbnail_url(item['id'])
-    result['item_size'] = 'small'
     result['type'] = 'video'
     return result
     
@@ -47,7 +46,6 @@ def watch_page_related_playlist_info(item):
         'id': item['list'],
         'first_video_id': item['video_id'],
         'thumbnail': util.get_thumbnail_url(item['video_id']),
-        'item_size': 'small',
         'type': 'playlist',
     }
 
