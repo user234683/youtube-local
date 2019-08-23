@@ -17,6 +17,8 @@ body{
     background-color:#cccccc;
     
     min-height:100vh;
+    display: flex;
+    flex-direction: column;
 }
 
     header{
@@ -99,7 +101,7 @@ body{
             }
 
     main{
-        grid-row: 2;
+        flex-grow: 1;
     }
 
 
