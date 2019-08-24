@@ -66,6 +66,12 @@ For security reasons, enabling this is not recommended.''',
 1 to sort by newest''',
     }),
 
+    ('theater_mode', {
+        'type': bool,
+        'default': True,
+        'comment': '',
+    }),
+
     ('gather_googlevideo_domains', {
         'type': bool,
         'default': False,

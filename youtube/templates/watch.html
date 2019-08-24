@@ -3,17 +3,39 @@
 {% import "common_elements.html" as common_elements %}
 {% import "comments.html" as comments %}
 {% block style %}
+    {% if theater_mode %}
+        video{
+            grid-column: 1 / span 5;
+            width: 100%;
+            max-height: 360px;
+        }
+        #related{
+            margin-top: 10px;
+            grid-row: 2 /span 3;
+            width: 400px;
+        }
+        .video-info{
+            margin-top: 10px;
+            width: 640px;
+        }
+    {% else %}
+        video{
+            height: 360px;
+            width: 640px;
+            grid-column: 2;
+        }
+        #related{
+            grid-row: 1 /span 4;
+        }
+    {% endif %}
+
     main{
         display:grid;
         grid-template-columns: 1fr 640px 40px 400px 1fr;
         grid-template-rows: auto auto auto auto;
         align-content: start;
     }
-        video{
-            height: 360px;
-            width: 640px;
-            grid-column: 2;
-        }
+
         .video-info{
             grid-column: 2;
             grid-row: 2;
@@ -99,7 +121,6 @@
             }
         #related{
             grid-column: 4;
-            grid-row: 1 /span 4;
             display: grid;
             grid-auto-rows: 94px;
             grid-row-gap: 10px;
@@ -116,6 +137,7 @@
             margin-top: 10px;
             grid-column: 2;
             grid-row: 3;
+            width: initial;
         }
         .comments-area{
             grid-row: 4;

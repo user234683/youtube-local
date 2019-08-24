@@ -207,6 +207,8 @@ def get_watch_page():
         music_attributes        = get_ordered_music_list_attributes(info['music_list']),
         comments_info           = comments_info,
 
+        theater_mode            = settings.theater_mode,
+
         title       = info['title'],
         uploader    = info['uploader'],
         description = info['description'],
