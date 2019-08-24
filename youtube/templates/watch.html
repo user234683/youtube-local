@@ -75,11 +75,12 @@
                 justify-self:end;
             }
             .video-info > .download-dropdown{
-                grid-column:1;
-                grid-row: 5;
+                grid-column:1 / span 2;
+                grid-row: 6;
             }
             .video-info > .checkbox{
                 justify-self:end;
+                align-self: start;
 
                 grid-row: 5;
                 grid-column: 2;
@@ -91,11 +92,11 @@
                 min-width: 0;
                 word-wrap: break-word;
                 grid-column: 1 / span 2;
-                grid-row: 6;
+                grid-row: 7;
             }
 
             .music-list{
-                grid-row:7;
+                grid-row:8;
                 grid-column: 1 / span 2;
                 background-color: #dadada;
             }
@@ -145,35 +146,42 @@
     }
 
 
-    .download-dropdown{
-        z-index:1;
-        justify-self:start;
-        min-width:0px;
-        height:0px;
+    .download-dropdown-label{
+        background-color: #dadada;
+        border-style: outset;
+        border-width: 2px;
+        font-weight: bold;
+        padding-bottom: 2px;
     }
-
-        .download-dropdown-label{
-            background-color: #e9e9e9;
-            border-style: outset;
-            border-width: 2px;
-            font-weight: bold;
-        }
-
+    .download-dropdown-label:hover{
+        text-decoration: underline;
+    }
         .download-dropdown-content{
-            display:none;
-            background-color: #e9e9e9;
+            background-color: #dadada;
+            padding: 10px;
+            list-style: none;
+            margin: 0px;
         }
-        .download-dropdown:hover .download-dropdown-content {
-            display: grid;
-            grid-auto-rows:30px;
-            padding-bottom: 50px;
-        }
-            .download-dropdown-content a{
-                white-space: nowrap;
-                display:grid;
-                grid-template-columns: 60px 90px auto;
-                max-height: 1.2em;
+            li.download-format{
+                margin-bottom: 7px;
             }
+                .format-attributes{
+                    list-style: none;
+                    padding: 0px;
+                    margin: 0px;
+                    display: flex;
+                    flex-direction: row;
+                }
+                    .format-attributes li{
+                        white-space: nowrap;
+                        max-height: 1.2em;
+                    }
+                    .format-ext{
+                        width: 60px;
+                    }
+                    .format-res{
+                        width:90px;
+                    }
 {% endblock style %}
 
 {% block main %}
@@ -203,18 +211,22 @@
 
         <time datetime="$upload_date">Published on {{ upload_date }}</time>
         <span class="likes-dislikes">{{ likes }} likes {{ dislikes }} dislikes</span>
-        <div class="download-dropdown">
-            <button class="download-dropdown-label">Download</button>
-            <div class="download-dropdown-content">
+        <details class="download-dropdown">
+            <summary class="download-dropdown-label">Download</summary>
+            <ul class="download-dropdown-content">
                 {% for format in download_formats %}
-                    <a href="{{ format['url'] }}">
-                        <span>{{ format['ext'] }}</span>
-                        <span>{{ format['resolution'] }}</span>
-                        <span>{{ format['note'] }}</span>
-                    </a>
+                    <li class="download-format">
+                        <a class="download-link" href="{{ format['url'] }}">
+                            <ol class="format-attributes">
+                                <li class="format-ext">{{ format['ext'] }}</li>
+                                <li class="format-res">{{ format['resolution'] }}</li>
+                                <li class="format-note">{{ format['note'] }}</li>
+                            </ol>
+                        </a>
+                    </li>
                 {% endfor %}
-            </div>
-        </div>
+            </ul>
+        </details>
         <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
 
 
