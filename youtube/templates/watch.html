@@ -8,14 +8,7 @@
         grid-template-columns: 1fr 640px 40px 400px 1fr;
         grid-template-rows: auto auto auto auto;
         align-content: start;
-        background-color:#cccccc;
     }
-        #left{
-            background-color:#bcbcbc;
-            grid-column: 1;
-            grid-row: 1 / span 3;
-
-        }
         video{
             height: 360px;
             width: 640px;
@@ -28,14 +21,13 @@
             grid-template-rows: 0fr 0fr 0fr 20px 0fr 0fr;
             grid-template-columns: 1fr 1fr;
             align-content: start;
-            background-color:#bcbcbc;
         }
             .video-info > .title{
                 grid-column: 1 / span 2;
                 min-width: 0;
             }
             .video-info > .is-unlisted{
-                background-color: #d0d0d0;
+                background-color: #dadada;
                 justify-self:start;
                 padding-left:2px;
                 padding-right:2px;
@@ -71,7 +63,7 @@
                 grid-column: 2;
             }
             .video-info > .description{
-                background-color:#d0d0d0;
+                background-color:#dadada;
                 margin-top:8px;
                 white-space: pre-wrap;
                 min-width: 0;
@@ -83,7 +75,7 @@
             .music-list{
                 grid-row:7;
                 grid-column: 1 / span 2;
-                background-color: #d0d0d0;
+                background-color: #dadada;
             }
                 .music-list table,th,td{
                     border: 1px solid;
@@ -101,7 +93,6 @@
             grid-column: 2;
             grid-row: 3;
             padding-top:10px;
-            background-color:#bcbcbc;
         }
             .comment{
                 width:640px;
@@ -122,6 +113,7 @@
             grid-template-columns: 1fr 640px 40px 1fr;
         }
         #related{
+            margin-top: 10px;
             grid-column: 2;
             grid-row: 3;
         }
@@ -163,9 +155,6 @@
 {% endblock style %}
 
 {% block main %}
-    <div id="left">
-    </div>
-
     <video controls autofocus>
         {% for video_source in video_sources %}
             <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
