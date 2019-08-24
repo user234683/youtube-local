@@ -3,96 +3,88 @@
 {% import "common_elements.html" as common_elements %}
 {% import "comments.html" as comments %}
 {% block style %}
-            main{
-                display:grid;
-                grid-template-columns: 1fr 640px 40px 500px 1fr;
-                background-color:#cccccc;
-            }
+    main{
+        display:grid;
+        grid-template-columns: 1fr 640px 40px 400px 1fr;
+        grid-template-rows: auto auto auto auto;
+        align-content: start;
+        background-color:#cccccc;
+    }
+        #left{
+            background-color:#bcbcbc;
+            grid-column: 1;
+            grid-row: 1 / span 3;
 
-            #left{
-                background-color:#bcbcbc;
+        }
+        video{
+            height: 360px;
+            width: 640px;
+            grid-column: 2;
+        }
+        .video-info{
+            grid-column: 2;
+            grid-row: 2;
+            display: grid;
+            grid-template-rows: 0fr 0fr 0fr 20px 0fr 0fr;
+            grid-template-columns: 1fr 1fr;
+            align-content: start;
+            background-color:#bcbcbc;
+        }
+            .video-info > .title{
+                grid-column: 1 / span 2;
+                min-width: 0;
+            }
+            .video-info > .is-unlisted{
+                background-color: #d0d0d0;
+                justify-self:start;
+                padding-left:2px;
+                padding-right:2px;
+            }
+            .video-info > address{
                 grid-column: 1;
-
+                grid-row: 3;
+                justify-self: start;
             }
-                .full-item{
-                    display: grid;
-                    grid-column: 2;
-                    grid-template-rows: 0fr 0fr 0fr 0fr 20px 0fr 0fr;
-                    grid-template-columns: 1fr 1fr;
-                    align-content: start;
-                    background-color:#bcbcbc;
-                }
-                    .full-item > video{
-                        grid-column: 1 / span 2;
-                        grid-row: 1;
-                    }
-                    .full-item > .title{
-                        grid-column: 1 / span 2;
-                        grid-row:2;
-                        min-width: 0;
-                    }
-                    .full-item > .is-unlisted{
-                        background-color: #d0d0d0;
-                        justify-self:start;
-                        padding-left:2px;
-                        padding-right:2px;
-                    }
-                    .full-item > address{
-                        grid-column: 1;
-                        grid-row: 4;
-                        justify-self: start;
-                    }
-                    .full-item > .views{
-                        grid-column: 2;
-                        grid-row: 4;
-                        justify-self:end;
-                    }
-                    .full-item > time{
-                        grid-column: 1;
-                        grid-row: 5;
-                        justify-self:start;
-                    }
-                    .full-item > .likes-dislikes{
-                        grid-column: 2;
-                        grid-row: 5;
-                        justify-self:end;
-                    }
-                    .full-item > .download-dropdown{
-                        grid-column:1;
-                        grid-row: 6;
-                    }
-                    .full-item > .checkbox{
-                        justify-self:end;
+            .video-info > .views{
+                grid-column: 2;
+                grid-row: 3;
+                justify-self:end;
+            }
+            .video-info > time{
+                grid-column: 1;
+                grid-row: 4;
+                justify-self:start;
+            }
+            .video-info > .likes-dislikes{
+                grid-column: 2;
+                grid-row: 4;
+                justify-self:end;
+            }
+            .video-info > .download-dropdown{
+                grid-column:1;
+                grid-row: 5;
+            }
+            .video-info > .checkbox{
+                justify-self:end;
 
-                        grid-row: 6;
-                        grid-column: 2;
-                    }
-                    .full-item > .description{
-                        background-color:#d0d0d0;
-                        margin-top:8px;
-                        white-space: pre-wrap;
-                        min-width: 0;
-                        word-wrap: break-word;
-                        grid-column: 1 / span 2;
-                        grid-row: 7;
-                    }
-                    .full-item .music-list{
-                        grid-row:8;
-                        grid-column: 1 / span 2;
-                    }
+                grid-row: 5;
+                grid-column: 2;
+            }
+            .video-info > .description{
+                background-color:#d0d0d0;
+                margin-top:8px;
+                white-space: pre-wrap;
+                min-width: 0;
+                word-wrap: break-word;
+                grid-column: 1 / span 2;
+                grid-row: 6;
+            }
 
-                    .full-item .comments-area{
-                        grid-column: 1 / span 2;
-                        grid-row: 9;
-                        margin-top:10px;
-                    }
-                        .comment{
-                            width:640px;
-                        }
-
-                .music-list{
-                    background-color: #d0d0d0;
-                }
+            .music-list{
+                grid-row:7;
+                grid-column: 1 / span 2;
+                background-color: #d0d0d0;
+            }
                 .music-list table,th,td{
                     border: 1px solid;
                 }
@@ -105,123 +97,148 @@
                     font-weight:bold;
                     margin-bottom:5px;
                 }
-
-                #related{
-                    grid-column: 4;
-                    display: grid;
-                    grid-auto-rows: 94px;
-                    grid-row-gap: 10px;
-                }
-
-            .download-dropdown{
-                z-index:1;
-                justify-self:start;
-                min-width:0px;
-                height:0px;
+        .comments-area{
+            grid-column: 2;
+            grid-row: 3;
+            padding-top:10px;
+            background-color:#bcbcbc;
+        }
+            .comment{
+                width:640px;
             }
+        #related{
+            grid-column: 4;
+            grid-row: 1 /span 4;
+            display: grid;
+            grid-auto-rows: 94px;
+            grid-row-gap: 10px;
+            max-width: 640px;
+        }
 
-                .download-dropdown-label{
-                    background-color: #e9e9e9;
-                    border-style: outset;
-                    border-width: 2px;
-                    font-weight: bold;
-                }
+    /* Put related vids below videos when window is too small */
+    /* 1100px instead of 1080 because W3C is full of idiots who include scrollbar width */
+    @media (max-width:1100px){
+        main{
+            grid-template-columns: 1fr 640px 40px 1fr;
+        }
+        #related{
+            grid-column: 2;
+            grid-row: 3;
+        }
+        .comments-area{
+            grid-row: 4;
+        }
+    }
 
-                .download-dropdown-content{
-                    display:none;
-                    background-color: #e9e9e9;
-                }
-                .download-dropdown:hover .download-dropdown-content {
-                    display: grid;
-                    grid-auto-rows:30px;
-                    padding-bottom: 50px;
-                }
-                    .download-dropdown-content a{
-                        white-space: nowrap;
-                        display:grid;
-                        grid-template-columns: 60px 90px auto;
-                        max-height: 1.2em;
-                    }
+
+    .download-dropdown{
+        z-index:1;
+        justify-self:start;
+        min-width:0px;
+        height:0px;
+    }
+
+        .download-dropdown-label{
+            background-color: #e9e9e9;
+            border-style: outset;
+            border-width: 2px;
+            font-weight: bold;
+        }
+
+        .download-dropdown-content{
+            display:none;
+            background-color: #e9e9e9;
+        }
+        .download-dropdown:hover .download-dropdown-content {
+            display: grid;
+            grid-auto-rows:30px;
+            padding-bottom: 50px;
+        }
+            .download-dropdown-content a{
+                white-space: nowrap;
+                display:grid;
+                grid-template-columns: 60px 90px auto;
+                max-height: 1.2em;
+            }
 {% endblock style %}
 
 {% block main %}
-                <div id="left">
-                </div>
-                <article class="full-item">
+    <div id="left">
+    </div>
 
-                    <video width="640" height="360" controls autofocus>
-{% for video_source in video_sources %}
-                        <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
-{% endfor %}
+    <video controls autofocus>
+        {% for video_source in video_sources %}
+            <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
+        {% endfor %}
 
-{% for source in subtitle_sources %}
-    {% if source['on'] %}
-                        <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
-    {% else %}
-                        <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
-    {% endif %}
-{% endfor %}
+        {% for source in subtitle_sources %}
+            {% if source['on'] %}
+                <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
+            {% else %}
+                <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
+            {% endif %}
+        {% endfor %}
 
-                    </video>
+    </video>
 
-                    <h2 class="title">{{ title }}</h2>
-{% if unlisted %}
-                    <span class="is-unlisted">Unlisted</span>
-{% endif %}
-                    <address>Uploaded by <a href="{{ uploader_channel_url }}">{{ uploader }}</a></address>
-                    <span class="views">{{ views }} views</span>
-
-
-                    <time datetime="$upload_date">Published on {{ upload_date }}</time>
-                    <span class="likes-dislikes">{{ likes }} likes {{ dislikes }} dislikes</span>
-                    <div class="download-dropdown">
-                        <button class="download-dropdown-label">Download</button>
-                        <div class="download-dropdown-content">
-{% for format in download_formats %}
-                            <a href="{{ format['url'] }}">
-                                <span>{{ format['ext'] }}</span>
-                                <span>{{ format['resolution'] }}</span>
-                                <span>{{ format['note'] }}</span>
-                            </a>
-{% endfor %}
-                        </div>
-                    </div>
-                    <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
-
-                    <span class="description">{{ description }}</span>
-                    <div class="music-list">
-                        {% if music_list.__len__() != 0 %}
-                            <hr>
-                            <table>
-                                <caption>Music</caption>
-                                <tr>
-                                    {% for attribute in music_attributes %}
-                                        <th>{{ attribute }}</th>
-                                    {% endfor %}
-                                </tr>
-                                {% for track in music_list %}
-                                    <tr>
-                                        {% for attribute in music_attributes %}
-                                            <td>{{ track.get(attribute.lower(), '') }}</td>
-                                        {% endfor %}
-                                    </tr>
-                                {% endfor %}
-                            </table>
-                        {% endif %}
-                    </div>
-
-                {% if comments_info %}
-                    {{ comments.video_comments(comments_info) }}
-                {% endif %}
-                </article>
+    <div class="video-info">
+        <h2 class="title">{{ title }}</h2>
+        {% if unlisted %}
+            <span class="is-unlisted">Unlisted</span>
+        {% endif %}
+        <address>Uploaded by <a href="{{ uploader_channel_url }}">{{ uploader }}</a></address>
+        <span class="views">{{ views }} views</span>
 
 
+        <time datetime="$upload_date">Published on {{ upload_date }}</time>
+        <span class="likes-dislikes">{{ likes }} likes {{ dislikes }} dislikes</span>
+        <div class="download-dropdown">
+            <button class="download-dropdown-label">Download</button>
+            <div class="download-dropdown-content">
+                {% for format in download_formats %}
+                    <a href="{{ format['url'] }}">
+                        <span>{{ format['ext'] }}</span>
+                        <span>{{ format['resolution'] }}</span>
+                        <span>{{ format['note'] }}</span>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+        <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
 
 
-                <nav id="related">
-                    {% for info in related %}
-                        {{ common_elements.item(info) }}
+        <span class="description">{{ description }}</span>
+        <div class="music-list">
+            {% if music_list.__len__() != 0 %}
+                <hr>
+                <table>
+                    <caption>Music</caption>
+                    <tr>
+                        {% for attribute in music_attributes %}
+                            <th>{{ attribute }}</th>
+                        {% endfor %}
+                    </tr>
+                    {% for track in music_list %}
+                        <tr>
+                            {% for attribute in music_attributes %}
+                                <td>{{ track.get(attribute.lower(), '') }}</td>
+                            {% endfor %}
+                        </tr>
                     {% endfor %}
-                </nav>
+                </table>
+            {% endif %}
+        </div>
+    </div>
 
+    <nav id="related">
+        {% for info in related %}
+            {{ common_elements.item(info) }}
+        {% endfor %}
+    </nav>
+
+    <section class="comments-area">
+        {% if comments_info %}
+            {{ comments.video_comments(comments_info) }}
+        {% endif %}
+    </section>
 {% endblock main %}
