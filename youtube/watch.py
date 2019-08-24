@@ -217,6 +217,9 @@ def get_watch_page():
         comments_info           = comments_info,
 
         theater_mode            = settings.theater_mode,
+        related_videos_mode     = settings.related_videos_mode,
+        comments_mode           = settings.comments_mode,
+
         video_height            = video_height,
 
         title       = info['title'],

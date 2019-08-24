@@ -3,19 +3,29 @@
 {% import "common_elements.html" as common_elements %}
 {% import "comments.html" as comments %}
 {% block style %}
+    details > summary{
+        background-color: #dadada;
+        border-style: outset;
+        border-width: 2px;
+        font-weight: bold;
+        padding-bottom: 2px;
+    }
+    details > summary:hover{
+        text-decoration: underline;
+    }
+
     {% if theater_mode %}
         video{
             grid-column: 1 / span 5;
             width: 100%;
             max-height: {{ video_height }}px;
+            margin-bottom: 10px;
         }
-        #related{
-            margin-top: 10px;
+        .related-videos-outer{
             grid-row: 2 /span 3;
             width: 400px;
         }
         .video-info{
-            margin-top: 10px;
             width: 640px;
         }
     {% else %}
@@ -24,7 +34,7 @@
             width: 640px;
             grid-column: 2;
         }
-        #related{
+        .related-videos-outer{
             grid-row: 1 /span 4;
         }
     {% endif %}
@@ -112,20 +122,26 @@
                     font-weight:bold;
                     margin-bottom:5px;
                 }
-        .comments-area{
+        .comments-area-outer{
             grid-column: 2;
             grid-row: 3;
-            padding-top:10px;
+            margin-top:10px;
+        }
+        .comments-area-inner{
+            padding-top: 10px;
         }
             .comment{
                 width:640px;
             }
-        #related{
+        .related-videos-outer{
             grid-column: 4;
+            max-width: 640px;
+        }
+        .related-videos-inner{
+            padding-top: 10px;
             display: grid;
             grid-auto-rows: 94px;
             grid-row-gap: 10px;
-            max-width: 640px;
         }
 
     /* Put related vids below videos when window is too small */
@@ -134,54 +150,43 @@
         main{
             grid-template-columns: 1fr 640px 40px 1fr;
         }
-        #related{
+        .related-videos-outer{
             margin-top: 10px;
             grid-column: 2;
             grid-row: 3;
             width: initial;
         }
-        .comments-area{
+        .comments-area-outer{
             grid-row: 4;
         }
     }
 
-
-    .download-dropdown-label{
+    .download-dropdown-content{
         background-color: #dadada;
-        border-style: outset;
-        border-width: 2px;
-        font-weight: bold;
-        padding-bottom: 2px;
+        padding: 10px;
+        list-style: none;
+        margin: 0px;
     }
-    .download-dropdown-label:hover{
-        text-decoration: underline;
-    }
-        .download-dropdown-content{
-            background-color: #dadada;
-            padding: 10px;
-            list-style: none;
-            margin: 0px;
+        li.download-format{
+            margin-bottom: 7px;
         }
-            li.download-format{
-                margin-bottom: 7px;
+            .format-attributes{
+                list-style: none;
+                padding: 0px;
+                margin: 0px;
+                display: flex;
+                flex-direction: row;
             }
-                .format-attributes{
-                    list-style: none;
-                    padding: 0px;
-                    margin: 0px;
-                    display: flex;
-                    flex-direction: row;
+                .format-attributes li{
+                    white-space: nowrap;
+                    max-height: 1.2em;
                 }
-                    .format-attributes li{
-                        white-space: nowrap;
-                        max-height: 1.2em;
-                    }
-                    .format-ext{
-                        width: 60px;
-                    }
-                    .format-res{
-                        width:90px;
-                    }
+                .format-ext{
+                    width: 60px;
+                }
+                .format-res{
+                    width:90px;
+                }
 {% endblock style %}
 
 {% block main %}
@@ -253,15 +258,25 @@
         </div>
     </div>
 
-    <nav id="related">
-        {% for info in related %}
-            {{ common_elements.item(info) }}
-        {% endfor %}
-    </nav>
+    {% if related_videos_mode != 0 %}
+        <details class="related-videos-outer" {{'open' if related_videos_mode == 1 else ''}}>
+            <summary>Related Videos</summary>
+            <nav class="related-videos-inner">
+                {% for info in related %}
+                    {{ common_elements.item(info) }}
+                {% endfor %}
+            </nav>
+        </details>
+    {% endif %}
 
-    <section class="comments-area">
-        {% if comments_info %}
-            {{ comments.video_comments(comments_info) }}
-        {% endif %}
-    </section>
+    {% if comments_mode != 0 %}
+        <details class="comments-area-outer" {{'open' if comments_mode == 1 else ''}}>
+            <summary>Comments</summary>
+            <section class="comments-area-inner comments-area">
+                {% if comments_info %}
+                    {{ comments.video_comments(comments_info) }}
+                {% endif %}
+            </section>
+        </details>
+    {% endif %}
 {% endblock main %}
