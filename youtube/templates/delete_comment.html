@@ -2,14 +2,10 @@
 {% extends "base.html" %}
 
 {% block style %}
-    main{
-        display: grid;
-        grid-template-columns: minmax(0px, 3fr) 640px 40px 500px minmax(0px,2fr);
-        align-content: start;
-    }
     main > div, main > form{
+        margin: auto;
         margin-top:20px;
-        grid-column:2;
+        width: 640px;
     }
 {% endblock style %}
 

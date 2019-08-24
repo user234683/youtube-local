@@ -267,7 +267,10 @@ body{
 
 
 .page-button-row{
+    margin-top: 10px;
+    margin-bottom: 10px;
     justify-self:center;
+    justify-content: center;
     display: grid;
     grid-auto-columns: 40px;
     grid-auto-flow: column; 

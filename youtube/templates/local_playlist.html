@@ -2,59 +2,41 @@
 {% extends "base.html" %}
 {% import "common_elements.html" as common_elements %}
 {% block style %}
-    main{
-        display:grid;
-        grid-template-columns: 3fr 1fr;
+    main > *{
+        width: 800px;
+        margin: auto;
     }
 
-
-        
-    #left{
-        grid-column: 1;
-        grid-row: 1;
-        
-        display: grid;
-        grid-template-columns: 1fr 800px auto;
-        grid-template-rows: 0fr 1fr 0fr;
+    .playlist-metadata{
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
     }
         .playlist-title{
-            grid-column:2;
         }
         #playlist-remove-button{
-            grid-column:3;
             align-self: center;
             white-space: nowrap;
         }
         #results{
-            
-            grid-row: 2;
-            grid-column: 2 / span 2;
-            
-            
             display: grid;
             grid-auto-rows: 0fr;
             grid-row-gap: 10px;
-            
-        }
-        .page-button-row{
-            grid-row: 3;
-            grid-column: 2;
-            justify-self: center;
         }
 {% endblock style %}
 
 {% block main %}   
-    <div id="left">
+    <div class="playlist-metadata">
         <h2 class="playlist-title">{{ playlist_name }}</h2>
         <input type="hidden" name="playlist_page" value="{{ playlist_name }}" form="playlist-edit">
         <button type="submit" id="playlist-remove-button" name="action" value="remove" form="playlist-edit" formaction="">Remove from playlist</button>
-        <div id="results">          
-            {% for video_info in videos %}
-                {{ common_elements.item(video_info) }}
-            {% endfor %}
-        </div>
-        <nav class="page-button-row">
-            {{ common_elements.page_buttons(num_pages, '/https://www.youtube.com/playlists/' + playlist_name, parameters_dictionary) }}
-        </nav>
     </div>
+    <div id="results">
+        {% for video_info in videos %}
+            {{ common_elements.item(video_info) }}
+        {% endfor %}
+    </div>
+    <nav class="page-button-row">
+        {{ common_elements.page_buttons(num_pages, '/https://www.youtube.com/playlists/' + playlist_name, parameters_dictionary) }}
+    </nav>
 {% endblock main %}

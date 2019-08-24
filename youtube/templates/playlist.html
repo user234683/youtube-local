@@ -2,72 +2,45 @@
 {% extends "base.html" %}
 {% import "common_elements.html" as common_elements %}
 {% block style %}
-    main{
+    main > * {
+        width: 800px;
+        margin:auto;
+    }
+        
+    .playlist-metadata{
         display:grid;
-        grid-template-columns: 3fr 1fr;
+        grid-template-columns: 0fr 1fr;
     }
-
-
-        
-    #left{
-        grid-column: 1;
-        grid-row: 1;
-        
-        display: grid;
-        grid-template-columns: 1fr 800px;
-        grid-template-rows: 0fr 1fr 0fr;
-    }
-        .playlist-metadata{
+        .playlist-thumbnail{
+            grid-row: 1 / span 5;
+            grid-column:1;
+            justify-self:start;
+            width:250px;
+            margin-right: 10px;
+        }
+        .playlist-title{
+            grid-row: 1;
             grid-column:2;
-            grid-row:1;
-
-            display:grid;
-            grid-template-columns: 0fr 1fr;
         }
-            .playlist-thumbnail{
-                grid-row: 1 / span 5;
-                grid-column:1;
-                justify-self:start;
-                width:250px;
-                margin-right: 10px;
-            }
-            .playlist-title{
-                grid-row: 1;
-                grid-column:2;
-            }
-            .playlist-author{
-                grid-row:2;
-                grid-column:2;
-            }
-            .playlist-stats{
-                grid-row:3;
-                grid-column:2;
-            }
-            
-            .playlist-description{
-                grid-row:4;
-                grid-column:2;
-                min-width:0px;
-                white-space: pre-line;
-            }
-        .page-button-row{
-            grid-row: 3;
-            grid-column: 2;
-            justify-self: center;
+        .playlist-author{
+            grid-row:2;
+            grid-column:2;
         }
-    
-    
-    #right{
-        grid-column: 2;
-        grid-row: 1;
+        .playlist-stats{
+            grid-row:3;
+            grid-column:2;
+        }
 
-    }
+        .playlist-description{
+            grid-row:4;
+            grid-column:2;
+            min-width:0px;
+            white-space: pre-line;
+        }
+
     #results{
-        
-        grid-row: 2;
-        grid-column: 2;
         margin-top:10px;
-        
+
         display: grid;
         grid-auto-rows: 0fr;
         grid-row-gap: 10px;
@@ -76,27 +49,25 @@
 {% endblock style %}
 
 {% block main %}
-    <div id="left">
-        <div class="playlist-metadata">
-            <img class="playlist-thumbnail" src="{{ thumbnail }}">
-            <h2 class="playlist-title">{{ title }}</h2>
-            <a class="playlist-author" href="{{ author_url }}">{{ author }}</a>
-            <div class="playlist-stats">
-                <div>{{ views }}</div>
-                <div>{{ size }}</div>
-            </div>
-            <div class="playlist-description">{{ common_elements.text_runs(description) }}</div>
+    <div class="playlist-metadata">
+        <img class="playlist-thumbnail" src="{{ thumbnail }}">
+        <h2 class="playlist-title">{{ title }}</h2>
+        <a class="playlist-author" href="{{ author_url }}">{{ author }}</a>
+        <div class="playlist-stats">
+            <div>{{ views }}</div>
+            <div>{{ size }}</div>
         </div>
-
-        <div id="results">          
-            {% for info in video_list %}
-                {{ common_elements.item(info) }}
-            {% endfor %}
-        </div>
-        <nav class="page-button-row">
-            {{ common_elements.page_buttons(num_pages, '/https://www.youtube.com/playlist', parameters_dictionary) }}
-        </nav>
+        <div class="playlist-description">{{ common_elements.text_runs(description) }}</div>
     </div>
+
+    <div id="results">          
+        {% for info in video_list %}
+            {{ common_elements.item(info) }}
+        {% endfor %}
+    </div>
+    <nav class="page-button-row">
+        {{ common_elements.page_buttons(num_pages, '/https://www.youtube.com/playlist', parameters_dictionary) }}
+    </nav>
 {% endblock main %}
 
 
