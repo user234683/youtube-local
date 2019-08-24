@@ -72,6 +72,12 @@ For security reasons, enabling this is not recommended.''',
         'comment': '',
     }),
 
+    ('default_resolution', {
+        'type': int,
+        'default': 720,
+        'comment': '',
+    }),
+
     ('gather_googlevideo_domains', {
         'type': bool,
         'default': False,

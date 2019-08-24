@@ -52,11 +52,16 @@ def watch_page_related_playlist_info(item):
 def get_video_sources(info):
     video_sources = []
     for format in info['formats']:
-        if format['acodec'] != 'none' and format['vcodec'] != 'none':
+        if format['acodec'] != 'none' and format['vcodec'] != 'none' and format['height'] <= settings.default_resolution:
             video_sources.append({
                 'src': format['url'],
                 'type': 'video/' + format['ext'],
+                'height': format['height'],
             })
+
+    #### order the videos sources so the preferred resolution is first ###
+
+    video_sources.sort(key=lambda source: source['height'], reverse=True)
 
     return video_sources
 
@@ -191,6 +196,10 @@ def get_watch_page():
             'note': yt_dl_downloader._format_note(format),
         })
 
+    video_sources = get_video_sources(info)
+    video_height = video_sources[0]['height']
+
+
     return flask.render_template('watch.html',
         header_playlist_names   = local_playlist.get_playlist_names(),
         uploader_channel_url    = '/' + info['uploader_url'],
@@ -200,7 +209,7 @@ def get_watch_page():
         dislikes        = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("dislike_count", None)),
         download_formats        = download_formats,
         video_info              = json.dumps(video_info),
-        video_sources           = get_video_sources(info),
+        video_sources           = video_sources,
         subtitle_sources        = get_subtitle_sources(info),
         related                 = related_videos,
         music_list              = info['music_list'],
@@ -208,6 +217,7 @@ def get_watch_page():
         comments_info           = comments_info,
 
         theater_mode            = settings.theater_mode,
+        video_height            = video_height,
 
         title       = info['title'],
         uploader    = info['uploader'],
