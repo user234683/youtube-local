@@ -4,4 +4,4 @@ yt_app.url_map.strict_slashes = False
 
 @yt_app.route('/')
 def homepage():
-    return flask.render_template('base.html', title="Youtube local")
+    return flask.render_template('home.html', title="Youtube local")
