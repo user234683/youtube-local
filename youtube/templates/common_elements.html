@@ -35,9 +35,9 @@
                 {% else %}
                     {% if include_author %}
                         {% if 'author_url' is in(info) %}
-                            <li><address>By <a href="{{ info['author_url'] }}">{{ info['author'] }}</a></address></li>
+                            <li><address title="{{ info['author'] }}">By <a href="{{ info['author_url'] }}">{{ info['author'] }}</a></address></li>
                         {% else %}
-                            <li><address><b>{{ info['author'] }}</b></address></li>
+                            <li><address title="{{ info['author'] }}"><b>{{ info['author'] }}</b></address></li>
                         {% endif %}
                     {% endif %}
                     {% if 'views' is in(info) %}

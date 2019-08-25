@@ -257,6 +257,10 @@ body{
             .stats address{
                 display: inline;
             }
+            .vertical-stats li{
+                max-height: 1.3em;
+                overflow: hidden;
+            }
 
     .item-checkbox{
         justify-self:start;
