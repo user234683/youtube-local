@@ -4,7 +4,7 @@
 {% import "comments.html" as comments %}
 {% block style %}
     details > summary{
-        background-color: #dadada;
+        background-color: var(--interface-color);
         border-style: outset;
         border-width: 2px;
         font-weight: bold;
@@ -22,7 +22,7 @@
             width: {{ theater_video_target_width }}px;
             max-height: {{ video_height }}px;
             margin-bottom: 10px;
-            background-color: #bcbcbc;
+            background-color: var(--background-color);
         }
         .related-videos-outer{
             grid-row: 2 /span 3;
@@ -62,7 +62,7 @@
                 min-width: 0;
             }
             .video-info > .is-unlisted{
-                background-color: #dadada;
+                background-color: var(--interface-color);
                 justify-self:start;
                 padding-left:2px;
                 padding-right:2px;
@@ -99,7 +99,7 @@
                 grid-column: 2;
             }
             .video-info > .description{
-                background-color:#dadada;
+                background-color:var(--interface-color);
                 margin-top:8px;
                 white-space: pre-wrap;
                 min-width: 0;
@@ -111,7 +111,7 @@
             .music-list{
                 grid-row:8;
                 grid-column: 1 / span 2;
-                background-color: #dadada;
+                background-color: var(--interface-color);
             }
                 .music-list table,th,td{
                     border: 1px solid;
@@ -165,7 +165,7 @@
     }
 
     .download-dropdown-content{
-        background-color: #dadada;
+        background-color: var(--interface-color);
         padding: 10px;
         list-style: none;
         margin: 0px;

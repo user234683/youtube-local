@@ -11,10 +11,10 @@ address{
 body{
     margin:0;
     padding: 0;
-    color:#222;
+    color:var(--text-color);
     
     
-    background-color:#bcbcbc;
+    background-color:var(--background-color);
     
     min-height:100vh;
     display: flex;
@@ -111,7 +111,7 @@ body{
 }
     .dropdown-content{
         display:none;
-        background-color: #e9e9e9;
+        background-color: var(--interface-color);
     }
     .dropdown:hover .dropdown-content{
         /* For some reason, if this is just grid, it will insist on being 0px wide just like its 0px by 0px parent */
@@ -151,7 +151,7 @@ body{
 .horizontal-item-box{
 }
     .item{
-        background-color:#dadada;
+        background-color:var(--interface-color);
         text-decoration:none;
         font-size: 12px;
         color: #767676;
@@ -225,7 +225,7 @@ body{
             max-height:3.6em;
             overflow:hidden;
 
-            color: #333;
+            color: var(--text-color);
             font-size: 16px;
             font-weight: 500;
             text-decoration:initial;
@@ -284,14 +284,14 @@ body{
     height: 40px;
 }
     .page-button{
-        background-color: #e9e9e9;
+        background-color: var(--interface-color);
         border-style: outset;
         border-width: 2px;
         font-weight: bold;
         text-align: center;
     }
 .sort-button{
-    background-color: #dadada;
+    background-color: var(--interface-color);
     padding: 2px;
     justify-self: start;
 }

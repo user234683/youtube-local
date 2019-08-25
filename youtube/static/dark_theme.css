@@ -1,0 +1,21 @@
+body{
+    --interface-color: #333333;
+    --text-color: #cccccc;
+    --background-color: #000000;
+}
+
+a:link {
+    color: #22aaff;
+}
+
+a:visited {
+    color: ##7755ff;
+}
+
+a:not([href]){
+    color: var(--text-color);
+}
+
+.comment .permalink{
+    color: #ffffff;
+}

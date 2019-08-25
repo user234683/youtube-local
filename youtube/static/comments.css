@@ -69,7 +69,7 @@
     display:grid;
     grid-template-columns: auto auto 100px 1fr;
     grid-template-rows: 0fr 0fr 0fr 0fr;
-    background-color: #dadada;
+    background-color: var(--interface-color);
     justify-content: start;
 }
 
@@ -102,8 +102,6 @@
     grid-column: 3;
     grid-row: 1;
     white-space: nowrap;
-    color: black;
-
 }
 
 

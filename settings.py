@@ -78,6 +78,12 @@ For security reasons, enabling this is not recommended.''',
         'comment': '',
     }),
 
+    ('theme', {
+        'type': int,
+        'default': 0,
+        'comment': '',
+    }),
+
     ('gather_googlevideo_domains', {
         'type': bool,
         'default': False,

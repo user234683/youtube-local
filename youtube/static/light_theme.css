@@ -1,0 +1,9 @@
+body{
+    --interface-color: #ffffff;
+    --text-color: #222222;
+    --background-color: #f8f8f8;
+}
+
+.comment .permalink{
+    color: #000000;
+}
