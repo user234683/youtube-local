@@ -267,6 +267,7 @@ body{
         align-self:center;
         height:30px;
         width:30px;
+        min-width:30px;
         margin: 0px;
     }
 
