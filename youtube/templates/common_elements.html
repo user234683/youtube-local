@@ -26,7 +26,7 @@
                 {% endif %}
             </a>
 
-            <a class="title" href="{{ info['url'] }}" title="{{ info['title'] }}">{{ info['title'] }}</a>
+            <div class="title"><a class="title" href="{{ info['url'] }}" title="{{ info['title'] }}">{{ info['title'] }}</a></div>
 
             <ul class="stats {{'vertical-stats' if horizontal and not description and include_author else 'horizontal-stats'}}">
                 {% if info['type'] == 'channel' %}
