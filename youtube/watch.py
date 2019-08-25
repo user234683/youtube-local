@@ -57,6 +57,7 @@ def get_video_sources(info):
                 'src': format['url'],
                 'type': 'video/' + format['ext'],
                 'height': format['height'],
+                'width': format['width'],
             })
 
     #### order the videos sources so the preferred resolution is first ###
@@ -199,6 +200,8 @@ def get_watch_page():
     video_sources = get_video_sources(info)
     video_height = video_sources[0]['height']
 
+    # 1 second per pixel, or the actual video width
+    theater_video_target_width = max(640, info['duration'], video_sources[0]['width'])
 
     return flask.render_template('watch.html',
         header_playlist_names   = local_playlist.get_playlist_names(),
@@ -221,6 +224,7 @@ def get_watch_page():
         comments_mode           = settings.comments_mode,
 
         video_height            = video_height,
+        theater_video_target_width = theater_video_target_width,
 
         title       = info['title'],
         uploader    = info['uploader'],

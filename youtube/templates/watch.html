@@ -17,9 +17,12 @@
     {% if theater_mode %}
         video{
             grid-column: 1 / span 5;
-            width: 100%;
+            justify-self: center;
+            max-width: 100%;
+            width: {{ theater_video_target_width }}px;
             max-height: {{ video_height }}px;
             margin-bottom: 10px;
+            background-color: #bcbcbc;
         }
         .related-videos-outer{
             grid-row: 2 /span 3;
