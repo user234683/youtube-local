@@ -1703,18 +1703,22 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
         # Is it unlisted?
         unlisted = ('<span id="watch-privacy-icon"' in video_webpage)
 
-        # Related videos
-        related_vid_info = self._search_regex(r"""'RELATED_PLAYER_ARGS':\s*(\{.*?\})""", video_webpage, "related_player_args", default='')
 
-        if related_vid_info == '':
-            related_vids = []
-        else:
-            related_vid_info = json.loads(related_vid_info)['rvs']
-            if related_vid_info == '':
-                related_vids = []
+        # Related videos
+        related_vids = []
+        try:
+            rvs_match = re.search(r'"rvs":"(.*?)[^\\]"', video_webpage)
+            if rvs_match is not None:
+                rvs = json.loads('"' + rvs_match.group(1) + '"')  # unescape json string (\u0026 for example)
+                related_vid_parts = (compat_parse_qs(related_item) for related_item in rvs.split(","))
+                related_vids = [{key : value[0] for key,value in vid.items()} for vid in related_vid_parts]
             else:
-                related_vids = (compat_parse_qs(related_item) for related_item in related_vid_info.split(","))
-                related_vids = [{key : value[0] for key,value in vid.items()} for vid in related_vids]
+                print('Failed to extract related videos: no rvs')
+
+        except Exception:
+            print('Error while extracting related videos:')
+            traceback.print_exc()
+
 
         # Music list
         # Test case: https://www.youtube.com/watch?v=jbkZdRglnKY
