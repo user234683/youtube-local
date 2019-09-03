@@ -39,8 +39,8 @@ def open_database():
                               id integer PRIMARY KEY,
                               yt_channel_id text UNIQUE NOT NULL,
                               channel_name text NOT NULL,
-                              time_last_checked integer,
-                              next_check_time integer,
+                              time_last_checked integer DEFAULT 0,
+                              next_check_time integer DEFAULT 0,
                               muted integer DEFAULT 0
                           )''')
         cursor.execute('''CREATE TABLE IF NOT EXISTS videos (
@@ -51,6 +51,7 @@ def open_database():
                               duration text,
                               time_published integer NOT NULL,
                               is_time_published_exact integer DEFAULT 0,
+                              time_noticed integer NOT NULL,
                               description text,
                               watched integer default 0
                           )''')
@@ -96,11 +97,10 @@ def is_subscribed(channel_id):
 def _subscribe(cursor, channels):
     ''' channels is a list of (channel_id, channel_name) '''
 
-    # set time_last_checked to 0 on all channels being subscribed to
-    channels = ( (channel_id, channel_name, 0) for channel_id, channel_name in channels)
+    channels = ( (channel_id, channel_name, 0, 0) for channel_id, channel_name in channels)
 
-    cursor.executemany('''INSERT OR IGNORE INTO subscribed_channels (yt_channel_id, channel_name, time_last_checked)
-                          VALUES (?, ?, ?)''', channels)
+    cursor.executemany('''INSERT OR IGNORE INTO subscribed_channels (yt_channel_id, channel_name, time_last_checked, next_check_time)
+                          VALUES (?, ?, ?, ?)''', channels)
 
 
 def delete_thumbnails(to_delete):
@@ -146,14 +146,14 @@ def _get_videos(cursor, number_per_page, offset, tag = None):
                                       INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
                                       INNER JOIN tag_associations on videos.sql_channel_id = tag_associations.sql_channel_id
                                       WHERE tag = ? AND muted = 0
-                                      ORDER BY time_published DESC
+                                      ORDER BY time_noticed DESC, time_published DESC
                                       LIMIT ? OFFSET ?''', (tag, number_per_page*9, offset)).fetchall()
     else:
         db_videos = cursor.execute('''SELECT video_id, title, duration, time_published, is_time_published_exact, channel_name
                                       FROM videos
                                       INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
                                       WHERE muted = 0
-                                      ORDER BY time_published DESC
+                                      ORDER BY time_noticed DESC, time_published DESC
                                       LIMIT ? OFFSET ?''', (number_per_page*9, offset)).fetchall()
 
     pseudo_number_of_videos = offset + len(db_videos)
@@ -328,15 +328,20 @@ if settings.autocheck_subscriptions:
     with open_database() as connection:
         with connection as cursor:
             now = time.time()
-            for row in cursor.execute('''SELECT yt_channel_id, channel_name, next_check_time FROM subscribed_channels WHERE next_check_time IS NOT NULL AND muted != 1''').fetchall():
+            for row in cursor.execute('''SELECT yt_channel_id, channel_name, next_check_time FROM subscribed_channels WHERE muted != 1''').fetchall():
 
-                # expired, check randomly within the 30 minutes
+                if row[2] is None:
+                    next_check_time = 0
+                else:
+                    next_check_time = row[2]
+
+                # expired, check randomly within the next hour
                 # note: even if it isn't scheduled in the past right now, it might end up being if it's due soon and we dont start dispatching by then, see below where time_until_earliest_job is negative
-                if row[2] < now:
+                if next_check_time < now:
                     next_check_time = now + 3600*secrets.randbelow(60)/60
                     row = (row[0], row[1], next_check_time)
                     _schedule_checking(cursor, row[0], next_check_time)
-                autocheck_jobs.append({'channel_id': row[0], 'channel_name': row[1], 'next_check_time': row[2]})
+                autocheck_jobs.append({'channel_id': row[0], 'channel_name': row[1], 'next_check_time': next_check_time})
 
 
 
@@ -400,8 +405,6 @@ def _get_upstream_videos(channel_id):
 
     print("Checking channel: " + channel_status_name)
 
-    videos = []
-
     tasks = (
         gevent.spawn(channel.get_channel_tab, channel_id, print_status=False), # channel page, need for video duration
         gevent.spawn(util.fetch_url, 'https://www.youtube.com/feeds/videos.xml?channel_id=' + channel_id) # atoma feed, need for exact published time
@@ -444,40 +447,47 @@ def _get_upstream_videos(channel_id):
         print('Failed to read atoma feed for ' + channel_status_name)
         traceback.print_exc()
 
-
-    channel_videos = channel.extract_info(json.loads(channel_tab), 'videos')['items']
-    for i, video_item in enumerate(channel_videos):
-        if 'description' not in video_item:
-            video_item['description'] = ''
-
-        if video_item['id'] in times_published:
-            video_item['time_published'] = times_published[video_item['id']]
-            video_item['is_time_published_exact'] = True
-        else:
-            video_item['is_time_published_exact'] = False
-            try:
-                video_item['time_published'] = youtube_timestamp_to_posix(video_item['published']) - i  # subtract a few seconds off the videos so they will be in the right order
-            except KeyError:
-                print(video_item)
-        videos.append((channel_id, video_item['id'], video_item['title'], video_item['duration'], video_item['time_published'], video_item['is_time_published_exact'], video_item['description']))
-
-
-    if len(videos) == 0:
-        average_upload_period = 4*7*24*3600 # assume 1 month for channel with no videos
-    elif len(videos) < 5:
-        average_upload_period = int((time.time() - videos[len(videos)-1][4])/len(videos))
-    else:
-        average_upload_period = int((time.time() - videos[4][4])/5) # equivalent to averaging the time between videos for the last 5 videos
-
-    # calculate when to check next for auto checking
-    # add some quantization and randomness to make pattern analysis by Youtube slightly harder
-    quantized_upload_period = average_upload_period - (average_upload_period % (4*3600)) + 4*3600   # round up to nearest 4 hours
-    randomized_upload_period = quantized_upload_period*(1 + secrets.randbelow(50)/50*0.5) # randomly between 1x and 1.5x
-    next_check_delay = randomized_upload_period/10    # check at 10x the channel posting rate. might want to fine tune this number
-    next_check_time = int(time.time() + next_check_delay)
-
     with open_database() as connection:
         with connection as cursor:
+            is_first_check = cursor.execute('''SELECT time_last_checked FROM subscribed_channels WHERE yt_channel_id=?''', [channel_id]).fetchone()[0] in (None, 0)
+            video_add_time = int(time.time())
+
+            videos = []
+            channel_videos = channel.extract_info(json.loads(channel_tab), 'videos')['items']
+            for i, video_item in enumerate(channel_videos):
+                if 'description' not in video_item:
+                    video_item['description'] = ''
+
+                if video_item['id'] in times_published:
+                    time_published = times_published[video_item['id']]
+                    is_time_published_exact = True
+                else:
+                    is_time_published_exact = False
+                    try:
+                        time_published = youtube_timestamp_to_posix(video_item['published']) - i  # subtract a few seconds off the videos so they will be in the right order
+                    except KeyError:
+                        print(video_item)
+                if is_first_check:
+                    time_noticed = time_published  # don't want a crazy ordering on first check, since we're ordering by time_noticed
+                else:
+                    time_noticed = video_add_time
+                videos.append((channel_id, video_item['id'], video_item['title'], video_item['duration'], time_published, is_time_published_exact, time_noticed, video_item['description']))
+
+
+            if len(videos) == 0:
+                average_upload_period = 4*7*24*3600 # assume 1 month for channel with no videos
+            elif len(videos) < 5:
+                average_upload_period = int((time.time() - videos[len(videos)-1][4])/len(videos))
+            else:
+                average_upload_period = int((time.time() - videos[4][4])/5) # equivalent to averaging the time between videos for the last 5 videos
+
+            # calculate when to check next for auto checking
+            # add some quantization and randomness to make pattern analysis by Youtube slightly harder
+            quantized_upload_period = average_upload_period - (average_upload_period % (4*3600)) + 4*3600   # round up to nearest 4 hours
+            randomized_upload_period = quantized_upload_period*(1 + secrets.randbelow(50)/50*0.5) # randomly between 1x and 1.5x
+            next_check_delay = randomized_upload_period/10    # check at 10x the channel posting rate. might want to fine tune this number
+            next_check_time = int(time.time() + next_check_delay)
+
             # calculate how many new videos there are
             row = cursor.execute('''SELECT video_id
                                     FROM videos
@@ -496,8 +506,8 @@ def _get_upstream_videos(channel_id):
                     index += 1
                 number_of_new_videos = index
 
-            cursor.executemany('''INSERT OR IGNORE INTO videos (sql_channel_id, video_id, title, duration, time_published, is_time_published_exact, description)
-                                  VALUES ((SELECT id FROM subscribed_channels WHERE yt_channel_id=?), ?, ?, ?, ?, ?, ?)''', videos)
+            cursor.executemany('''INSERT OR IGNORE INTO videos (sql_channel_id, video_id, title, duration, time_published, is_time_published_exact, time_noticed, description)
+                                  VALUES ((SELECT id FROM subscribed_channels WHERE yt_channel_id=?), ?, ?, ?, ?, ?, ?, ?)''', videos)
             cursor.execute('''UPDATE subscribed_channels
                               SET time_last_checked = ?, next_check_time = ?
                               WHERE yt_channel_id=?''', [int(time.time()), next_check_time, channel_id])
