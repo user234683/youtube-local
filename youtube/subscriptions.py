@@ -79,29 +79,37 @@ def with_open_db(function, *args, **kwargs):
         with connection as cursor:
             return function(cursor, *args, **kwargs)
 
+def _is_subscribed(cursor, channel_id):
+    result = cursor.execute('''SELECT EXISTS(
+                                   SELECT 1
+                                   FROM subscribed_channels
+                                   WHERE yt_channel_id=?
+                                   LIMIT 1
+                               )''', [channel_id]).fetchone()
+    return bool(result[0])
+
 def is_subscribed(channel_id):
     if not os.path.exists(database_path):
         return False
 
+    return with_open_db(_is_subscribed, channel_id)
+
+def _subscribe(channels):
+    ''' channels is a list of (channel_id, channel_name) '''
+    channels = list(channels)
     with open_database() as connection:
         with connection as cursor:
-            result = cursor.execute('''SELECT EXISTS(
-                                           SELECT 1
-                                           FROM subscribed_channels
-                                           WHERE yt_channel_id=?
-                                           LIMIT 1
-                                       )''', [channel_id]).fetchone()
-            return bool(result[0])
+            channel_ids_to_check = [channel[0] for channel in channels if not _is_subscribed(cursor, channel[0])]
 
+            rows = ( (channel_id, channel_name, 0, 0) for channel_id, channel_name in channels)
+            cursor.executemany('''INSERT OR IGNORE INTO subscribed_channels (yt_channel_id, channel_name, time_last_checked, next_check_time)
+                                  VALUES (?, ?, ?, ?)''', rows)
 
-def _subscribe(cursor, channels):
-    ''' channels is a list of (channel_id, channel_name) '''
-
-    channels = ( (channel_id, channel_name, 0, 0) for channel_id, channel_name in channels)
-
-    cursor.executemany('''INSERT OR IGNORE INTO subscribed_channels (yt_channel_id, channel_name, time_last_checked, next_check_time)
-                          VALUES (?, ?, ?, ?)''', channels)
-
+    if settings.autocheck_subscriptions:
+        # important that this is after the changes have been committed to database
+        # otherwise the autochecker (other thread) tries checking the channel before it's in the database
+        channel_names.update(channels)
+        check_channels_if_necessary(channel_ids_to_check)
 
 def delete_thumbnails(to_delete):
     for thumbnail in to_delete:
@@ -611,7 +619,7 @@ def import_subscriptions():
     else:
             return '400 Bad Request: Unsupported file format: ' + mime_type + '. Only subscription.json files (from Google Takeouts) and XML OPML files exported from Youtube\'s subscription manager page are supported', 400
 
-    with_open_db(_subscribe, channels)
+    _subscribe(channels)
 
     return flask.redirect(util.URL_ORIGIN + '/subscription_manager', 303)
 
@@ -757,7 +765,7 @@ def post_subscriptions_page():
     if action == 'subscribe':
         if len(request.values.getlist('channel_id')) != len(request.values.getlist('channel_name')):
             return '400 Bad Request, length of channel_id != length of channel_name', 400
-        with_open_db(_subscribe, zip(request.values.getlist('channel_id'), request.values.getlist('channel_name')))
+        _subscribe(zip(request.values.getlist('channel_id'), request.values.getlist('channel_name')))
 
     elif action == 'unsubscribe':
         with_open_db(_unsubscribe, request.values.getlist('channel_id'))
