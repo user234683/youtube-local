@@ -1,4 +1,4 @@
-from youtube import util, yt_app
+from youtube import util
 import ast
 import re
 import os
@@ -271,8 +271,6 @@ else:
     print("Tor routing is OFF - your Youtube activity is NOT anonymous")
 
 
-
-@yt_app.route('/settings', methods=['POST', 'GET'])
 def settings_page():
     if request.method == 'GET':
         return flask.render_template('settings.html',

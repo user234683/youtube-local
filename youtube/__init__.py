@@ -3,6 +3,9 @@ import settings
 yt_app = flask.Flask(__name__)
 yt_app.url_map.strict_slashes = False
 
+
+yt_app.add_url_rule('/settings', 'settings_page', settings.settings_page, methods=['POST', 'GET'])
+
 @yt_app.route('/')
 def homepage():
     return flask.render_template('home.html', title="Youtube local")
