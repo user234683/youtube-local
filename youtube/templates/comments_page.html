@@ -3,63 +3,46 @@
 {% import "comments.html" as comments %}
 
 {% block style %}
-    main{
-        display:grid;
-        grid-template-columns: 3fr 2fr;
+    .comments-area{
+        margin: auto;
+        width:640px;
     }
-    #left{
-        background-color:#bcbcbc;
-        
-        display: grid;
-        grid-column: 1;
-        grid-row: 1;
-        grid-template-columns: 1fr 640px;
-        grid-template-rows: 0fr 0fr 0fr;
-    }
-        .comments-area{
-            grid-column:2;
-        }
-            .comment{
-                width:640px;
-            }
 {% endblock style %}
 
 
 {% block main %}
-    <div id="left">
-        <section class="comments-area">
-            {% if not comments_info['is_replies'] %}
-                <section class="video-metadata">
-                    <a class="video-metadata-thumbnail-box" href="{{ comments_info['video_url'] }}" title="{{ comments_info['video_title'] }}">
-                        <img class="video-metadata-thumbnail-img" src="{{ comments_info['video_thumbnail'] }}" height="180px" width="320px">
-                    </a>
-                    <a class="title" href="{{ comments_info['video_url'] }}" title="{{ comments_info['video_title'] }}">{{ comments_info['video_title'] }}</a>
+    <section class="comments-area">
+        {% if not comments_info['is_replies'] %}
+            <section class="video-metadata">
+                <a class="video-metadata-thumbnail-box" href="{{ comments_info['video_url'] }}" title="{{ comments_info['video_title'] }}">
+                    <img class="video-metadata-thumbnail-img" src="{{ comments_info['video_thumbnail'] }}" height="180px" width="320px">
+                </a>
+                <a class="title" href="{{ comments_info['video_url'] }}" title="{{ comments_info['video_title'] }}">{{ comments_info['video_title'] }}</a>
 
-                    <h2>Comments page {{ comments_info['page_number'] }}</h2>
-                    <span>Sorted by {{ comments_info['sort_text'] }}</span>
-                </section>
-            {% endif %}
+                <h2>Comments page {{ comments_info['page_number'] }}</h2>
+                <span>Sorted by {{ comments_info['sort_text'] }}</span>
+            </section>
+        {% endif %}
 
-            {{ comments.comment_posting_box(comment_posting_box_info) }}
+        {{ comments.comment_posting_box(comment_posting_box_info) }}
 
-            {% if not comments_info['is_replies'] %}
-                <div class="comment-links">
-                    {% for link_text, link_url in comments_info['comment_links'] %}
-                        <a class="sort-button" href="{{ link_url }}">{{ link_text }}</a>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <div class="comments">
-                {% for comment in comments_info['comments'] %}
-                    {{ comments.render_comment(comment, comments_info['include_avatars']) }}
+        {% if not comments_info['is_replies'] %}
+            <div class="comment-links">
+                {% for link_text, link_url in comments_info['comment_links'] %}
+                    <a class="sort-button" href="{{ link_url }}">{{ link_text }}</a>
                 {% endfor %}
             </div>
-            {% if 'more_comments_url' is in comments_info %}
-                <a class="page-button more-comments" href="{{ comments_info['more_comments_url'] }}">More comments</a>
-            {% endif %}
-        </section>
-    </div>
+        {% endif %}
+
+        <div class="comments">
+            {% for comment in comments_info['comments'] %}
+                {{ comments.render_comment(comment, comments_info['include_avatars']) }}
+            {% endfor %}
+        </div>
+        {% if 'more_comments_url' is in comments_info %}
+            <a class="page-button more-comments" href="{{ comments_info['more_comments_url'] }}">More comments</a>
+        {% endif %}
+    </section>
 {% endblock main %}
 
 

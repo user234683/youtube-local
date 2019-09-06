@@ -197,10 +197,6 @@ def renderer_info(renderer, additional_info={}):
 
     info.update(additional_info)
 
-    if type.startswith('compact') or (type.startswith('playlist') and type != 'playlistRenderer'):
-        info['item_size'] = 'small'
-    else:
-        info['item_size'] = 'medium'
 
     if type in ('compactVideoRenderer', 'videoRenderer', 'playlistVideoRenderer', 'gridVideoRenderer'):
         info['type'] = 'video'

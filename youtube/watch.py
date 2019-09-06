@@ -36,7 +36,6 @@ def watch_page_related_video_info(item):
     except KeyError:
         result['views'] = ''
     result['thumbnail'] = util.get_thumbnail_url(item['id'])
-    result['item_size'] = 'small'
     result['type'] = 'video'
     return result
     
@@ -47,18 +46,23 @@ def watch_page_related_playlist_info(item):
         'id': item['list'],
         'first_video_id': item['video_id'],
         'thumbnail': util.get_thumbnail_url(item['video_id']),
-        'item_size': 'small',
         'type': 'playlist',
     }
 
 def get_video_sources(info):
     video_sources = []
     for format in info['formats']:
-        if format['acodec'] != 'none' and format['vcodec'] != 'none':
+        if format['acodec'] != 'none' and format['vcodec'] != 'none' and format['height'] <= settings.default_resolution:
             video_sources.append({
                 'src': format['url'],
                 'type': 'video/' + format['ext'],
+                'height': format['height'],
+                'width': format['width'],
             })
+
+    #### order the videos sources so the preferred resolution is first ###
+
+    video_sources.sort(key=lambda source: source['height'], reverse=True)
 
     return video_sources
 
@@ -193,6 +197,12 @@ def get_watch_page():
             'note': yt_dl_downloader._format_note(format),
         })
 
+    video_sources = get_video_sources(info)
+    video_height = video_sources[0]['height']
+
+    # 1 second per pixel, or the actual video width
+    theater_video_target_width = max(640, info['duration'], video_sources[0]['width'])
+
     return flask.render_template('watch.html',
         header_playlist_names   = local_playlist.get_playlist_names(),
         uploader_channel_url    = '/' + info['uploader_url'],
@@ -202,12 +212,19 @@ def get_watch_page():
         dislikes        = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("dislike_count", None)),
         download_formats        = download_formats,
         video_info              = json.dumps(video_info),
-        video_sources           = get_video_sources(info),
+        video_sources           = video_sources,
         subtitle_sources        = get_subtitle_sources(info),
         related                 = related_videos,
         music_list              = info['music_list'],
         music_attributes        = get_ordered_music_list_attributes(info['music_list']),
         comments_info           = comments_info,
+
+        theater_mode            = settings.theater_mode,
+        related_videos_mode     = settings.related_videos_mode,
+        comments_mode           = settings.comments_mode,
+
+        video_height            = video_height,
+        theater_video_target_width = theater_video_target_width,
 
         title       = info['title'],
         uploader    = info['uploader'],

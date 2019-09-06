@@ -2,16 +2,14 @@
 {% extends "base.html" %}
 
 {% block style %}
-    main{
-        display: grid;
-        grid-template-columns: minmax(0px, 3fr) 640px 40px 500px minmax(0px,2fr);
-        align-content: start;
-        grid-row-gap: 40px;
+    main > * {
+        width: 640px;
+        margin: auto;
     }
-
     main form{
+        background-color: var(--interface-color);
+        padding: 10px;
         margin-top:20px;
-        grid-column:2;
         display:grid;
         justify-items: start;
         align-content: start;
@@ -26,10 +24,9 @@
         margin-top:20px;
     }
     #tor-note{
-        grid-row:2;
-        grid-column:2;
-        background-color: #dddddd;
+        background-color: var(--interface-color);
         padding: 10px;
+        margin-top: 40px;
     }
 {% endblock style %}
 
