@@ -51,8 +51,13 @@ def watch_page_related_playlist_info(item):
 
 def get_video_sources(info):
     video_sources = []
+    if not settings.theater_mode:
+        max_resolution = 360
+    else:
+        max_resolution = settings.default_resolution
+
     for format in info['formats']:
-        if format['acodec'] != 'none' and format['vcodec'] != 'none' and format['height'] <= settings.default_resolution:
+        if format['acodec'] != 'none' and format['vcodec'] != 'none' and format['height'] <= max_resolution:
             video_sources.append({
                 'src': format['url'],
                 'type': 'video/' + format['ext'],
