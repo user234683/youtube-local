@@ -9,7 +9,7 @@ a:link {
 }
 
 a:visited {
-    color: ##7755ff;
+    color: #7755ff;
 }
 
 a:not([href]){
@@ -23,3 +23,16 @@ a:not([href]){
 .setting-item{
     background-color: #444444;
 }
+
+
+.muted{
+    background-color: #111111;
+    color: gray;
+}
+
+.muted a:link {
+    color: #10547f;
+}
+
+
+

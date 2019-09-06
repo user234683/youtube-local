@@ -34,33 +34,7 @@ def add_to_playlist(name, video_info_list):
             if id not in ids:
                 file.write(info + "\n")
                 missing_thumbnails.append(id)
-    gevent.spawn(download_thumbnails, name, missing_thumbnails)
-
-def download_thumbnail(playlist_name, video_id):
-    url = "https://i.ytimg.com/vi/" + video_id + "/mqdefault.jpg"
-    save_location = os.path.join(thumbnails_directory, playlist_name, video_id + ".jpg")
-    try:
-        thumbnail = util.fetch_url(url, report_text="Saved local playlist thumbnail: " + video_id)
-    except urllib.error.HTTPError as e:
-        print("Failed to download thumbnail for " + video_id + ": " + str(e))
-        return
-    try:
-        f = open(save_location, 'wb')
-    except FileNotFoundError:
-        os.makedirs(os.path.join(thumbnails_directory, playlist_name))
-        f = open(save_location, 'wb')
-    f.write(thumbnail)
-    f.close()
-
-def download_thumbnails(playlist_name, ids):
-    # only do 5 at a time
-    # do the n where n is divisible by 5
-    i = -1
-    for i in range(0, int(len(ids)/5) - 1 ):
-        gevent.joinall([gevent.spawn(download_thumbnail, playlist_name, ids[j]) for j in range(i*5, i*5 + 5)])
-    # do the remainders (< 5)
-    gevent.joinall([gevent.spawn(download_thumbnail, playlist_name, ids[j]) for j in range(i*5 + 5, len(ids))])
-            
+    gevent.spawn(util.download_thumbnails, os.path.join(thumbnails_directory, name), missing_thumbnails)
         
 
 def get_local_playlist_videos(name, offset=0, amount=50):
@@ -88,7 +62,7 @@ def get_local_playlist_videos(name, offset=0, amount=50):
         except json.decoder.JSONDecodeError:
             if not video_json.strip() == '':
                 print('Corrupt playlist video entry: ' + video_json)
-    gevent.spawn(download_thumbnails, name, missing_thumbnails)
+    gevent.spawn(util.download_thumbnails, os.path.join(thumbnails_directory, name), missing_thumbnails)
     return videos[offset:offset+amount], len(videos)
 
 def get_playlist_names():

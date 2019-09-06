@@ -1,5 +1,5 @@
 import base64
-from youtube import util, yt_data_extract, local_playlist
+from youtube import util, yt_data_extract, local_playlist, subscriptions
 from youtube import yt_app
 
 import urllib
@@ -83,13 +83,15 @@ def channel_ctoken(channel_id, page, sort, tab, view=1):
 
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
 
-def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1):
+def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1, print_status=True):
     ctoken = channel_ctoken(channel_id, page, sort, tab, view).replace('=', '%3D')
     url = "https://www.youtube.com/browse_ajax?ctoken=" + ctoken
 
-    print("Sending channel tab ajax request")
+    if print_status:
+        print("Sending channel tab ajax request")
     content = util.fetch_url(url, util.desktop_ua + headers_1, debug_name='channel_tab')
-    print("Finished recieving channel tab response")
+    if print_status:
+        print("Finished recieving channel tab response")
 
     return content
 
@@ -312,7 +314,7 @@ def get_channel_page(channel_id, tab='videos'):
         info['current_sort'] = sort
     elif tab == 'search':
         info['search_box_value'] = query
-
+    info['subscribed'] = subscriptions.is_subscribed(info['channel_id'])
 
     return flask.render_template('channel.html',
         parameters_dictionary = request.args,
@@ -352,7 +354,7 @@ def get_channel_page_general_url(base_url, tab, request):
         info['current_sort'] = sort
     elif tab == 'search':
         info['search_box_value'] = query
-
+    info['subscribed'] = subscriptions.is_subscribed(info['channel_id'])
 
     return flask.render_template('channel.html',
         parameters_dictionary = request.args,

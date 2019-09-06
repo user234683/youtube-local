@@ -119,6 +119,12 @@ For security reasons, enabling this is not recommended.''',
         ],
     }),
 
+    ('autocheck_subscriptions', {
+        'type': bool,
+        'default': 0,
+        'comment': '',
+    }),
+
     ('gather_googlevideo_domains', {
         'type': bool,
         'default': False,

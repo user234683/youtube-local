@@ -8,7 +8,11 @@ body{
     color: #000000;
 }
 
-
 .setting-item{
     background-color: #f8f8f8;
 }
+
+.muted{
+    background-color: #888888;
+}
+

@@ -11,3 +11,7 @@ body{
 .setting-item{
     background-color: #eeeeee;
 }
+
+.muted{
+    background-color: #888888;
+}

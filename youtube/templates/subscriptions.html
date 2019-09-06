@@ -1,0 +1,113 @@
+{% set page_title = 'Subscriptions' %}
+{% extends "base.html" %}
+{% import "common_elements.html" as common_elements %}
+
+{% block style %}
+    main{
+        display:flex;
+        flex-direction: row;
+    }
+    .video-section{
+        flex-grow: 1;
+    }
+        .video-section .page-button-row{
+            justify-content: center;
+        }
+    .subscriptions-sidebar{
+        flex-basis: 300px;
+        background-color: var(--interface-color);
+        border-left: 2px;
+    }
+        .sidebar-links{
+            display:flex;
+            justify-content: space-between;
+            padding-left:10px;
+            padding-right: 10px;
+        }
+
+        .sidebar-list{
+            list-style: none;
+            padding-left:10px;
+            padding-right: 10px;
+        }
+            .sidebar-list-item{
+                display:flex;
+                justify-content: space-between;
+                margin-bottom: 5px;
+            }
+                .sub-refresh-list .sidebar-item-name{
+                    text-overflow: clip;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    max-width: 200px;
+                }
+{% endblock style %}
+
+{% block main %}
+    <div class="video-section">
+        <nav class="item-grid">
+            {% for video_info in videos %}
+                {{ common_elements.item(video_info, include_author=false) }}
+            {% endfor %}
+        </nav>
+
+        <nav class="page-button-row">
+            {{ common_elements.page_buttons(num_pages, '/youtube.com/subscriptions', parameters_dictionary) }}
+        </nav>
+    </div>
+
+    <div class="subscriptions-sidebar">
+        <div class="sidebar-links">
+            <a href="/youtube.com/subscription_manager" class="sub-manager-link">Subscription Manager</a>
+            <form method="POST" class="refresh-all">
+                <input type="submit" value="Check All">
+                <input type="hidden" name="action" value="refresh">
+                <input type="hidden" name="type" value="all">
+            </form>
+        </div>
+
+        <hr>
+
+        <ol class="sidebar-list tags">
+            {% if current_tag %}
+                <li class="sidebar-list-item">
+                    <a href="/youtube.com/subscriptions" class="sidebar-item-name">Any tag</a>
+                </li>
+            {% endif %}
+
+            {% for tag in tags %}
+                <li class="sidebar-list-item">
+                    {% if tag == current_tag %}
+                        <span class="sidebar-item-name">{{ tag }}</span>
+                    {% else %}
+                        <a href="?tag={{ tag|urlencode }}" class="sidebar-item-name">{{ tag }}</a>
+                    {% endif %}
+                    <form method="POST" class="sidebar-item-refresh">
+                        <input type="submit" value="Check">
+                        <input type="hidden" name="action" value="refresh">
+                        <input type="hidden" name="type" value="tag">
+                        <input type="hidden" name="tag_name" value="{{ tag }}">
+                    </form>
+                </li>
+            {% endfor %}
+        </ol>
+
+        <hr>
+
+        <ol class="sidebar-list sub-refresh-list">
+            {% for subscription in subscription_list %}
+                <li class="sidebar-list-item {{ 'muted' if subscription['muted'] else '' }}">
+                    <a href="{{ subscription['channel_url'] }}" class="sidebar-item-name" title="{{ subscription['channel_name'] }}">{{ subscription['channel_name'] }}</a>
+                    <form method="POST" class="sidebar-item-refresh">
+                        <input type="submit" value="Check">
+                        <input type="hidden" name="action" value="refresh">
+                        <input type="hidden" name="type" value="channel">
+                        <input type="hidden" name="channel_id" value="{{ subscription['channel_id'] }}">
+                    </form>
+                </li>
+            {% endfor %}
+        </ol>
+
+    </div>
+
+{% endblock main %}
