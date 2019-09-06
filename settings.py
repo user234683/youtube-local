@@ -102,12 +102,21 @@ For security reasons, enabling this is not recommended.''',
         'type': int,
         'default': 720,
         'comment': '',
+        'options': [
+            (360, '360p'),
+            (720, '720p'),
+        ],
     }),
 
     ('theme', {
         'type': int,
         'default': 0,
         'comment': '',
+        'options': [
+            (0, 'Light'),
+            (1, 'Gray'),
+            (2, 'Dark'),
+        ],
     }),
 
     ('gather_googlevideo_domains', {
