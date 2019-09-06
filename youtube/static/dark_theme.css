@@ -19,3 +19,7 @@ a:not([href]){
 .comment .permalink{
     color: #ffffff;
 }
+
+.setting-item{
+    background-color: #444444;
+}
