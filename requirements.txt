@@ -1,0 +1,6 @@
+Flask>=1.0.3
+gevent>=1.2.2
+Brotli>=1.0.7
+PySocks>=1.6.8
+urllib3>=1.24.1
+defusedxml>=0.5.0
