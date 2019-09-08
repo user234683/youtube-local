@@ -26,40 +26,40 @@ The Youtube API is not used, so no keys or anything are needed. It uses the same
 - View or post comments
 - Works without Javascript
 - Theater and non-theater mode
-- Subscriptions that are independent from Youtube
- - Works by checking channels individually
- - Can be set to automatically check channels.
- - For efficiency of requests, frequency of checking is based on how quickly channel posts videos
- - Can mute channels, so as to have a way to "soft" unsubscribe. Muted channels won't be checked automatically or when using the "Check all" button. Videos from these channels will be hidden.
- - Can tag subscriptions to organize them or check specific tags
-- Fast page
- - No distracting/slow layout rearrangement
- - No lazy-loading of comments; they are ready instantly.
-- Settings allow fine-tuned control over when/how comments or related videos are shown:
- 1. Shown by default, with click to hide
- 2. Hidden by default, with click to show
- 3. Never shown
+* Subscriptions that are independent from Youtube
+  * Works by checking channels individually
+  * Can be set to automatically check channels.
+  * For efficiency of requests, frequency of checking is based on how quickly channel posts videos
+  * Can mute channels, so as to have a way to "soft" unsubscribe. Muted channels won't be checked automatically or when using the "Check all" button. Videos from these channels will be hidden.
+  * Can tag subscriptions to organize them or check specific tags
+* Fast page
+  * No distracting/slow layout rearrangement
+  * No lazy-loading of comments; they are ready instantly.
+* Settings allow fine-tuned control over when/how comments or related videos are shown:
+  1. Shown by default, with click to hide
+  2. Hidden by default, with click to show
+  3. Never shown
 
 ## Planned features
-- [] Putting videos from subscriptions or local playlists into the related videos
-- [] Information about video (geographic regions, region of Tor exit node, etc)
-- [] Ability to delete playlists
-- [] Auto-saving of local playlist videos
-- [] Import youtube playlist into a local playlist
-- [] Rearrange items of local playlist
-- [] Muxing of 1080p
-- [] Corrected .m4a downloads
-- [] Replying to comment replies
-- [] Editing comments
-- [] Indicate if comments are disabled
-- [] Indicate how many comments a video has
-- [] Featured channels page
-- [] Channel comments
-- [] Video transcript
-- [] Tor RC
-- [] Support &t parameter
-- [] Subscriptions: Option to mark what has been watched
-- [] Subscriptions: Option to filter videos based on keywords in title or description
+- [ ] Putting videos from subscriptions or local playlists into the related videos
+- [ ] Information about video (geographic regions, region of Tor exit node, etc)
+- [ ] Ability to delete playlists
+- [ ] Auto-saving of local playlist videos
+- [ ] Import youtube playlist into a local playlist
+- [ ] Rearrange items of local playlist
+- [ ] Muxing of 1080p
+- [ ] Corrected .m4a downloads
+- [ ] Replying to comment replies
+- [ ] Editing comments
+- [ ] Indicate if comments are disabled
+- [ ] Indicate how many comments a video has
+- [ ] Featured channels page
+- [ ] Channel comments
+- [ ] Video transcript
+- [ ] Tor RC
+- [ ] Support &t parameter
+- [ ] Subscriptions: Option to mark what has been watched
+- [ ] Subscriptions: Option to filter videos based on keywords in title or description
 
 ## Installing
 
