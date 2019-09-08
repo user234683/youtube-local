@@ -47,7 +47,7 @@
     <div class="video-section">
         <nav class="item-grid">
             {% for video_info in videos %}
-                {{ common_elements.item(video_info, include_author=false) }}
+                {{ common_elements.item(video_info) }}
             {% endfor %}
         </nav>
 
