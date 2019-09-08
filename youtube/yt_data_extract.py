@@ -94,8 +94,7 @@ def get_badges(node):
     badges = []
     for badge_node in node:
         badge = badge_node['metadataBadgeRenderer']['label']
-        if badge.lower() != 'new':
-            badges.append(badge)
+        badges.append(badge)
     return badges
 
 def get_thumbnail(node):
