@@ -78,7 +78,11 @@ def get_search_page():
     
     estimated_results = int(info[1]['response']['estimatedResults'])
     estimated_pages = ceil(estimated_results/20)
-    results = info[1]['response']['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents']
+
+    # almost always is the first "section", but if there's an advertisement for a google product like Stadia or Home in the search results, then that becomes the first "section" and the search results are in the second. So just join all of them for resiliency
+    results = []
+    for section in info[1]['response']['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']:
+        results += section['itemSectionRenderer']['contents']
 
     parsed_results = []
     corrections = {'type': None}
