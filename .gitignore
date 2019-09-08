@@ -3,7 +3,11 @@ __pycache__/
 debug/
 data/
 python/
+release/
+youtube-local/
 banned_addresses.txt
 settings.txt
-
+get-pip.py
+latest-dist.zip
+*.zip
 *venv*

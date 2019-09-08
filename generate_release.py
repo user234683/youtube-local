@@ -1,0 +1,196 @@
+# Generate a windows release and a generated embedded distribution of python
+# Latest python version is the argument of the script
+# Only works on windows at the moment
+
+import sys
+import urllib
+import urllib.request
+import subprocess
+import shutil
+import os
+
+latest_version = sys.argv[1]
+if sys.argv[2] == '-nd':
+    downloads_enabled = False
+elif sys.argv[2] == '-d':
+    downloads_enabled = True
+else:
+    raise Exception('No download switch specified')
+
+def check(code):
+    if code != 0:
+        raise Exception('Got nonzero exit code from command')
+
+def log(line):
+    print('[generate_release.py] ' + line)
+
+# https://stackoverflow.com/questions/7833715/python-deleting-certain-file-extensions
+def remove_files_with_extensions(path, extensions):
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            if os.path.splitext(file)[1] in extensions:
+                os.remove(os.path.join(root, file))
+
+# ---------- Get current release version, for later ----------
+log('Getting current release version')
+describe_result = subprocess.run(['git', 'describe', '--tags'], stdout=subprocess.PIPE)
+if describe_result.returncode != 0:
+    raise Exception('Git describe failed')
+
+release_tag = describe_result.stdout.strip().decode('ascii')
+
+
+# ----------- Make copy of youtube-local files using git -----------
+
+if os.path.exists('./youtube-local'):
+    log('Removing old release')
+    shutil.rmtree('./youtube-local')
+
+# Export git repository - this will ensure .git and things in gitignore won't
+# be included. Git only supports exporting archive formats, not into
+# directories, so pipe into 7z to put it into .\youtube-local (not to be
+# confused with working directory. I'm calling it the same thing so it will
+# have that name when extracted from the final release zip archive)
+log('Making copy of youtube-local files')
+check(os.system('git archive --format tar master | 7z x -si -ttar -oyoutube-local'))
+
+if len(os.listdir('./youtube-local')) == 0:
+    raise Exception('Failed to copy youtube-local files')
+
+
+# ----------- Generate embedded python distribution -----------
+os.environ['PYTHONDONTWRITEBYTECODE'] = '1'     # *.pyc files double the size of the distribution
+get_pip_url = 'https://bootstrap.pypa.io/get-pip.py'
+latest_dist_url = 'https://www.python.org/ftp/python/' + latest_version + '/python-' + latest_version + '-embed-win32.zip'
+
+if downloads_enabled:
+    log('Downloading get-pip.py...')
+    get_pip = urllib.request.urlopen(get_pip_url).read()
+    log('Finished downloading get-pip.py')
+
+    with open('./get-pip.py', 'wb') as f:
+        f.write(get_pip)
+
+    log('Downloading latest python distribution...')
+    latest_dist= urllib.request.urlopen(latest_dist_url).read()
+    log('Finished downloading python distribution')
+
+    with open('./latest-dist.zip', 'wb') as f:
+        f.write(latest_dist)
+
+if os.path.exists('./python'):
+    log('Removing old python distribution')
+    shutil.rmtree('./python')
+
+
+log('Extracting python distribution')
+
+check(os.system(r'7z -y x -opython latest-dist.zip'))
+
+log('Executing get-pip.py')
+os.system(r'.\python\python.exe -I get-pip.py')
+
+'''
+# Explanation of .pth, ._pth, and isolated mode
+
+## Isolated mode
+    We want to run in what is called isolated mode, given by the switch -I.
+This mode prevents the embedded python distribution from searching in 
+global directories for imports
+
+    For example, if a user has `C:\Python37` and the embedded distribution is
+the same version, importing something using the embedded distribution will
+search `C:\Python37\Libs\site-packages`. This is not desirable because it
+means I might forget to distribute a dependency if I have it installed
+globally and I don't see any import errors. It also means that an outdated
+package might override the one being distributed and cause other problems.
+
+    Isolated mode also means global environment variables and registry
+entries will be ignored
+
+## The trouble with isolated mode
+    Isolated mode also prevents the current working directory (cwd) from
+being added to `sys.path`. `sys.path` is the list of directories python will
+search in for imports. In non-isolated mode this is automatically populated
+with the cwd, `site-packages`, the directory of the python executable, etc.
+
+# How to get the cwd into sys.path in isolated mode
+    The hack to get this to work is to use a .pth file. Normally, these files
+are just an additional list of directories to be added to `sys.path`.
+However, they also allow arbitrary code execution on lines beginning with
+`import ` (see https://docs.python.org/3/library/site.html). So, we simply
+add `import sys; sys.path.insert(0, '')` to add the cwd to path. `''` is
+shorthand for the cwd. See https://bugs.python.org/issue33698#msg318272
+
+# ._pth files in the embedded distribution
+A python37._pth file is included in the embedded distribution. The presence
+of tis file causes the embedded distribution to always use isolated mode
+(which we want). They are like .pth files, except they do not allow the
+arbitrary code execution trick. In my experimentation, I found that they
+prevent .pth files from loading. So the ._pth file will have to be removed
+and replaced with a .pth. Isolated mode will have to be specified manually.
+'''
+
+log('Removing ._pth')
+major_release = latest_version.split('.')[1]
+os.remove(r'.\python\python3' + major_release + '._pth')
+
+log('Adding path_fixes.pth')
+with open(r'.\python\path_fixes.pth', 'w', encoding='utf-8') as f:
+    f.write("import sys; sys.path.insert(0, '')\n")
+
+
+'''# python3x._pth file tells the python executable where to look for files
+#  Need to add the directory where packages are installed,
+# and the parent directory (which is where the youtube-local files are)
+major_release = latest_version.split('.')[1]
+with open('./python/python3' + major_release + '._pth', 'a', encoding='utf-8') as f:
+    f.write('.\\Lib\\site-packages\n')
+    f.write('..\n')'''
+
+log('Inserting Microsoft C Runtime')
+check(os.system(r'copy C:\Windows\SysWOW64\msvcp140.dll .\python\msvcp140.dll'))
+
+log('Installing dependencies')
+check(os.system(r'.\python\python.exe -I -m pip install --no-compile -r .\requirements.txt'))
+
+log('Uninstalling unnecessary gevent stuff')
+check(os.system(r'.\python\python.exe -I -m pip uninstall --yes cffi pycparser'))
+shutil.rmtree(r'./python/Lib/site-packages/gevent/tests')
+shutil.rmtree(r'./python/Lib/site-packages/gevent/testing')
+remove_files_with_extensions(r'./python/Lib/site-packages/gevent', ['.html']) # bloated html documentation
+
+log('Uninstalling pip and others')
+check(os.system(r'.\python\python.exe -I -m pip uninstall --yes pip setuptools wheel'))
+
+log('Removing pyc files')   # Have to do this because get-pip and some packages don't respect --no-compile
+remove_files_with_extensions(r'./python', ['.pyc'])
+
+log('Removing dist-info and __pycache__')
+for root, dirs, files in os.walk(r'./python'):
+    for dir in dirs:
+        if dir == '__pycache__' or dir.endswith('.dist-info'):
+            shutil.rmtree(os.path.join(root, dir))
+
+
+'''log('Removing get-pip.py and zipped distribution')
+os.remove(r'.\get-pip.py')
+os.remove(r'.\latest-dist.zip')'''
+
+print()
+log('Finished generating python distribution')
+
+# ----------- Copy generated distribution into release folder -----------
+log('Copying python distribution into release folder')
+shutil.copytree(r'.\python', r'.\youtube-local\python')
+
+# ----------- Create release zip -----------
+output_filename = 'youtube-local-' + release_tag + '-windows.zip'
+if os.path.exists('./' + output_filename):
+    log('Removing previous zipped release')
+    os.remove('.\\' + output_filename)
+log('Zipping release')
+check(os.system(r'7z -mx=9 a ' + output_filename + ' .\youtube-local'))
+
+print('\n')
+log('Finished')
