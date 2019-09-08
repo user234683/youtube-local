@@ -17,15 +17,15 @@ The Youtube API is not used, so no keys or anything are needed. It uses the same
 [Downloads](https://user-images.githubusercontent.com/28744867/64483437-a2608b80-d1b6-11e9-9e5a-4114391b7304.png)
 
 ## Features
-- Standard pages of Youtube: search, channels, playlists
-- Anonymity from Google's tracking by routing requests through Tor
-- Local playlists: These solve the two problems with creating playlists on Youtube: (1) they're datamined and (2) videos frequently get deleted by Youtube and lost from the playlist, making it very difficult to find a reupload as the title of the deleted video is not displayed.
-- Themes: Light, Gray, and Dark
-- Subtitles
-- Easily download videos or their audio
-- View or post comments
-- Works without Javascript
-- Theater and non-theater mode
+* Standard pages of Youtube: search, channels, playlists
+* Anonymity from Google's tracking by routing requests through Tor
+* Local playlists: These solve the two problems with creating playlists on Youtube: (1) they're datamined and (2) videos frequently get deleted by Youtube and lost from the playlist, making it very difficult to find a reupload as the title of the deleted video is not displayed.
+* Themes: Light, Gray, and Dark
+* Subtitles
+* Easily download videos or their audio
+* View or post comments
+* Works without Javascript
+* Theater and non-theater mode
 * Subscriptions that are independent from Youtube
   * Works by checking channels individually
   * Can be set to automatically check channels.
