@@ -81,6 +81,11 @@ def site_dispatch(env, start_response):
             yield error_code('403 Forbidden', start_response)
             return
 
+        # redirect localhost:8080 to localhost:8080/https://youtube.com
+        if path == '' or path == '/':
+            start_response('302 Found', [('Location', '/https://youtube.com')])
+            return
+
         try:
             env['SERVER_NAME'], env['PATH_INFO'] = split_url(path[1:])
         except ValueError:
