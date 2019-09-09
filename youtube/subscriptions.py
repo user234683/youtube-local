@@ -455,7 +455,7 @@ def _get_upstream_videos(channel_id):
         print('Failed to read atoma feed for ' + channel_status_name)
         traceback.print_exc()
 
-    videos = channel.extract_info(json.loads(channel_tab), 'videos')['items']
+    videos = yt_data_extract.extract_channel_info(json.loads(channel_tab), 'videos')['items']
     for i, video_item in enumerate(videos):
         if 'description' not in video_item:
             video_item['description'] = ''
