@@ -4,6 +4,7 @@ import html
 import json
 import re
 import urllib
+from math import ceil
 
 # videos (all of type str):
 
@@ -400,4 +401,51 @@ def extract_channel_info(polymer_json, tab):
 
     return info
 
+def extract_search_info(polymer_json):
+    info = {}
+    info['estimated_results'] = int(polymer_json[1]['response']['estimatedResults'])
+    info['estimated_pages'] = ceil(info['estimated_results']/20)
 
+    # almost always is the first "section", but if there's an advertisement for a google product like Stadia or Home in the search results, then that becomes the first "section" and the search results are in the second. So just join all of them for resiliency
+    results = []
+    for section in polymer_json[1]['response']['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']:
+        results += section['itemSectionRenderer']['contents']
+
+    info['items'] = []
+    info['corrections'] = {'type': None}
+    for renderer in results:
+        type = list(renderer.keys())[0]
+        if type == 'shelfRenderer':
+            continue
+        if type == 'didYouMeanRenderer':
+            renderer = renderer[type]
+            corrected_query_string = request.args.to_dict(flat=False)
+            corrected_query_string['query'] = [renderer['correctedQueryEndpoint']['searchEndpoint']['query']]
+            corrected_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(corrected_query_string, doseq=True)
+
+            info['corrections'] = {
+                'type': 'did_you_mean',
+                'corrected_query': yt_data_extract.format_text_runs(renderer['correctedQuery']['runs']),
+                'corrected_query_url': corrected_query_url,
+            }
+            continue
+        if type == 'showingResultsForRenderer':
+            renderer = renderer[type]
+            no_autocorrect_query_string = request.args.to_dict(flat=False)
+            no_autocorrect_query_string['autocorrect'] = ['0']
+            no_autocorrect_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
+
+            info['corrections'] = {
+                'type': 'showing_results_for',
+                'corrected_query': yt_data_extract.format_text_runs(renderer['correctedQuery']['runs']),
+                'original_query_url': no_autocorrect_query_url,
+                'original_query': renderer['originalQuery']['simpleText'],
+            }
+            continue
+
+        item_info = renderer_info(renderer)
+        if item_info['type'] != 'unsupported':
+            info['items'].append(item_info)
+
+
+    return info

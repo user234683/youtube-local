@@ -5,7 +5,6 @@ import settings
 import json
 import urllib
 import base64
-from math import ceil
 import mimetypes
 from flask import request
 import flask
@@ -74,59 +73,20 @@ def get_search_page():
     filters['time'] = int(request.args.get("time", "0"))
     filters['type'] = int(request.args.get("type", "0"))
     filters['duration'] = int(request.args.get("duration", "0"))
-    info = get_search_json(query, page, autocorrect, sort, filters)
-    
-    estimated_results = int(info[1]['response']['estimatedResults'])
-    estimated_pages = ceil(estimated_results/20)
+    polymer_json = get_search_json(query, page, autocorrect, sort, filters)
 
-    # almost always is the first "section", but if there's an advertisement for a google product like Stadia or Home in the search results, then that becomes the first "section" and the search results are in the second. So just join all of them for resiliency
-    results = []
-    for section in info[1]['response']['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']:
-        results += section['itemSectionRenderer']['contents']
-
-    parsed_results = []
-    corrections = {'type': None}
-    for renderer in results:
-        type = list(renderer.keys())[0]
-        if type == 'shelfRenderer':
-            continue
-        if type == 'didYouMeanRenderer':
-            renderer = renderer[type]
-            corrected_query_string = request.args.to_dict(flat=False)
-            corrected_query_string['query'] = [renderer['correctedQueryEndpoint']['searchEndpoint']['query']]
-            corrected_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(corrected_query_string, doseq=True)
-
-            corrections = {
-                'type': 'did_you_mean',
-                'corrected_query': yt_data_extract.format_text_runs(renderer['correctedQuery']['runs']),
-                'corrected_query_url': corrected_query_url,
-            }
-            continue
-        if type == 'showingResultsForRenderer':
-            renderer = renderer[type]
-            no_autocorrect_query_string = request.args.to_dict(flat=False)
-            no_autocorrect_query_string['autocorrect'] = ['0']
-            no_autocorrect_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
-
-            corrections = {
-                'type': 'showing_results_for',
-                'corrected_query': yt_data_extract.format_text_runs(renderer['correctedQuery']['runs']),
-                'original_query_url': no_autocorrect_query_url,
-                'original_query': renderer['originalQuery']['simpleText'],
-            }
-            continue
-
-        info = yt_data_extract.parse_info_prepare_for_html(renderer)
-        if info['type'] != 'unsupported':
-            parsed_results.append(info)
+    search_info = yt_data_extract.extract_search_info(polymer_json)
+    for item_info in search_info['items']:
+        yt_data_extract.prefix_urls(item_info)
+        yt_data_extract.add_extra_html_info(item_info)
 
     return flask.render_template('search.html',
         header_playlist_names = local_playlist.get_playlist_names(),
         query = query,
-        estimated_results = estimated_results,
-        estimated_pages = estimated_pages,
-        corrections = corrections,
-        results = parsed_results,
+        estimated_results = search_info['estimated_results'],
+        estimated_pages = search_info['estimated_pages'],
+        corrections = search_info['corrections'],
+        results = search_info['items'],
         parameters_dictionary = request.args,
     )
 
