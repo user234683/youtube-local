@@ -2,6 +2,7 @@ body{
     --interface-color: #333333;
     --text-color: #cccccc;
     --background-color: #000000;
+    --video-background-color: #080808;
 }
 
 a:link {

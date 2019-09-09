@@ -2,6 +2,7 @@ body{
     --interface-color: #ffffff;
     --text-color: #222222;
     --background-color: #f8f8f8;
+    --video-background-color: #ffffff;
 }
 
 .comment .permalink{
