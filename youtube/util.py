@@ -317,3 +317,7 @@ def uppercase_escape(s):
      return re.sub(
          r'\\U([0-9a-fA-F]{8})',
          lambda m: chr(int(m.group(1), base=16)), s)
+
+def prefix_url(url):
+    url = url.lstrip('/')     # some urls have // before them, which has a special meaning
+    return '/' + url

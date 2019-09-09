@@ -2,6 +2,7 @@ from youtube import util
 
 import html
 import json
+import re
 
 # videos (all of type str):
 
@@ -152,15 +153,22 @@ def ajax_info(item_json):
         raise
 
 
+youtube_url_re = re.compile(r'^(?:(?:(?:https?:)?//)?(?:www\.)?youtube\.com)?(/.*)$')
+def normalize_url(url):
+    match = youtube_url_re.fullmatch(url)
+    if match is None:
+        raise Exception()
+
+    return 'https://www.youtube.com' + match.group(1)
 
 def prefix_urls(item):
     try:
-        item['thumbnail'] = '/' + item['thumbnail'].lstrip('/')
+        item['thumbnail'] = util.prefix_url(item['thumbnail'])
     except KeyError:
         pass
 
     try:
-        item['author_url'] = util.URL_ORIGIN + item['author_url']
+        item['author_url'] = util.prefix_url(item['author_url'])
     except KeyError:
         pass
 
@@ -219,7 +227,7 @@ def renderer_info(renderer, additional_info={}):
 
         if 'ownerText' in renderer:
             info['author'] = renderer['ownerText']['runs'][0]['text']
-            info['author_url'] = renderer['ownerText']['runs'][0]['navigationEndpoint']['commandMetadata']['webCommandMetadata']['url']
+            info['author_url'] = normalize_url(renderer['ownerText']['runs'][0]['navigationEndpoint']['commandMetadata']['webCommandMetadata']['url'])
         try:
             overlays = renderer['thumbnailOverlays']
         except KeyError:
@@ -241,7 +249,7 @@ def renderer_info(renderer, additional_info={}):
             if key in ('longBylineText', 'shortBylineText'):
                 info['author'] = get_text(node)
                 try:
-                    info['author_url'] = get_url(node)
+                    info['author_url'] = normalize_url(get_url(node))
                 except KeyError:
                     pass
 

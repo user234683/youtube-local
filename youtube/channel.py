@@ -219,8 +219,7 @@ def extract_info(polymer_json, tab):
             else:
                 items = contents    # for search
 
-        # TODO: Fix this URL prefixing shit
-        additional_info = {'author': info['channel_name'], 'author_url': '/channel/' + channel_id}
+        additional_info = {'author': info['channel_name'], 'author_url': 'https://www.youtube.com/channel/' + channel_id}
         info['items'] = [yt_data_extract.renderer_info(renderer, additional_info) for renderer in items]
 
     elif tab == 'about':
@@ -258,8 +257,8 @@ def extract_info(polymer_json, tab):
     return info
 
 def post_process_channel_info(info):
-    info['avatar'] = '/' + info['avatar']
-    info['channel_url'] = '/' + info['channel_url']
+    info['avatar'] = util.prefix_url(info['avatar'])
+    info['channel_url'] = util.prefix_url(info['channel_url'])
     for item in info['items']:
         yt_data_extract.prefix_urls(item)
         yt_data_extract.add_extra_html_info(item)
