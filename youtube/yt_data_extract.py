@@ -281,6 +281,7 @@ def parse_info_prepare_for_html(renderer, additional_info={}):
 
 
 def extract_channel_info(polymer_json, tab):
+    info = {'errors': []}
     response = polymer_json[1]['response']
     try:
         microformat = response['microformat']['microformatDataRenderer']
@@ -289,18 +290,18 @@ def extract_channel_info(polymer_json, tab):
     # example terminated channel: https://www.youtube.com/channel/UCnKJeK_r90jDdIuzHXC0Org
     except KeyError:
         if 'alerts' in response and len(response['alerts']) > 0:
-            result = ''
             for alert in response['alerts']:
-                result += alert['alertRenderer']['text']['simpleText'] + '\n'
-            flask.abort(200, result)
+                info['errors'].append(alert['alertRenderer']['text']['simpleText'])
+            return info
         elif 'errors' in response['responseContext']:
             for error in response['responseContext']['errors']['error']:
                 if error['code'] == 'INVALID_VALUE' and error['location'] == 'browse_id':
-                    flask.abort(404, 'This channel does not exist')
-        raise
+                    info['errors'].append('This channel does not exist')
+                    return info
+        info['errors'].append('Failure getting microformat')
+        return info
 
 
-    info = {}
     info['current_tab'] = tab
 
 
