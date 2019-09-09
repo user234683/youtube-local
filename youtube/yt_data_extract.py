@@ -449,3 +449,30 @@ def extract_search_info(polymer_json):
 
 
     return info
+
+def extract_playlist_metadata(polymer_json):
+    metadata = renderer_info(polymer_json['response']['header'])
+
+    if 'description' not in metadata:
+        metadata['description'] = ''
+
+    metadata['size'] = int(metadata['size'].replace(',', ''))
+
+    return metadata
+
+def extract_playlist_info(polymer_json):
+    info = {}
+    try:    # first page
+        video_list = polymer_json['response']['contents']['singleColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['playlistVideoListRenderer']['contents']
+        first_page = True
+    except KeyError:    # other pages
+        video_list = polymer_json['response']['continuationContents']['playlistVideoListContinuation']['contents']
+        first_page = False
+
+    info['items'] = [renderer_info(renderer) for renderer in video_list]
+
+    if first_page:
+        info['metadata'] = extract_playlist_metadata(polymer_json)
+
+    return info
+
