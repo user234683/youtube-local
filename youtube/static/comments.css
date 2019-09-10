@@ -81,6 +81,9 @@
     height:32px;
     width:32px;
 }
+    .comment .author-avatar-img{
+        max-height: 100%;
+    }
 
 .comment address{
     grid-column: 2;
