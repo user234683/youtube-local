@@ -1,6 +1,23 @@
 {% set page_title = 'Local playlists' %}
 {% extends "base.html" %}
 
+{% block style %}
+main{
+    display: flex;
+    justify-content: center;
+}
+    ul{
+        background-color: var(--interface-color);
+        margin-top: 20px;
+        padding: 20px;
+        min-width: 400px;
+        align-self: start;
+    }
+        li{
+            margin-bottom: 10px;
+        }
+{% endblock style %}
+
 {% block main %}
     <ul>
         {% for playlist_name, playlist_url in playlists %}
