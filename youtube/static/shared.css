@@ -107,6 +107,18 @@ body{
         flex-grow: 1;
         padding-bottom: 20px;
     }
+        #message-box{
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-style: outset;
+            padding: 20px;
+            background-color: var(--interface-color);
+            opacity: 0;
+            transition-property: opacity;
+            transition-duration: 0.3s;
+        }
 
 
 .dropdown{
