@@ -93,85 +93,87 @@
                     </div>
                 </form>
 
-            <form id="playlist-edit" action="/youtube.com/edit_playlist" method="post" target="_self">
-                <input name="playlist_name" id="playlist-name-selection" list="playlist-options" type="text">
-                <datalist id="playlist-options">
-                {% for playlist_name in header_playlist_names %}
-                    <option value="{{ playlist_name }}">{{ playlist_name }}</option>
-                {% endfor %}
-                </datalist>
-                <button type="submit" id="playlist-add-button" name="action" value="add">Add to playlist</button>
-                <button type="reset" id="item-selection-reset">Clear selection</button>
-            </form>
-            <script>
-                /* Takes control of the form if javascript is enabled, so that adding stuff to a playlist will not cause things to stop loading, and will display a status message. If javascript is disabled, the form will still work using regular HTML methods, but causes things on the page (such as the video) to stop loading. */
-                var playlistAddForm = document.getElementById('playlist-edit');
+            {% if header_playlist_names is defined %}
+                <form id="playlist-edit" action="/youtube.com/edit_playlist" method="post" target="_self">
+                    <input name="playlist_name" id="playlist-name-selection" list="playlist-options" type="text">
+                    <datalist id="playlist-options">
+                    {% for playlist_name in header_playlist_names %}
+                        <option value="{{ playlist_name }}">{{ playlist_name }}</option>
+                    {% endfor %}
+                    </datalist>
+                    <button type="submit" id="playlist-add-button" name="action" value="add">Add to playlist</button>
+                    <button type="reset" id="item-selection-reset">Clear selection</button>
+                </form>
+                <script>
+                    /* Takes control of the form if javascript is enabled, so that adding stuff to a playlist will not cause things to stop loading, and will display a status message. If javascript is disabled, the form will still work using regular HTML methods, but causes things on the page (such as the video) to stop loading. */
+                    var playlistAddForm = document.getElementById('playlist-edit');
 
-                function setStyle(element, property, value){
-                    element.style[property] = value;
-                }
-                function removeMessage(messageBox){
-                    messageBox.parentNode.removeChild(messageBox);
-                }
+                    function setStyle(element, property, value){
+                        element.style[property] = value;
+                    }
+                    function removeMessage(messageBox){
+                        messageBox.parentNode.removeChild(messageBox);
+                    }
 
-                function displayMessage(text, error=false){
-                    let currentMessageBox = document.getElementById('message-box');
-                    if(currentMessageBox !== null){
-                        currentMessageBox.parentNode.removeChild(currentMessageBox);
-                    }
-                    let messageBox = document.createElement('div');
-                    if(error){
-                        messageBox.setAttribute('role', 'alert');
-                    } else {
-                        messageBox.setAttribute('role', 'status');
-                    }
-                    messageBox.setAttribute('id', 'message-box');
-                    let textNode = document.createTextNode(text);
-                    messageBox.appendChild(textNode);
-                    document.querySelector('main').appendChild(messageBox);
-                    let currentstyle = window.getComputedStyle(messageBox);
-                    let removalDelay;
-                    if(error){
-                        removalDelay = 5000;
-                    } else {
-                        removalDelay = 1500;
-                    }
-                    window.setTimeout(setStyle, 20, messageBox, 'opacity', 1);
-                    window.setTimeout(setStyle, removalDelay, messageBox, 'opacity', 0);
-                    window.setTimeout(removeMessage, removalDelay+300, messageBox);
-                }
-                // https://developer.mozilla.org/en-US/docs/Learn/HTML/Forms/Sending_forms_through_JavaScript
-                function sendData(){
-                    var XHR = new XMLHttpRequest();
-                    var FD = new FormData(playlistAddForm);
-                    // https://stackoverflow.com/questions/48322876/formdata-doesnt-include-value-of-buttons
-                    FD.append('action', 'add');
-
-                    XHR.addEventListener('load', function(event){
-                        if(event.target.status == 204){
-                            displayMessage('Added videos to playlist "' + FD.get('playlist_name') + '"');
-                        } else {
-                            displayMessage('Error adding videos to playlist: ' + event.target.status.toString(), true);
+                    function displayMessage(text, error=false){
+                        let currentMessageBox = document.getElementById('message-box');
+                        if(currentMessageBox !== null){
+                            currentMessageBox.parentNode.removeChild(currentMessageBox);
                         }
-                    });
-
-                    XHR.addEventListener('error', function(event){
-                        if(event.target.status == 0){
-                            displayMessage('XHR failed: Check that XHR requests are allowed', true);
+                        let messageBox = document.createElement('div');
+                        if(error){
+                            messageBox.setAttribute('role', 'alert');
                         } else {
-                            displayMessage('XHR failed: Unknown error', true);
+                            messageBox.setAttribute('role', 'status');
                         }
+                        messageBox.setAttribute('id', 'message-box');
+                        let textNode = document.createTextNode(text);
+                        messageBox.appendChild(textNode);
+                        document.querySelector('main').appendChild(messageBox);
+                        let currentstyle = window.getComputedStyle(messageBox);
+                        let removalDelay;
+                        if(error){
+                            removalDelay = 5000;
+                        } else {
+                            removalDelay = 1500;
+                        }
+                        window.setTimeout(setStyle, 20, messageBox, 'opacity', 1);
+                        window.setTimeout(setStyle, removalDelay, messageBox, 'opacity', 0);
+                        window.setTimeout(removeMessage, removalDelay+300, messageBox);
+                    }
+                    // https://developer.mozilla.org/en-US/docs/Learn/HTML/Forms/Sending_forms_through_JavaScript
+                    function sendData(){
+                        var XHR = new XMLHttpRequest();
+                        var FD = new FormData(playlistAddForm);
+                        // https://stackoverflow.com/questions/48322876/formdata-doesnt-include-value-of-buttons
+                        FD.append('action', 'add');
+
+                        XHR.addEventListener('load', function(event){
+                            if(event.target.status == 204){
+                                displayMessage('Added videos to playlist "' + FD.get('playlist_name') + '"');
+                            } else {
+                                displayMessage('Error adding videos to playlist: ' + event.target.status.toString(), true);
+                            }
+                        });
+
+                        XHR.addEventListener('error', function(event){
+                            if(event.target.status == 0){
+                                displayMessage('XHR failed: Check that XHR requests are allowed', true);
+                            } else {
+                                displayMessage('XHR failed: Unknown error', true);
+                            }
+                        });
+
+                        XHR.open('POST', playlistAddForm.getAttribute('action'));
+                        XHR.send(FD);
+                    }
+
+                    playlistAddForm.addEventListener('submit', function(event){
+                        event.preventDefault();
+                        sendData();
                     });
-
-                    XHR.open('POST', playlistAddForm.getAttribute('action'));
-                    XHR.send(FD);
-                }
-
-                playlistAddForm.addEventListener('submit', function(event){
-                    event.preventDefault();
-                    sendData();
-                });
-            </script>
+                </script>
+            {% endif %}
         </header>
         <main>
 {% block main %}
