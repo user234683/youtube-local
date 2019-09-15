@@ -1,4 +1,4 @@
-from youtube import util, yt_data_extract, channel
+from youtube import util, yt_data_extract, channel, local_playlist
 from youtube import yt_app
 import settings
 
@@ -774,6 +774,7 @@ def get_subscriptions_page():
                 })
 
     return flask.render_template('subscriptions.html',
+        header_playlist_names = local_playlist.get_playlist_names(),
         videos = videos,
         num_pages = math.ceil(number_of_videos_in_db/60),
         parameters_dictionary = request.args,

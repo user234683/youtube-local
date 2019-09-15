@@ -110,6 +110,7 @@ def get_local_playlist_page(playlist_name=None):
         offset = 50*(page - 1)
         videos, num_videos = get_local_playlist_videos(playlist_name, offset=offset, amount=50)
         return flask.render_template('local_playlist.html',
+            header_playlist_names = get_playlist_names(),
             playlist_name = playlist_name,
             videos = videos,
             num_pages = math.ceil(num_videos/50),
