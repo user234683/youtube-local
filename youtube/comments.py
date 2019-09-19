@@ -48,24 +48,6 @@ def comment_replies_ctoken(video_id, comment_id, max_results=500):
     result = proto.nested(2, proto.string(2, video_id)) + proto.uint(3,6) + proto.nested(6, params)
     return base64.urlsafe_b64encode(result).decode('ascii')
 
-def ctoken_metadata(ctoken):
-    result = dict()
-    params = proto.parse(proto.b64_to_bytes(ctoken))
-    result['video_id'] = proto.parse(params[2])[2].decode('ascii')
-
-    offset_information = proto.parse(params[6])
-    result['offset'] = offset_information.get(5, 0)
-
-    result['is_replies'] = False
-    if (3 in offset_information) and (2 in proto.parse(offset_information[3])):
-        result['is_replies'] = True
-        result['sort'] = None
-    else:
-        try:
-            result['sort'] = proto.parse(offset_information[4])[6]
-        except KeyError:
-            result['sort'] = 0
-    return result
 
 
 mobile_headers = {
@@ -91,7 +73,9 @@ def request_comments(ctoken, replies=False):
             print("got <!DOCTYPE>, retrying")
             continue
         break
-    return content
+
+    polymer_json = json.loads(util.uppercase_escape(content.decode('utf-8')))
+    return polymer_json
 
 
 def single_comment_ctoken(video_id, comment_id):
@@ -101,77 +85,6 @@ def single_comment_ctoken(video_id, comment_id):
     return base64.urlsafe_b64encode(result).decode('ascii')
 
 
-
-def parse_comments_polymer(content):
-    try:
-        video_title = ''
-        content = json.loads(util.uppercase_escape(content.decode('utf-8')))
-        url = content[1]['url']
-        ctoken = urllib.parse.parse_qs(url[url.find('?')+1:])['ctoken'][0]
-        metadata = ctoken_metadata(ctoken)
-
-        try:
-            comments_raw = content[1]['response']['continuationContents']['commentSectionContinuation']['items']
-        except KeyError:
-            comments_raw = content[1]['response']['continuationContents']['commentRepliesContinuation']['contents']
-
-        ctoken = util.default_multi_get(content, 1, 'response', 'continuationContents', 'commentSectionContinuation', 'continuations', 0, 'nextContinuationData', 'continuation', default='')
-
-        comments = []
-        for comment_json in comments_raw:
-            number_of_replies = 0
-            try:
-                comment_thread = comment_json['commentThreadRenderer']
-            except KeyError:
-                comment_renderer = comment_json['commentRenderer']
-            else:
-                if 'commentTargetTitle' in comment_thread:
-                    video_title = comment_thread['commentTargetTitle']['runs'][0]['text']
-
-                if 'replies' in comment_thread:
-                    view_replies_text = yt_data_extract.get_plain_text(comment_thread['replies']['commentRepliesRenderer']['moreText'])
-                    view_replies_text = view_replies_text.replace(',', '')
-                    match = re.search(r'(\d+)', view_replies_text)
-                    if match is None:
-                        number_of_replies = 1
-                    else:
-                        number_of_replies = int(match.group(1))
-                comment_renderer = comment_thread['comment']['commentRenderer']
-
-            comment = {
-                'author_id': comment_renderer.get('authorId', ''),
-                'author_avatar': comment_renderer['authorThumbnail']['thumbnails'][0]['url'],
-                'likes': comment_renderer['likeCount'],
-                'published': yt_data_extract.get_plain_text(comment_renderer['publishedTimeText']),
-                'text': comment_renderer['contentText'].get('runs', ''),
-                'number_of_replies': number_of_replies,
-                'comment_id': comment_renderer['commentId'],
-            }
-
-            if 'authorText' in comment_renderer:     # deleted channels have no name or channel link
-                comment['author'] = yt_data_extract.get_plain_text(comment_renderer['authorText'])
-                comment['author_url'] = comment_renderer['authorEndpoint']['commandMetadata']['webCommandMetadata']['url']
-                comment['author_channel_id'] = comment_renderer['authorEndpoint']['browseEndpoint']['browseId']
-            else:
-                comment['author'] = ''
-                comment['author_url'] = ''
-                comment['author_channel_id'] = ''
-
-            comments.append(comment)
-    except Exception as e:
-        print('Error parsing comments: ' + str(e))
-        comments = ()
-        ctoken = ''
-
-    return {
-        'ctoken': ctoken,
-        'comments': comments,
-        'video_title': video_title,
-        'video_id': metadata['video_id'],
-        'offset': metadata['offset'],
-        'is_replies': metadata['is_replies'],
-        'sort': metadata['sort'],
-    }
 
 def post_process_comments_info(comments_info):
     for comment in comments_info['comments']:
@@ -207,7 +120,7 @@ def post_process_comments_info(comments_info):
             comment['likes_text'] = str(comment['likes']) + ' likes'
 
     comments_info['include_avatars'] = settings.enable_comment_avatars
-    if comments_info['ctoken'] != '':
+    if comments_info['ctoken']:
         comments_info['more_comments_url'] = util.URL_ORIGIN + '/comments?ctoken=' + comments_info['ctoken']
 
     comments_info['page_number'] = page_number = str(int(comments_info['offset']/20) + 1)
@@ -222,7 +135,7 @@ def post_process_comments_info(comments_info):
 
 def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
     if settings.comments_mode:
-        comments_info = parse_comments_polymer(request_comments(make_comment_ctoken(video_id, sort, offset, lc, secret_key)))
+        comments_info = yt_data_extract.parse_comments_polymer(request_comments(make_comment_ctoken(video_id, sort, offset, lc, secret_key)))
         post_process_comments_info(comments_info)
 
         post_comment_url = util.URL_ORIGIN + "/post_comment?video_id=" + video_id
@@ -247,7 +160,7 @@ def get_comments_page():
         ctoken = comment_replies_ctoken(video_id, parent_id)
         replies = True
 
-    comments_info = parse_comments_polymer(request_comments(ctoken, replies))
+    comments_info = yt_data_extract.parse_comments_polymer(request_comments(ctoken, replies))
     post_process_comments_info(comments_info)
 
     if not replies:

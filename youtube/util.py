@@ -277,15 +277,6 @@ def video_id(url):
     url_parts = urllib.parse.urlparse(url)
     return urllib.parse.parse_qs(url_parts.query)['v'][0]
 
-def default_multi_get(object, *keys, default):
-    ''' Like dict.get(), but for nested dictionaries/sequences, supporting keys or indices. Last argument is the default value to use in case of any IndexErrors or KeyErrors '''
-    try:
-        for key in keys:
-            object = object[key]
-        return object
-    except (IndexError, KeyError):
-        return default
-
 
 # default, sddefault, mqdefault, hqdefault, hq720
 def get_thumbnail_url(video_id):

@@ -1,4 +1,4 @@
-from youtube import util
+from youtube import util, proto
 
 import html
 import json
@@ -59,10 +59,14 @@ def format_text_runs(runs):
     return result
 
 
-
-
-
-
+def default_multi_get(object, *keys, default):
+    ''' Like dict.get(), but for nested dictionaries/sequences, supporting keys or indices. Last argument is the default value to use in case of any IndexErrors or KeyErrors '''
+    try:
+        for key in keys:
+            object = object[key]
+        return object
+    except (IndexError, KeyError):
+        return default
 
 
 def get_url(node):
@@ -500,4 +504,103 @@ def extract_playlist_info(polymer_json):
         info['metadata'] = extract_playlist_metadata(polymer_json)
 
     return info
+
+def ctoken_metadata(ctoken):
+    result = dict()
+    params = proto.parse(proto.b64_to_bytes(ctoken))
+    result['video_id'] = proto.parse(params[2])[2].decode('ascii')
+
+    offset_information = proto.parse(params[6])
+    result['offset'] = offset_information.get(5, 0)
+
+    result['is_replies'] = False
+    if (3 in offset_information) and (2 in proto.parse(offset_information[3])):
+        result['is_replies'] = True
+        result['sort'] = None
+    else:
+        try:
+            result['sort'] = proto.parse(offset_information[4])[6]
+        except KeyError:
+            result['sort'] = 0
+    return result
+
+def parse_comments_polymer(polymer_json):
+    try:
+        video_title = ''
+        response, err = get_response(polymer_json)
+        if err:
+            raise Exception(err)
+
+        try:
+            url = polymer_json[1]['url']
+        except (TypeError, IndexError, KeyError):
+            url = polymer_json['url']
+
+        ctoken = urllib.parse.parse_qs(url[url.find('?')+1:])['ctoken'][0]
+        metadata = ctoken_metadata(ctoken)
+
+        try:
+            comments_raw = response['continuationContents']['commentSectionContinuation']['items']
+        except KeyError:
+            comments_raw = response['continuationContents']['commentRepliesContinuation']['contents']
+
+        ctoken = default_multi_get(response, 'continuationContents', 'commentSectionContinuation', 'continuations', 0, 'nextContinuationData', 'continuation', default='')
+
+        comments = []
+        for comment_json in comments_raw:
+            number_of_replies = 0
+            try:
+                comment_thread = comment_json['commentThreadRenderer']
+            except KeyError:
+                comment_renderer = comment_json['commentRenderer']
+            else:
+                if 'commentTargetTitle' in comment_thread:
+                    video_title = comment_thread['commentTargetTitle']['runs'][0]['text']
+
+                if 'replies' in comment_thread:
+                    view_replies_text = get_plain_text(comment_thread['replies']['commentRepliesRenderer']['moreText'])
+                    view_replies_text = view_replies_text.replace(',', '')
+                    match = re.search(r'(\d+)', view_replies_text)
+                    if match is None:
+                        number_of_replies = 1
+                    else:
+                        number_of_replies = int(match.group(1))
+                comment_renderer = comment_thread['comment']['commentRenderer']
+
+            comment = {
+                'author_id': comment_renderer.get('authorId', ''),
+                'author_avatar': comment_renderer['authorThumbnail']['thumbnails'][0]['url'],
+                'likes': comment_renderer['likeCount'],
+                'published': get_plain_text(comment_renderer['publishedTimeText']),
+                'text': comment_renderer['contentText'].get('runs', ''),
+                'number_of_replies': number_of_replies,
+                'comment_id': comment_renderer['commentId'],
+            }
+
+            if 'authorText' in comment_renderer:     # deleted channels have no name or channel link
+                comment['author'] = get_plain_text(comment_renderer['authorText'])
+                comment['author_url'] = comment_renderer['authorEndpoint']['commandMetadata']['webCommandMetadata']['url']
+                comment['author_channel_id'] = comment_renderer['authorEndpoint']['browseEndpoint']['browseId']
+            else:
+                comment['author'] = ''
+                comment['author_url'] = ''
+                comment['author_channel_id'] = ''
+
+            comments.append(comment)
+    except Exception as e:
+        print('Error parsing comments: ' + str(e))
+        comments = ()
+        ctoken = ''
+
+    return {
+        'ctoken': ctoken,
+        'comments': comments,
+        'video_title': video_title,
+        'video_id': metadata['video_id'],
+        'offset': metadata['offset'],
+        'is_replies': metadata['is_replies'],
+        'sort': metadata['sort'],
+    }
+
+
 
