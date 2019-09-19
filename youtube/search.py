@@ -76,6 +76,9 @@ def get_search_page():
     polymer_json = get_search_json(query, page, autocorrect, sort, filters)
 
     search_info = yt_data_extract.extract_search_info(polymer_json)
+    if search_info['error']:
+        return flask.render_template('error.html', error_message = search_info['error'])
+
     for item_info in search_info['items']:
         yt_data_extract.prefix_urls(item_info)
         yt_data_extract.add_extra_html_info(item_info)

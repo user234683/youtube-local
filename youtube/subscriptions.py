@@ -456,8 +456,8 @@ def _get_upstream_videos(channel_id):
         traceback.print_exc()
 
     channel_info = yt_data_extract.extract_channel_info(json.loads(channel_tab), 'videos')
-    if channel_info['errors']:
-        print('Error checking channel ' + channel_status_name + ': ' + ', '.join(channel_info['errors']))
+    if channel_info['error']:
+        print('Error checking channel ' + channel_status_name + ': ' + channel_info['error'])
         return
 
     videos = channel_info['items']

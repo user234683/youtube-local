@@ -186,8 +186,8 @@ def get_channel_page(channel_id, tab='videos'):
 
 
     info = yt_data_extract.extract_channel_info(json.loads(polymer_json), tab)
-    if info['errors']:
-        return flask.render_template('error.html', error_message = '\n'.join(info['errors']))
+    if info['error']:
+        return flask.render_template('error.html', error_message = info['error'])
     post_process_channel_info(info)
     if tab in ('videos', 'search'):
         info['number_of_videos'] = number_of_videos
@@ -228,8 +228,8 @@ def get_channel_page_general_url(base_url, tab, request):
 
 
     info = yt_data_extract.extract_channel_info(json.loads(polymer_json), tab)
-    if info['errors']:
-        return flask.render_template('error.html', error_message = '\n'.join(info['errors']))
+    if info['error']:
+        return flask.render_template('error.html', error_message = info['error'])
 
     post_process_channel_info(info)
     if tab in ('videos', 'search'):

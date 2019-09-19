@@ -280,10 +280,29 @@ def parse_info_prepare_for_html(renderer, additional_info={}):
 
     return item
 
+def get_response(polymer_json):
+    '''return response, error'''
+
+    # responses returned for desktop version
+    try:
+        return polymer_json[1]['response'], None
+    except (TypeError, KeyError, IndexError):
+        pass
+
+    # responses returned for mobile version
+    try:
+        return polymer_json['response'], None
+    except (TypeError, KeyError):
+        pass
+
+    return None, 'Failed to extract response'
+
 
 def extract_channel_info(polymer_json, tab):
-    info = {'errors': []}
-    response = polymer_json[1]['response']
+    response, err = get_response(polymer_json)
+    if err:
+        return {'error': err}
+
     try:
         microformat = response['microformat']['microformatDataRenderer']
 
@@ -291,18 +310,14 @@ def extract_channel_info(polymer_json, tab):
     # example terminated channel: https://www.youtube.com/channel/UCnKJeK_r90jDdIuzHXC0Org
     except KeyError:
         if 'alerts' in response and len(response['alerts']) > 0:
-            for alert in response['alerts']:
-                info['errors'].append(alert['alertRenderer']['text']['simpleText'])
-            return info
+            return {'error': ' '.join(alert['alertRenderer']['text']['simpleText'] for alert in response['alerts']) }
         elif 'errors' in response['responseContext']:
             for error in response['responseContext']['errors']['error']:
                 if error['code'] == 'INVALID_VALUE' and error['location'] == 'browse_id':
-                    info['errors'].append('This channel does not exist')
-                    return info
-        info['errors'].append('Failure getting microformat')
-        return info
+                    return {'error': 'This channel does not exist'}
+        return {'error': 'Failure getting microformat'}
 
-
+    info = {'error': None}
     info['current_tab'] = tab
 
 
@@ -402,13 +417,16 @@ def extract_channel_info(polymer_json, tab):
     return info
 
 def extract_search_info(polymer_json):
-    info = {}
-    info['estimated_results'] = int(polymer_json[1]['response']['estimatedResults'])
+    response, err = get_response(polymer_json)
+    if err:
+        return {'error': err}
+    info = {'error': None}
+    info['estimated_results'] = int(response['estimatedResults'])
     info['estimated_pages'] = ceil(info['estimated_results']/20)
 
     # almost always is the first "section", but if there's an advertisement for a google product like Stadia or Home in the search results, then that becomes the first "section" and the search results are in the second. So just join all of them for resiliency
     results = []
-    for section in polymer_json[1]['response']['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']:
+    for section in response['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents']:
         results += section['itemSectionRenderer']['contents']
 
     info['items'] = []
@@ -451,7 +469,11 @@ def extract_search_info(polymer_json):
     return info
 
 def extract_playlist_metadata(polymer_json):
-    metadata = renderer_info(polymer_json['response']['header'])
+    response, err = get_response(polymer_json)
+    if err:
+        return {'error': err}
+    metadata = renderer_info(response['header'])
+    metadata['error'] = None
 
     if 'description' not in metadata:
         metadata['description'] = ''
@@ -461,12 +483,15 @@ def extract_playlist_metadata(polymer_json):
     return metadata
 
 def extract_playlist_info(polymer_json):
-    info = {}
+    response, err = get_response(polymer_json)
+    if err:
+        return {'error': err}
+    info = {'error': None}
     try:    # first page
-        video_list = polymer_json['response']['contents']['singleColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['playlistVideoListRenderer']['contents']
+        video_list = response['contents']['singleColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['playlistVideoListRenderer']['contents']
         first_page = True
     except KeyError:    # other pages
-        video_list = polymer_json['response']['continuationContents']['playlistVideoListContinuation']['contents']
+        video_list = response['continuationContents']['playlistVideoListContinuation']['contents']
         first_page = False
 
     info['items'] = [renderer_info(renderer) for renderer in video_list]

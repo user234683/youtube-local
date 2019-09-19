@@ -91,6 +91,9 @@ def get_playlist_page():
         first_page_json, this_page_json = tasks[0].value, tasks[1].value
 
     info = yt_data_extract.extract_playlist_info(this_page_json)
+    if info['error']:
+        return flask.render_template('error.html', error_message = info['error'])
+
     if page != '1':
         info['metadata'] = yt_data_extract.extract_playlist_metadata(first_page_json)
 
