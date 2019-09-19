@@ -237,7 +237,8 @@ body{
 
         .item .title{
             min-width: 0;
-            max-height:3.6em;
+            line-height:1.25em;
+            max-height:3.75em;
             overflow:hidden;
 
             color: var(--text-color);
