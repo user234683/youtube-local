@@ -554,27 +554,20 @@ def extract_search_info(polymer_json):
             continue
         if type == 'didYouMeanRenderer':
             renderer = renderer[type]
-            corrected_query_string = request.args.to_dict(flat=False)
-            corrected_query_string['query'] = [renderer['correctedQueryEndpoint']['searchEndpoint']['query']]
-            corrected_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(corrected_query_string, doseq=True)
 
             info['corrections'] = {
                 'type': 'did_you_mean',
-                'corrected_query': yt_data_extract.format_text_runs(renderer['correctedQuery']['runs']),
-                'corrected_query_url': corrected_query_url,
+                'corrected_query': renderer['correctedQueryEndpoint']['searchEndpoint']['query'],
+                'corrected_query_text': renderer['correctedQuery']['runs'],
             }
             continue
         if type == 'showingResultsForRenderer':
             renderer = renderer[type]
-            no_autocorrect_query_string = request.args.to_dict(flat=False)
-            no_autocorrect_query_string['autocorrect'] = ['0']
-            no_autocorrect_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
 
             info['corrections'] = {
                 'type': 'showing_results_for',
-                'corrected_query': yt_data_extract.format_text_runs(renderer['correctedQuery']['runs']),
-                'original_query_url': no_autocorrect_query_url,
-                'original_query': renderer['originalQuery']['simpleText'],
+                'corrected_query_text': renderer['correctedQuery']['runs'],
+                'original_query_text': renderer['originalQuery']['simpleText'],
             }
             continue
 

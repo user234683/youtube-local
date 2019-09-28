@@ -83,6 +83,17 @@ def get_search_page():
         yt_data_extract.prefix_urls(item_info)
         yt_data_extract.add_extra_html_info(item_info)
 
+    corrections = search_info['corrections']
+    if corrections['type'] == 'did_you_mean':
+        corrected_query_string = request.args.to_dict(flat=False)
+        corrected_query_string['query'] = [corrections['corrected_query']]
+        corrections['corrected_query_url'] = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(corrected_query_string, doseq=True)
+    elif corrections['type'] == 'showing_results_for':
+        no_autocorrect_query_string = request.args.to_dict(flat=False)
+        no_autocorrect_query_string['autocorrect'] = ['0']
+        no_autocorrect_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
+        corrections['original_query_url'] = no_autocorrect_query_url
+
     return flask.render_template('search.html',
         header_playlist_names = local_playlist.get_playlist_names(),
         query = query,
