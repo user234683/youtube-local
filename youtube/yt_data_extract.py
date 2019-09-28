@@ -322,23 +322,14 @@ def parse_info_prepare_for_html(renderer, additional_info={}):
 
     return item
 
-# TODO: Type checking
-def get_response(polymer_json):
+def extract_response(polymer_json):
     '''return response, error'''
+    response = multi_default_multi_get(polymer_json, [1, 'response'], ['response'], default=None, types=dict)
+    if response is None:
+        return None, 'Failed to extract response'
+    else:
+        return response, None
 
-    # responses returned for desktop version
-    try:
-        return polymer_json[1]['response'], None
-    except (TypeError, KeyError, IndexError):
-        pass
-
-    # responses returned for mobile version
-    try:
-        return polymer_json['response'], None
-    except (TypeError, KeyError):
-        pass
-
-    return None, 'Failed to extract response'
 
 list_types = {
     'sectionListRenderer',
@@ -459,7 +450,7 @@ def extract_items(response):
         return [], None
 
 def extract_channel_info(polymer_json, tab):
-    response, err = get_response(polymer_json)
+    response, err = extract_response(polymer_json)
     if err:
         return {'error': err}
 
@@ -544,7 +535,7 @@ def extract_channel_info(polymer_json, tab):
     return info
 
 def extract_search_info(polymer_json):
-    response, err = get_response(polymer_json)
+    response, err = extract_response(polymer_json)
     if err:
         return {'error': err}
     info = {'error': None}
@@ -595,7 +586,7 @@ def extract_search_info(polymer_json):
     return info
 
 def extract_playlist_metadata(polymer_json):
-    response, err = get_response(polymer_json)
+    response, err = extract_response(polymer_json)
     if err:
         return {'error': err}
     metadata = renderer_info(response['header'])
@@ -609,7 +600,7 @@ def extract_playlist_metadata(polymer_json):
     return metadata
 
 def extract_playlist_info(polymer_json):
-    response, err = get_response(polymer_json)
+    response, err = extract_response(polymer_json)
     if err:
         return {'error': err}
     info = {'error': None}
@@ -645,7 +636,7 @@ def ctoken_metadata(ctoken):
 def parse_comments_polymer(polymer_json):
     try:
         video_title = ''
-        response, err = get_response(polymer_json)
+        response, err = extract_response(polymer_json)
         if err:
             raise Exception(err)
 
