@@ -176,7 +176,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookieja
         return content, response
     return content
 
-mobile_user_agent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1'
+mobile_user_agent = 'Mozilla/5.0 (Linux; Android 7.0; Redmi Note 4 Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Mobile Safari/537.36'
 mobile_ua = (('User-Agent', mobile_user_agent),)
 desktop_user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0'
 desktop_ua = (('User-Agent', desktop_user_agent),)
@@ -312,3 +312,10 @@ def uppercase_escape(s):
 def prefix_url(url):
     url = url.lstrip('/')     # some urls have // before them, which has a special meaning
     return '/' + url
+
+def left_remove(string, substring):
+    '''removes substring from the start of string, if present'''
+    if string.startswith(substring):
+        return string[len(substring):]
+    return string
+

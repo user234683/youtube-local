@@ -187,8 +187,17 @@
                 .format-ext{
                     width: 60px;
                 }
-                .format-res{
-                    width:90px;
+                .format-video-quality{
+                    width: 140px;
+                }
+                .format-audio-quality{
+                    width: 120px;
+                }
+                .format-file-size{
+                    width: 80px;
+                }
+                .format-codecs{
+                    width: 120px;
                 }
 {% endblock style %}
 
@@ -227,8 +236,10 @@
                         <a class="download-link" href="{{ format['url'] }}">
                             <ol class="format-attributes">
                                 <li class="format-ext">{{ format['ext'] }}</li>
-                                <li class="format-res">{{ format['resolution'] }}</li>
-                                <li class="format-note">{{ format['note'] }}</li>
+                                <li class="format-video-quality">{{ format['video_quality'] }}</li>
+                                <li class="format-audio-quality">{{ format['audio_quality'] }}</li>
+                                <li class="format-file-size">{{ format['file_size'] }}</li>
+                                <li class="format-codecs">{{ format['codecs'] }}</li>
                             </ol>
                         </a>
                     </li>
@@ -238,7 +249,7 @@
         <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
 
 
-        <span class="description">{{ description }}</span>
+        <span class="description">{{ common_elements.text_runs(description) }}</span>
         <div class="music-list">
             {% if music_list.__len__() != 0 %}
                 <hr>
