@@ -14,6 +14,19 @@
         text-decoration: underline;
     }
 
+    .playability-error{
+        height: 360px;
+        width: 640px;
+        grid-column: 2;
+        background-color: var(--video-background-color);
+        text-align:center;
+    }
+        .playability-error span{
+            position: relative;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
     {% if theater_mode %}
         video{
             grid-column: 1 / span 5;
@@ -202,20 +215,24 @@
 {% endblock style %}
 
 {% block main %}
-    <video controls autofocus>
-        {% for video_source in video_sources %}
-            <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
-        {% endfor %}
+    {% if playability_error %}
+        <div class="playability-error"><span>{{ 'Error: ' + playability_error }}</span></div>
+    {% else %}
+        <video controls autofocus class="video">
+            {% for video_source in video_sources %}
+                <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
+            {% endfor %}
 
-        {% for source in subtitle_sources %}
-            {% if source['on'] %}
-                <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
-            {% else %}
-                <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
-            {% endif %}
-        {% endfor %}
+            {% for source in subtitle_sources %}
+                {% if source['on'] %}
+                    <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
+                {% else %}
+                    <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
+                {% endif %}
+            {% endfor %}
 
-    </video>
+        </video>
+    {% endif %}
 
     <div class="video-info">
         <h2 class="title">{{ title }}</h2>

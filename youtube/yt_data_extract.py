@@ -824,7 +824,7 @@ def check_missing_keys(object, *key_sequences):
         _object = object
         try:
             for key in key_sequence:
-                _object = object[key]
+                _object = _object[key]
         except (KeyError, IndexError, TypeError):
             return 'Could not find ' + key
 
@@ -1028,21 +1028,20 @@ def extract_watch_info(polymer_json):
         return {'error': 'Invalid top level polymer data'}
 
     error = check_missing_keys(top_level,
-        ['playerResponse'],
-    )
-    if error:
-        return {'error': error}
-
-    error = check_missing_keys(top_level,
         ['player', 'args'],
         ['player', 'assets', 'js'],
+        ['playerResponse'],
     )
     if error:
         info['playability_error'] = error
 
-
     player_args = default_multi_get(top_level, 'player', 'args', default={})
     player_response = json.loads(player_args['player_response']) if 'player_response' in player_args else {}
+    playability_status = default_multi_get(player_response, 'playabilityStatus', 'status', default=None)
+    playability_reason = default_multi_get(player_response, 'playabilityStatus', 'reason', default='Unknown error')
+    if playability_status not in (None, 'OK'):
+        info['playability_error'] = playability_reason
+
     streaming_data = player_response.get('streamingData', {})
     yt_formats = streaming_data.get('formats', []) + streaming_data.get('adaptiveFormats', [])
 
@@ -1069,6 +1068,8 @@ def extract_watch_info(polymer_json):
         fmt.update(_formats.get(str(yt_fmt.get('itag')), {}))
 
         info['formats'].append(fmt)
+    if info['formats']:
+        info['playability_error'] = None    # in case they lie
 
     info['base_js'] = default_multi_get(top_level, 'player', 'assets', 'js')
     if info['base_js']:

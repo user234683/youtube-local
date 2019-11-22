@@ -123,7 +123,7 @@ decrypt_function_re = re.compile(r'function\(a\)\{(a=a\.split\(""\)[^\}]+)\}')
 op_with_arg_re = re.compile(r'[^\.]+\.([^\(]+)\(a,(\d+)\)')
 def decrypt_signatures(info):
     '''return error string, or False if no errors'''
-    if not info['formats'] or not info['formats'][0]['s']:
+    if ('formats' not in info) or (not info['formats']) or (not info['formats'][0]['s']):
         return False    # No decryption needed
     if not info['base_js']:
         return 'Failed to find base.js'
@@ -356,6 +356,7 @@ def get_watch_page():
         uploader    = info['author'],
         description = info['description'],
         unlisted    = info['unlisted'],
+        playability_error = info['playability_error'],
     )
 
 
