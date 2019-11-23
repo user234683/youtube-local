@@ -830,7 +830,8 @@ def check_missing_keys(object, *key_sequences):
 
     return None
 
-def extract_plain_text(node, default=None):
+def extract_plain_text(node, default=None, recover_urls=False):
+    '''default is the value returned if the extraction fails. If recover_urls is true, will attempt to fix Youtube's truncation of url text (most prominently seen in descriptions)'''
     if isinstance(node, str):
         return node
 
@@ -839,10 +840,21 @@ def extract_plain_text(node, default=None):
     except (KeyError, TypeError):
         pass
 
-    try:
-        return ''.join(text_run['text'] for text_run in node['runs'])
-    except (KeyError, TypeError):
-        pass
+    if isinstance(node, dict) and 'runs' in node:
+        if recover_urls:
+            result = ''
+            for run in node['runs']:
+                url = default_multi_get(run, 'navigationEndpoint', 'urlEndpoint', 'url')
+                text = run.get('text', '')
+                # second condition is necessary because youtube makes other things into urls, such as hashtags, which we want to keep as text
+                if url is not None and (text.startswith('http://') or text.startswith('https://')):
+                    url = remove_redirect(url)
+                    result += url # youtube truncates the url text, use actual url instead
+                else:
+                    result += text
+            return result
+        else:
+            return ''.join(text_run.get('text', '') for text_run in node['runs'])
 
     return default
 
@@ -878,6 +890,11 @@ def extract_integer(string):
     except ValueError:
         return None
 
+def update_if_not_none(dictionary, key, value):
+    '''Update dictionary[key] with value if value is not none'''
+    if key not in dictionary or value is not None:
+        dictionary[key] = value
+
 def extract_metadata_row_info(video_renderer_info):
     # extract category and music list
     info = {
@@ -908,6 +925,17 @@ def extract_metadata_row_info(video_renderer_info):
 
     return info
 
+def extract_date(date_text):
+    if date_text is None:
+        return None
+
+    date_text = date_text.replace(',', '').lower()
+    parts = date_text.split()
+    if len(parts) >= 3:
+        month, day, year = parts[-3:]
+        month = month_abbreviations.get(month[0:3]) # slicing in case they start writing out the full month name
+        if month and (re.fullmatch(r'\d\d?', day) is not None) and (re.fullmatch(r'\d{4}', year) is not None):
+            return year + '-' + month + '-' + day
 
 def extract_watch_info_mobile(top_level):
     info = {}
@@ -927,9 +955,20 @@ def extract_watch_info_mobile(top_level):
         video_info = {}
 
     info.update(extract_metadata_row_info(video_info))
-    #info['description'] = extract_formatted_text(video_info.get('description'))
+    info['description'] = extract_plain_text(video_info.get('description'), recover_urls=True)
+    info['view_count'] = extract_integer(extract_plain_text(video_info.get('expandedSubtitle')))
+    info['author'] = extract_plain_text(default_multi_get(video_info, 'owner', 'slimOwnerRenderer', 'title'))
+    info['author_id'] = default_multi_get(video_info, 'owner', 'slimOwnerRenderer', 'navigationEndpoint', 'browseEndpoint', 'browseId')
+    info['title'] = extract_plain_text(video_info.get('title'))
+    info['live'] = 'watching' in extract_plain_text(video_info.get('expandedSubtitle'))
+    info['unlisted'] = False
+    for badge in video_info.get('badges', []):
+        if default_multi_get(badge, 'metadataBadgeRenderer', 'label') == 'Unlisted':
+            info['unlisted'] = True
     info['like_count'] = None
     info['dislike_count'] = None
+    if not info['published_date']:
+        info['published_date'] = extract_date(extract_plain_text(video_info.get('dateText', None)))
     for button in video_info.get('buttons', ()):
         button_renderer = button.get('slimMetadataToggleButtonRenderer', {})
 
@@ -982,17 +1021,8 @@ def extract_watch_info_desktop(top_level):
             video_info.update(list(renderer.values())[0])
 
     info.update(extract_metadata_row_info(video_info))
-    #info['description'] = extract_formatted_text(video_info.get('description', None))
-    info['published_date'] = None
-    date_text = extract_plain_text(video_info.get('dateText', None))
-    if date_text is not None:
-        date_text = util.left_remove(date_text.lower(), 'published on ').replace(',', '')
-        parts = date_text.split()
-        if len(parts) == 3:
-            month, day, year = date_text.split()
-            month = month_abbreviations.get(month[0:3]) # slicing in case they start writing out the full month name
-            if month and (re.fullmatch(r'\d\d?', day) is not None) and (re.fullmatch(r'\d{4}', year) is not None):
-                info['published_date'] = year + '-' + month + '-' + day
+    info['description'] = extract_plain_text(video_info.get('description', None), recover_urls=True)
+    info['published_date'] = extract_date(extract_plain_text(video_info.get('dateText', None)))
 
     likes_dislikes = default_multi_get(video_info, 'sentimentBar', 'sentimentBarRenderer', 'tooltip', default='').split('/')
     if len(likes_dislikes) == 2:
@@ -1002,10 +1032,10 @@ def extract_watch_info_desktop(top_level):
         info['like_count'] = None
         info['dislike_count'] = None
 
-    #info['title'] = extract_plain_text(video_info.get('title', None))
-    #info['author'] = extract_plain_text(default_multi_get(video_info, 'owner', 'videoOwnerRenderer', 'title'))
-    #info['author_id'] = default_multi_get(video_info, 'owner', 'videoOwnerRenderer', 'navigationEndpoint', 'browseEndpoint', 'browseId')
-    #info['view_count'] = extract_integer(extract_plain_text(default_multi_get(video_info, 'viewCount', 'videoViewCountRenderer', 'viewCount')))
+    info['title'] = extract_plain_text(video_info.get('title', None))
+    info['author'] = extract_plain_text(default_multi_get(video_info, 'owner', 'videoOwnerRenderer', 'title'))
+    info['author_id'] = default_multi_get(video_info, 'owner', 'videoOwnerRenderer', 'navigationEndpoint', 'browseEndpoint', 'browseId')
+    info['view_count'] = extract_integer(extract_plain_text(default_multi_get(video_info, 'viewCount', 'videoViewCountRenderer', 'viewCount')))
 
     related = default_multi_get(top_level, 'response', 'contents', 'twoColumnWatchNextResults', 'secondaryResults', 'secondaryResults', 'results', default=[])
     info['related_videos'] = [renderer_info(renderer) for renderer in related]
@@ -1083,17 +1113,17 @@ def extract_watch_info(polymer_json):
 
     # stuff from videoDetails
     video_details = default_multi_get(top_level, 'playerResponse', 'videoDetails', default={})
-    info['title'] =      extract_plain_text(video_details.get('title'))
-    info['duration'] =   extract_integer(video_details.get('lengthSeconds'))
-    info['view_count'] = extract_integer(video_details.get('viewCount'))
+    update_if_not_none(info, 'title',      extract_plain_text(video_details.get('title')))
+    update_if_not_none(info, 'duration',   extract_integer(video_details.get('lengthSeconds')))
+    update_if_not_none(info, 'view_count', extract_integer(video_details.get('viewCount')))
     # videos with no description have a blank string
-    info['description'] = video_details.get('shortDescription')
-    info['id'] =          video_details.get('videoId')
-    info['author'] =      video_details.get('author')
-    info['author_id'] =   video_details.get('channelId')
-    info['live'] =        video_details.get('isLiveContent')
-    info['unlisted'] = not video_details.get('isCrawlable', True)
-    info['tags'] =        video_details.get('keywords', [])
+    update_if_not_none(info, 'description', video_details.get('shortDescription'))
+    update_if_not_none(info, 'id',          video_details.get('videoId'))
+    update_if_not_none(info, 'author',      video_details.get('author'))
+    update_if_not_none(info, 'author_id',   video_details.get('channelId'))
+    update_if_not_none(info, 'live',        video_details.get('isLiveContent'))
+    update_if_not_none(info, 'unlisted', not video_details.get('isCrawlable', True))
+    update_if_not_none(info, 'tags',        video_details.get('keywords', []))
 
     # other stuff
     info['author_url'] = 'https://www.youtube.com/channel/' + info['author_id'] if info['author_id'] else None
