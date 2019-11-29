@@ -3,7 +3,7 @@ from youtube import util, proto
 import html
 import json
 import re
-import urllib
+import urllib.parse
 import collections
 from math import ceil
 import traceback
@@ -1042,7 +1042,7 @@ def extract_watch_info_desktop(top_level):
 
     return info
 
-
+_SUBTITLE_FORMATS = ('srv1', 'srv2', 'srv3', 'ttml', 'vtt')
 def extract_watch_info(polymer_json):
     info = {'playability_error': None, 'error': None}
 
@@ -1072,6 +1072,36 @@ def extract_watch_info(polymer_json):
     if playability_status not in (None, 'OK'):
         info['playability_error'] = playability_reason
 
+    # automatic captions
+
+    # adapted from youtube_dl:
+    # https://github.com/ytdl-org/youtube-dl/blob/76e510b92c4a1c4b0001f892504ba2cbb4b8d486/youtube_dl/extractor/youtube.py#L1490-#L1523
+    info['automatic_captions'] = {}
+
+    renderer = default_multi_get(player_response, 'captions', 'playerCaptionsTracklistRenderer', default={})
+    base_url = default_multi_get(renderer, 'captionTracks', 0, 'baseUrl')
+
+    if base_url and '?' in base_url:
+        base_url = normalize_url(base_url)
+        base_url_path, base_url_query_string = base_url.split('?')
+        url_info = urllib.parse.parse_qs(base_url_query_string)
+
+        for lang in renderer.get('translationLanguages', []):
+            lang_code = lang.get('languageCode')
+            if not lang_code:
+                continue
+            formats_for_this_lang = []
+            for ext in _SUBTITLE_FORMATS:
+                url_info['tlang'] = [lang_code]
+                url_info['fmt'] = [ext]
+                url = base_url_path + '?' + urllib.parse.urlencode(url_info, doseq=True)
+                formats_for_this_lang.append({
+                    'url': url,
+                    'ext': ext,
+                })
+            info['automatic_captions'][lang_code] = formats_for_this_lang
+
+    # formats
     streaming_data = player_response.get('streamingData', {})
     yt_formats = streaming_data.get('formats', []) + streaming_data.get('adaptiveFormats', [])
 
