@@ -309,6 +309,8 @@ def ajax_info(item_json):
 
 youtube_url_re = re.compile(r'^(?:(?:(?:https?:)?//)?(?:www\.)?youtube\.com)?(/.*)$')
 def normalize_url(url):
+    if url is None:
+        return None
     match = youtube_url_re.fullmatch(url)
     if match is None:
         raise Exception()
@@ -1042,7 +1044,18 @@ def extract_watch_info_desktop(top_level):
 
     return info
 
-_SUBTITLE_FORMATS = ('srv1', 'srv2', 'srv3', 'ttml', 'vtt')
+def get_caption_url(info, language, format, automatic=False, translation_language=None):
+    '''Gets the url for captions with the given language and format. If automatic is True, get the automatic captions for that language. If translation_language is given, translate the captions from `language` to `translation_language`. If automatic is true and translation_language is given, the automatic captions will be translated.'''
+    url = info['_captions_base_url']
+    url += '&lang=' + language
+    url += '&fmt=' + format
+    if automatic:
+        url += '&kind=asr'
+    if translation_language:
+        url += '&tlang=' + translation_language
+    return url
+
+SUBTITLE_FORMATS = ('srv1', 'srv2', 'srv3', 'ttml', 'vtt')
 def extract_watch_info(polymer_json):
     info = {'playability_error': None, 'error': None}
 
@@ -1072,34 +1085,25 @@ def extract_watch_info(polymer_json):
     if playability_status not in (None, 'OK'):
         info['playability_error'] = playability_reason
 
-    # automatic captions
-
-    # adapted from youtube_dl:
-    # https://github.com/ytdl-org/youtube-dl/blob/76e510b92c4a1c4b0001f892504ba2cbb4b8d486/youtube_dl/extractor/youtube.py#L1490-#L1523
-    info['automatic_captions'] = {}
-
-    renderer = default_multi_get(player_response, 'captions', 'playerCaptionsTracklistRenderer', default={})
-    base_url = default_multi_get(renderer, 'captionTracks', 0, 'baseUrl')
-
-    if base_url and '?' in base_url:
-        base_url = normalize_url(base_url)
-        base_url_path, base_url_query_string = base_url.split('?')
-        url_info = urllib.parse.parse_qs(base_url_query_string)
-
-        for lang in renderer.get('translationLanguages', []):
-            lang_code = lang.get('languageCode')
-            if not lang_code:
-                continue
-            formats_for_this_lang = []
-            for ext in _SUBTITLE_FORMATS:
-                url_info['tlang'] = [lang_code]
-                url_info['fmt'] = [ext]
-                url = base_url_path + '?' + urllib.parse.urlencode(url_info, doseq=True)
-                formats_for_this_lang.append({
-                    'url': url,
-                    'ext': ext,
-                })
-            info['automatic_captions'][lang_code] = formats_for_this_lang
+    # captions
+    info['automatic_caption_languages'] = []
+    info['manual_caption_languages'] = []
+    info['translation_languages'] = []
+    captions_info = player_response.get('captions', {})
+    info['_captions_base_url'] = normalize_url(default_multi_get(captions_info, 'playerCaptionsRenderer', 'baseUrl'))
+    for caption_track in default_multi_get(captions_info, 'playerCaptionsTracklistRenderer', 'captionTracks', default=()):
+        lang_code = caption_track.get('languageCode')
+        if lang_code:
+            if caption_track.get('kind') == 'asr':
+                info['automatic_caption_languages'].append(lang_code)
+            else:
+                info['manual_caption_languages'].append(lang_code)
+    for translation_lang_info in default_multi_get(captions_info, 'playerCaptionsTracklistRenderer', 'translationLanguages', default=()):
+        lang_code = translation_lang_info.get('languageCode')
+        if lang_code:
+            info['translation_languages'].append(lang_code)
+        if translation_lang_info.get('isTranslatable') == False:
+            print('WARNING: Found non-translatable caption language')
 
     # formats
     streaming_data = player_response.get('streamingData', {})
@@ -1157,5 +1161,4 @@ def extract_watch_info(polymer_json):
 
     # other stuff
     info['author_url'] = 'https://www.youtube.com/channel/' + info['author_id'] if info['author_id'] else None
-    info['subtitles'] = {}  # TODO
     return info

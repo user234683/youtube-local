@@ -44,50 +44,104 @@ def get_video_sources(info):
 
     return video_sources
 
+def make_caption_src(info, lang, auto=False, trans_lang=None):
+    label = lang
+    if auto:
+        label += ' (Automatic)'
+    if trans_lang:
+        label += ' -> ' + trans_lang
+    return {
+        'url': '/' + yt_data_extract.get_caption_url(info, lang, 'vtt', auto, trans_lang),
+        'label': label,
+        'srclang': trans_lang[0:2] if trans_lang else lang[0:2],
+        'on': False,
+    }
+
+def lang_in(lang, sequence):
+    '''Tests if the language is in sequence, with e.g. en and en-US considered the same'''
+    lang = lang[0:2]
+    return lang in (l[0:2] for l in sequence)
+
+def lang_eq(lang1, lang2):
+    '''Tests if two iso 639-1 codes are equal, with en and en-US considered the same.
+       Just because the codes are equal does not mean the dialects are mutually intelligible, but this will have to do for now without a complex language model'''
+    return lang1[0:2] == lang2[0:2]
+
+def equiv_lang_in(lang, sequence):
+    '''Extracts a language in sequence which is equivalent to lang.
+    e.g. if lang is en, extracts en-GB from sequence.
+    Necessary because if only a specific variant like en-GB is available, can't ask Youtube for simply en. Need to get the available variant.'''
+    lang = lang[0:2]
+    for l in sequence:
+        if l[0:2] == lang:
+            return l
+    return None
+
 def get_subtitle_sources(info):
+    '''Returns these sources, ordered from least to most intelligible:
+    native_video_lang (Automatic)
+    foreign_langs (Manual)
+    native_video_lang (Automatic) -> pref_lang
+    foreign_langs (Manual) -> pref_lang
+    native_video_lang (Manual) -> pref_lang
+    pref_lang (Automatic)
+    pref_lang (Manual)'''
     sources = []
-    default_found = False
-    default = None
-    for language, formats in info['subtitles'].items():
-        for format in formats:
-            if format['ext'] == 'vtt':
-                source = {
-                    'url': '/' + format['url'],
-                    'label': language,
-                    'srclang': language,
+    pref_lang = settings.subtitles_language
+    native_video_lang = None
+    if info['automatic_caption_languages']:
+        native_video_lang = info['automatic_caption_languages'][0]
 
-                    # set as on by default if this is the preferred language and a default-on subtitles mode is in settings
-                    'on': language == settings.subtitles_language and settings.subtitles_mode > 0,
-                }
+    highest_fidelity_is_manual = False
 
-                if language == settings.subtitles_language:
-                    default_found = True
-                    default = source
-                else:
-                    sources.append(source)
-                break
-
-    # Put it at the end to avoid browser bug when there are too many languages
+    # Sources are added in very specific order outlined above
+    # More intelligible sources are put further down to avoid browser bug when there are too many languages
     # (in firefox, it is impossible to select a language near the top of the list because it is cut off)
-    if default_found:
-        sources.append(default)
 
-    try:
-        formats = info['automatic_captions'][settings.subtitles_language]
-    except KeyError:
-        pass
-    else:
-        for format in formats:
-            if format['ext'] == 'vtt':
-                sources.append({
-                    'url': '/' + format['url'],
-                    'label': settings.subtitles_language + ' - Automatic',
-                    'srclang': settings.subtitles_language,
+    # native_video_lang (Automatic)
+    if native_video_lang and not lang_eq(native_video_lang, pref_lang):
+        sources.append(make_caption_src(info, native_video_lang, auto=True))
 
-                    # set as on by default if this is the preferred language and a default-on subtitles mode is in settings
-                    'on': settings.subtitles_mode == 2 and not default_found,
+    # foreign_langs (Manual)
+    for lang in info['manual_caption_languages']:
+        if not lang_eq(lang, pref_lang):
+            sources.append(make_caption_src(info, lang))
 
-                })
+    if (lang_in(pref_lang, info['translation_languages'])
+            and not lang_in(pref_lang, info['automatic_caption_languages'])
+            and not lang_in(pref_lang, info['manual_caption_languages'])):
+        # native_video_lang (Automatic) -> pref_lang
+        if native_video_lang and not lang_eq(pref_lang, native_video_lang):
+            sources.append(make_caption_src(info, native_video_lang, auto=True, trans_lang=pref_lang))
+
+        # foreign_langs (Manual) -> pref_lang
+        for lang in info['manual_caption_languages']:
+            if not lang_eq(lang, native_video_lang):
+                sources.append(make_caption_src(info, lang, trans_lang=pref_lang))
+
+        # native_video_lang (Manual) -> pref_lang
+        if lang_in(native_video_lang, info['manual_caption_languages']):
+            sources.append(make_caption_src(info, native_video_lang, trans_lang=pref_lang))
+
+    # pref_lang (Automatic)
+    if lang_in(pref_lang, info['automatic_caption_languages']):
+        sources.append(make_caption_src(info, equiv_lang_in(pref_lang, info['automatic_caption_languages']), auto=True))
+
+    # pref_lang (Manual)
+    if lang_in(pref_lang, info['manual_caption_languages']):
+        sources.append(make_caption_src(info, equiv_lang_in(pref_lang, info['manual_caption_languages'])))
+        highest_fidelity_is_manual = True
+
+    if sources and sources[-1]['srclang'] == pref_lang:
+        # set as on by default since it's manual a default-on subtitles mode is in settings
+        if highest_fidelity_is_manual and settings.subtitles_mode > 0:
+            sources[-1]['on'] = True
+        # set as on by default since settings indicate to set it as such even if it's not manual
+        elif settings.subtitles_mode == 2:
+            sources[-1]['on'] = True
+
+    if len(sources) == 0:
+        assert len(info['automatic_caption_languages']) == 0 and len(info['manual_caption_languages']) == 0
 
     return sources
 
