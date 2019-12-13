@@ -275,17 +275,32 @@ headers = (
 ) + util.mobile_ua
 
 def extract_info(video_id):
-    polymer_json = util.fetch_url('https://m.youtube.com/watch?v=' + video_id + '&pbj=1', headers=headers, debug_name='watch')
+    polymer_json = util.fetch_url('https://m.youtube.com/watch?v=' + video_id + '&pbj=1', headers=headers, debug_name='watch').decode('utf-8')
+    # TODO: Decide whether this should be done in yt_data_extract.extract_watch_info
     try:
         polymer_json = json.loads(polymer_json)
     except json.decoder.JSONDecodeError:
         traceback.print_exc()
         return {'error': 'Failed to parse json response'}
     info = yt_data_extract.extract_watch_info(polymer_json)
-    error = decrypt_signatures(info)
-    if error:
-        print('Error decrypting url signatures: ' + error)
-        info['playability_error'] = error
+
+    # age restriction bypass
+    if info['age_restricted']:
+        print('Fetching age restriction bypass page')
+        data = {
+            'video_id': video_id,
+            'eurl': 'https://youtube.googleapis.com/v/' + video_id,
+        }
+        url = 'https://www.youtube.com/get_video_info?' + urllib.parse.urlencode(data)
+        video_info_page = util.fetch_url(url, debug_name='get_video_info', report_text='Fetched age restriction bypass page').decode('utf-8')
+        yt_data_extract.update_with_age_restricted_info(info, video_info_page)
+
+    # signature decryption
+    decryption_error = decrypt_signatures(info)
+    if decryption_error:
+        decryption_error = 'Error decrypting url signatures: ' + decryption_error
+        info['playability_error'] = decryption_error
+
     return info
 
 def video_quality_string(format):
@@ -410,6 +425,7 @@ def get_watch_page():
         uploader    = info['author'],
         description = info['description'],
         unlisted    = info['unlisted'],
+        age_restricted    = info['age_restricted'],
         playability_error = info['playability_error'],
     )
 
