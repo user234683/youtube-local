@@ -74,12 +74,21 @@
                 grid-column: 1 / span 2;
                 min-width: 0;
             }
-            .video-info > .is-unlisted{
-                background-color: var(--interface-color);
+            .video-info > .labels{
                 justify-self:start;
-                padding-left:2px;
-                padding-right:2px;
+                list-style: none;
+                padding: 0px;
+                margin: 5px 0px;
             }
+            .video-info > .labels:empty{
+                margin: 0px;
+            }
+                .labels > li{
+                    display: inline;
+                    margin-right:5px;
+                    background-color: var(--interface-color);
+                    padding: 2px 5px
+                }
             .video-info > address{
                 grid-column: 1;
                 grid-row: 3;
@@ -236,9 +245,14 @@
 
     <div class="video-info">
         <h2 class="title">{{ title }}</h2>
-        {% if unlisted %}
-            <span class="is-unlisted">Unlisted</span>
-        {% endif %}
+        <ul class="labels">
+            {%- if unlisted -%}
+                <li class="is-unlisted">Unlisted</li>
+            {%- endif -%}
+            {%- if age_restricted -%}
+                <li class="age-restricted">Age-restricted</li>
+            {%- endif -%}
+        </ul>
         <address>Uploaded by <a href="{{ uploader_channel_url }}">{{ uploader }}</a></address>
         <span class="views">{{ views }} views</span>
 
