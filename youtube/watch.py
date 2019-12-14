@@ -59,12 +59,16 @@ def make_caption_src(info, lang, auto=False, trans_lang=None):
 
 def lang_in(lang, sequence):
     '''Tests if the language is in sequence, with e.g. en and en-US considered the same'''
+    if lang is None:
+        return False
     lang = lang[0:2]
     return lang in (l[0:2] for l in sequence)
 
 def lang_eq(lang1, lang2):
     '''Tests if two iso 639-1 codes are equal, with en and en-US considered the same.
        Just because the codes are equal does not mean the dialects are mutually intelligible, but this will have to do for now without a complex language model'''
+    if lang1 is None or lang2 is None:
+        return False
     return lang1[0:2] == lang2[0:2]
 
 def equiv_lang_in(lang, sequence):
@@ -116,7 +120,7 @@ def get_subtitle_sources(info):
 
         # foreign_langs (Manual) -> pref_lang
         for lang in info['manual_caption_languages']:
-            if not lang_eq(lang, native_video_lang):
+            if not lang_eq(lang, native_video_lang) and not lang_eq(lang, pref_lang):
                 sources.append(make_caption_src(info, lang, trans_lang=pref_lang))
 
         # native_video_lang (Manual) -> pref_lang
