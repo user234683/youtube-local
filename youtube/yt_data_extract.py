@@ -1056,6 +1056,9 @@ def get_caption_url(info, language, format, automatic=False, translation_languag
     url += '&fmt=' + format
     if automatic:
         url += '&kind=asr'
+    elif language in info['_manual_caption_language_names']:
+        url += '&name=' + urllib.parse.quote(info['_manual_caption_language_names'][language], safe='')
+
     if translation_language:
         url += '&tlang=' + translation_language
     return url
@@ -1117,16 +1120,23 @@ def extract_watch_info(polymer_json):
     # captions
     info['automatic_caption_languages'] = []
     info['manual_caption_languages'] = []
+    info['_manual_caption_language_names'] = {}     # language name written in that language, needed in some cases to create the url
     info['translation_languages'] = []
     captions_info = player_response.get('captions', {})
     info['_captions_base_url'] = normalize_url(default_multi_get(captions_info, 'playerCaptionsRenderer', 'baseUrl'))
     for caption_track in default_multi_get(captions_info, 'playerCaptionsTracklistRenderer', 'captionTracks', default=()):
         lang_code = caption_track.get('languageCode')
-        if lang_code:
-            if caption_track.get('kind') == 'asr':
-                info['automatic_caption_languages'].append(lang_code)
-            else:
-                info['manual_caption_languages'].append(lang_code)
+        if not lang_code:
+            continue
+        if caption_track.get('kind') == 'asr':
+            info['automatic_caption_languages'].append(lang_code)
+        else:
+            info['manual_caption_languages'].append(lang_code)
+        base_url = caption_track.get('baseUrl', '')
+        lang_name = default_multi_get(urllib.parse.parse_qs(urllib.parse.urlparse(base_url).query), 'name', 0)
+        if lang_name:
+            info['_manual_caption_language_names'][lang_code] = lang_name
+
     for translation_lang_info in default_multi_get(captions_info, 'playerCaptionsTracklistRenderer', 'translationLanguages', default=()):
         lang_code = translation_lang_info.get('languageCode')
         if lang_code:
