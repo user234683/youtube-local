@@ -1091,6 +1091,25 @@ def extract_formats(info, player_response):
 
         info['formats'].append(fmt)
 
+def extract_playability_error(info, player_response, error_prefix=''):
+    if info['formats']:
+        info['playability_error'] = None
+        return
+
+    playability_status = default_multi_get(player_response, 'playabilityStatus', 'status', default=None)
+    info['playability_status'] = playability_status
+
+    playability_reason = extract_plain_text(multi_default_multi_get(player_response,
+        ['playabilityStatus', 'reason'],
+        ['playabilityStatus', 'errorScreen', 'playerErrorMessageRenderer', 'reason'],
+        default='Could not find playability error')
+    )
+
+    if playability_status not in (None, 'OK'):
+        info['playability_error'] = error_prefix + playability_reason
+    else:
+        info['playability_error'] = error_prefix + 'Unknown playability error'
+
 SUBTITLE_FORMATS = ('srv1', 'srv2', 'srv3', 'ttml', 'vtt')
 def extract_watch_info(polymer_json):
     info = {'playability_error': None, 'error': None}
@@ -1146,16 +1165,12 @@ def extract_watch_info(polymer_json):
 
     # formats
     extract_formats(info, player_response)
-    playability_status = default_multi_get(player_response, 'playabilityStatus', 'status', default=None)
-    playability_reason = default_multi_get(player_response, 'playabilityStatus', 'reason', default='Could not find playability error')
-    if not info['formats']:
-        if playability_status not in (None, 'OK'):
-            info['playability_error'] = playability_reason
-        else:
-            info['playability_error'] = 'Unknown playability error'
+
+    # playability errors
+    extract_playability_error(info, player_response)
 
     # check age-restriction
-    info['age_restricted'] = (playability_status == 'LOGIN_REQUIRED' and playability_reason and ' age' in playability_reason)
+    info['age_restricted'] = (info['playability_status'] == 'LOGIN_REQUIRED' and info['playability_reason'] and ' age' in info['playability_reason'])
 
     # base_js (for decryption of signatures)
     info['base_js'] = default_multi_get(top_level, 'player', 'assets', 'js')
@@ -1202,12 +1217,4 @@ def update_with_age_restricted_info(info, video_info_page):
         return
 
     extract_formats(info, player_response)
-    if info['formats']:
-        info['playability_error'] = None
-    else:
-        playability_status = default_multi_get(player_response, 'playabilityStatus', 'status', default=None)
-        playability_reason = default_multi_get(player_response, 'playabilityStatus', 'reason', default=ERROR_PREFIX + 'Could not find playability error')
-        if playability_status not in (None, 'OK'):
-            info['playability_error'] = ERROR_PREFIX + playability_reason
-        else:
-            info['playability_error'] = ERROR_PREFIX + 'Unknown playability error'
+    extract_playability_error(info, player_response, error_prefix=ERROR_PREFIX)
