@@ -165,9 +165,13 @@
         .related-videos-inner{
             padding-top: 10px;
             display: grid;
-            grid-auto-rows: 94px;
+            grid-auto-rows: 90px;
             grid-row-gap: 10px;
         }
+            .thumbnail-box{     /* overides rule in shared.css */
+                height: 90px !important;
+                width: 120px !important;
+            }
 
     /* Put related vids below videos when window is too small */
     /* 1100px instead of 1080 because W3C is full of idiots who include scrollbar width */
@@ -311,7 +315,7 @@
             <summary>Related Videos</summary>
             <nav class="related-videos-inner">
                 {% for info in related %}
-                    {{ common_elements.item(info) }}
+                    {{ common_elements.item(info, include_badges=false) }}
                 {% endfor %}
             </nav>
         </details>

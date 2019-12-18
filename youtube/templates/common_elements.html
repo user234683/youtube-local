@@ -14,7 +14,7 @@
     {%- endif -%}
 {% endmacro %}
 
-{% macro item(info, description=false, horizontal=true, include_author=true) %}
+{% macro item(info, description=false, horizontal=true, include_author=true, include_badges=true) %}
     <div class="item-box {{ info['type'] + '-item-box' }} {{'horizontal-item-box' if horizontal else 'vertical-item-box'}} {{'has-description' if description else 'no-description'}}">
         <div class="item {{ info['type'] + '-item' }}">
             <a class="thumbnail-box" href="{{ info['url'] }}" title="{{ info['title'] }}">
@@ -52,7 +52,9 @@
             {% if description %}
                 <span class="description">{{ text_runs(info.get('description', '')) }}</span>
             {% endif %}
-            <span class="badges">{{ info['badges']|join(' | ') }}</span>
+            {% if include_badges %}
+                <span class="badges">{{ info['badges']|join(' | ') }}</span>
+            {% endif %}
         </div>
         {% if info['type'] == 'video' %}
             <input class="item-checkbox" type="checkbox" name="video_info_list" value="{{ info['video_info'] }}" form="playlist-edit">
