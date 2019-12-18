@@ -279,7 +279,7 @@ headers = (
 ) + util.mobile_ua
 
 def extract_info(video_id):
-    polymer_json = util.fetch_url('https://m.youtube.com/watch?v=' + video_id + '&pbj=1', headers=headers, debug_name='watch').decode('utf-8')
+    polymer_json = util.fetch_url('https://m.youtube.com/watch?v=' + video_id + '&pbj=1&bpctr=9999999999', headers=headers, debug_name='watch').decode('utf-8')
     # TODO: Decide whether this should be done in yt_data_extract.extract_watch_info
     try:
         polymer_json = json.loads(polymer_json)
