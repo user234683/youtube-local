@@ -832,7 +832,7 @@ def check_missing_keys(object, *key_sequences):
 
     return None
 
-def extract_plain_text(node, default=None, recover_urls=False):
+def extract_str(node, default=None, recover_urls=False):
     '''default is the value returned if the extraction fails. If recover_urls is true, will attempt to fix Youtube's truncation of url text (most prominently seen in descriptions)'''
     if isinstance(node, str):
         return node
@@ -881,7 +881,7 @@ def extract_formatted_text(node):
 
     return []
 
-def extract_integer(string):
+def extract_int(string):
     if not isinstance(string, str):
         return None
     match = re.search(r'(\d+)', string.replace(',', ''))
@@ -892,11 +892,6 @@ def extract_integer(string):
     except ValueError:
         return None
 
-def update_if_not_none(dictionary, key, value):
-    '''Update dictionary[key] with value if value is not none'''
-    if key not in dictionary or value is not None:
-        dictionary[key] = value
-
 def extract_metadata_row_info(video_renderer_info):
     # extract category and music list
     info = {
@@ -906,8 +901,8 @@ def extract_metadata_row_info(video_renderer_info):
 
     current_song = {}
     for row in default_multi_get(video_renderer_info, 'metadataRowContainer', 'metadataRowContainerRenderer', 'rows', default=[]):
-        row_title = extract_plain_text(default_multi_get(row, 'metadataRowRenderer', 'title'), default='')
-        row_content = extract_plain_text(default_multi_get(row, 'metadataRowRenderer', 'contents', 0))
+        row_title = extract_str(default_multi_get(row, 'metadataRowRenderer', 'title'), default='')
+        row_content = extract_str(default_multi_get(row, 'metadataRowRenderer', 'contents', 0))
         if row_title == 'Category':
             info['category'] = row_content
         elif row_title in ('Song', 'Music'):
@@ -962,12 +957,12 @@ def extract_watch_info_mobile(top_level):
         video_info = {}
 
     info.update(extract_metadata_row_info(video_info))
-    info['description'] = extract_plain_text(video_info.get('description'), recover_urls=True)
-    info['view_count'] = extract_integer(extract_plain_text(video_info.get('expandedSubtitle')))
-    info['author'] = extract_plain_text(default_multi_get(video_info, 'owner', 'slimOwnerRenderer', 'title'))
+    info['description'] = extract_str(video_info.get('description'), recover_urls=True)
+    info['view_count'] = extract_int(extract_str(video_info.get('expandedSubtitle')))
+    info['author'] = extract_str(default_multi_get(video_info, 'owner', 'slimOwnerRenderer', 'title'))
     info['author_id'] = default_multi_get(video_info, 'owner', 'slimOwnerRenderer', 'navigationEndpoint', 'browseEndpoint', 'browseId')
-    info['title'] = extract_plain_text(video_info.get('title'))
-    info['live'] = 'watching' in extract_plain_text(video_info.get('expandedSubtitle'))
+    info['title'] = extract_str(video_info.get('title'))
+    info['live'] = 'watching' in extract_str(video_info.get('expandedSubtitle'))
     info['unlisted'] = False
     for badge in video_info.get('badges', []):
         if default_multi_get(badge, 'metadataBadgeRenderer', 'label') == 'Unlisted':
@@ -975,15 +970,15 @@ def extract_watch_info_mobile(top_level):
     info['like_count'] = None
     info['dislike_count'] = None
     if not info['published_date']:
-        info['published_date'] = extract_date(extract_plain_text(video_info.get('dateText', None)))
+        info['published_date'] = extract_date(extract_str(video_info.get('dateText', None)))
     for button in video_info.get('buttons', ()):
         button_renderer = button.get('slimMetadataToggleButtonRenderer', {})
 
         # all the digits can be found in the accessibility data
-        count = extract_integer(default_multi_get(button_renderer, 'button', 'toggleButtonRenderer', 'defaultText', 'accessibility', 'accessibilityData', 'label'))
+        count = extract_int(default_multi_get(button_renderer, 'button', 'toggleButtonRenderer', 'defaultText', 'accessibility', 'accessibilityData', 'label'))
 
         # this count doesn't have all the digits, it's like 53K for instance
-        dumb_count = extract_integer(extract_plain_text(default_multi_get(button_renderer, 'button', 'toggleButtonRenderer', 'defaultText')))
+        dumb_count = extract_int(extract_str(default_multi_get(button_renderer, 'button', 'toggleButtonRenderer', 'defaultText')))
 
         # the accessibility text will be "No likes" or "No dislikes" or something like that, but dumb count will be 0
         if dumb_count == 0:
@@ -998,11 +993,11 @@ def extract_watch_info_mobile(top_level):
     items, _ = extract_items(response, item_types={'commentSectionRenderer'})
     if items:
         comment_info = items[0]['commentSectionRenderer']
-        comment_count_text = extract_plain_text(default_multi_get(comment_info, 'header', 'commentSectionHeaderRenderer', 'countText'))
+        comment_count_text = extract_str(default_multi_get(comment_info, 'header', 'commentSectionHeaderRenderer', 'countText'))
         if comment_count_text == 'Comments':    # just this with no number, means 0 comments
             info['comment_count'] = 0
         else:
-            info['comment_count'] = extract_integer(comment_count_text)
+            info['comment_count'] = extract_int(comment_count_text)
         info['comments_disabled'] = False
     else:   # no comment section present means comments are disabled
         info['comment_count'] = 0
@@ -1028,21 +1023,21 @@ def extract_watch_info_desktop(top_level):
             video_info.update(list(renderer.values())[0])
 
     info.update(extract_metadata_row_info(video_info))
-    info['description'] = extract_plain_text(video_info.get('description', None), recover_urls=True)
-    info['published_date'] = extract_date(extract_plain_text(video_info.get('dateText', None)))
+    info['description'] = extract_str(video_info.get('description', None), recover_urls=True)
+    info['published_date'] = extract_date(extract_str(video_info.get('dateText', None)))
 
     likes_dislikes = default_multi_get(video_info, 'sentimentBar', 'sentimentBarRenderer', 'tooltip', default='').split('/')
     if len(likes_dislikes) == 2:
-        info['like_count'] = extract_integer(likes_dislikes[0])
-        info['dislike_count'] = extract_integer(likes_dislikes[1])
+        info['like_count'] = extract_int(likes_dislikes[0])
+        info['dislike_count'] = extract_int(likes_dislikes[1])
     else:
         info['like_count'] = None
         info['dislike_count'] = None
 
-    info['title'] = extract_plain_text(video_info.get('title', None))
-    info['author'] = extract_plain_text(default_multi_get(video_info, 'owner', 'videoOwnerRenderer', 'title'))
+    info['title'] = extract_str(video_info.get('title', None))
+    info['author'] = extract_str(default_multi_get(video_info, 'owner', 'videoOwnerRenderer', 'title'))
     info['author_id'] = default_multi_get(video_info, 'owner', 'videoOwnerRenderer', 'navigationEndpoint', 'browseEndpoint', 'browseId')
-    info['view_count'] = extract_integer(extract_plain_text(default_multi_get(video_info, 'viewCount', 'videoViewCountRenderer', 'viewCount')))
+    info['view_count'] = extract_int(extract_str(default_multi_get(video_info, 'viewCount', 'videoViewCountRenderer', 'viewCount')))
 
     related = default_multi_get(top_level, 'response', 'contents', 'twoColumnWatchNextResults', 'secondaryResults', 'secondaryResults', 'results', default=[])
     info['related_videos'] = [renderer_info(renderer) for renderer in related]
@@ -1093,13 +1088,14 @@ def extract_formats(info, player_response):
 
 def extract_playability_error(info, player_response, error_prefix=''):
     if info['formats']:
+        info['playability_status'] = None
         info['playability_error'] = None
         return
 
     playability_status = default_multi_get(player_response, 'playabilityStatus', 'status', default=None)
     info['playability_status'] = playability_status
 
-    playability_reason = extract_plain_text(multi_default_multi_get(player_response,
+    playability_reason = extract_str(multi_default_multi_get(player_response,
         ['playabilityStatus', 'reason'],
         ['playabilityStatus', 'errorScreen', 'playerErrorMessageRenderer', 'reason'],
         default='Could not find playability error')
@@ -1109,6 +1105,17 @@ def extract_playability_error(info, player_response, error_prefix=''):
         info['playability_error'] = error_prefix + playability_reason
     else:
         info['playability_error'] = error_prefix + 'Unknown playability error'
+
+def liberal_update(obj, key, value):
+    '''Updates obj[key] with value as long as value is not None.
+    Ensures obj[key] will at least get a value of None, however'''
+    if (value is not None) or (key not in obj):
+        obj[key] = value
+
+def conservative_update(obj, key, value):
+    '''Only updates obj if it doesn't have key or obj[key] is None'''
+    if obj.get(key) is None:
+        obj[key] = value
 
 SUBTITLE_FORMATS = ('srv1', 'srv2', 'srv3', 'ttml', 'vtt')
 def extract_watch_info(polymer_json):
@@ -1183,19 +1190,33 @@ def extract_watch_info(polymer_json):
     else:
         info.update(extract_watch_info_desktop(top_level))
 
-    # stuff from videoDetails
-    video_details = default_multi_get(top_level, 'playerResponse', 'videoDetails', default={})
-    update_if_not_none(info, 'title',      extract_plain_text(video_details.get('title')))
-    update_if_not_none(info, 'duration',   extract_integer(video_details.get('lengthSeconds')))
-    update_if_not_none(info, 'view_count', extract_integer(video_details.get('viewCount')))
+    # stuff from videoDetails. Use liberal_update to prioritize info from videoDetails over existing info
+    vd = default_multi_get(top_level, 'playerResponse', 'videoDetails', default={})
+    liberal_update(info, 'title',      extract_str(vd.get('title')))
+    liberal_update(info, 'duration',   extract_int(vd.get('lengthSeconds')))
+    liberal_update(info, 'view_count', extract_int(vd.get('viewCount')))
     # videos with no description have a blank string
-    update_if_not_none(info, 'description', video_details.get('shortDescription'))
-    update_if_not_none(info, 'id',          video_details.get('videoId'))
-    update_if_not_none(info, 'author',      video_details.get('author'))
-    update_if_not_none(info, 'author_id',   video_details.get('channelId'))
-    update_if_not_none(info, 'live',        video_details.get('isLiveContent'))
-    update_if_not_none(info, 'unlisted', not video_details.get('isCrawlable', True))
-    update_if_not_none(info, 'tags',        video_details.get('keywords', []))
+    liberal_update(info, 'description', vd.get('shortDescription'))
+    liberal_update(info, 'id',          vd.get('videoId'))
+    liberal_update(info, 'author',      vd.get('author'))
+    liberal_update(info, 'author_id',   vd.get('channelId'))
+    liberal_update(info, 'live',        vd.get('isLiveContent'))
+    liberal_update(info, 'unlisted', not vd.get('isCrawlable', True))
+    liberal_update(info, 'tags',        vd.get('keywords', []))
+
+    # fallback stuff from microformat
+    mf = default_multi_get(top_level, 'playerResponse', 'microformat', 'playerMicroformatRenderer', default={})
+    conservative_update(info, 'title',      extract_str(mf.get('title')))
+    conservative_update(info, 'duration', extract_int(mf.get('lengthSeconds')))
+    # this gives the view count for limited state videos
+    conservative_update(info, 'view_count', extract_int(mf.get('viewCount')))
+    conservative_update(info, 'description', extract_str(mf.get('description'), recover_urls=True))
+    conservative_update(info, 'author', mf.get('ownerChannelName'))
+    conservative_update(info, 'author_id', mf.get('externalChannelId'))
+    conservative_update(info, 'unlisted', mf.get('isUnlisted'))
+    liberal_update(info, 'category', mf.get('category'))
+    liberal_update(info, 'published_date', mf.get('publishDate'))
+    liberal_update(info, 'uploaded_date', mf.get('uploadDate'))
 
     # other stuff
     info['author_url'] = 'https://www.youtube.com/channel/' + info['author_id'] if info['author_id'] else None
