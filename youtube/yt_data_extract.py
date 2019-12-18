@@ -1003,6 +1003,13 @@ def extract_watch_info_mobile(top_level):
         info['comment_count'] = 0
         info['comments_disabled'] = True
 
+    # check for limited state
+    items, _ = extract_items(response, item_types={'limitedStateMessageRenderer'})
+    if items:
+        info['limited_state'] = True
+    else:
+        info['limited_state'] = False
+
     # related videos
     related, _ = extract_items(response)
     info['related_videos'] = [renderer_info(renderer) for renderer in related]
@@ -1015,6 +1022,7 @@ def extract_watch_info_desktop(top_level):
         'comment_count': None,
         'comments_disabled': None,
         'allowed_countries': None,
+        'limited_state': None,
     }
 
     video_info = {}
@@ -1201,7 +1209,7 @@ def extract_watch_info(polymer_json):
     liberal_update(info, 'author',      vd.get('author'))
     liberal_update(info, 'author_id',   vd.get('channelId'))
     liberal_update(info, 'live',        vd.get('isLiveContent'))
-    liberal_update(info, 'unlisted', not vd.get('isCrawlable', True))
+    conservative_update(info, 'unlisted', not vd.get('isCrawlable', True))  #isCrawlable is false on limited state videos even if they aren't unlisted
     liberal_update(info, 'tags',        vd.get('keywords', []))
 
     # fallback stuff from microformat
@@ -1213,7 +1221,7 @@ def extract_watch_info(polymer_json):
     conservative_update(info, 'description', extract_str(mf.get('description'), recover_urls=True))
     conservative_update(info, 'author', mf.get('ownerChannelName'))
     conservative_update(info, 'author_id', mf.get('externalChannelId'))
-    conservative_update(info, 'unlisted', mf.get('isUnlisted'))
+    liberal_update(info, 'unlisted', mf.get('isUnlisted'))
     liberal_update(info, 'category', mf.get('category'))
     liberal_update(info, 'published_date', mf.get('publishDate'))
     liberal_update(info, 'uploaded_date', mf.get('uploadDate'))

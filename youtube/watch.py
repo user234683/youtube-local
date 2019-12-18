@@ -429,6 +429,7 @@ def get_watch_page():
         uploader    = info['author'],
         description = info['description'],
         unlisted    = info['unlisted'],
+        limited_state = info['limited_state'],
         age_restricted    = info['age_restricted'],
         playability_error = info['playability_error'],
     )

@@ -252,6 +252,9 @@
             {%- if age_restricted -%}
                 <li class="age-restricted">Age-restricted</li>
             {%- endif -%}
+            {%- if limited_state -%}
+                <li>Limited state</li>
+            {%- endif -%}
         </ul>
         <address>Uploaded by <a href="{{ uploader_channel_url }}">{{ uploader }}</a></address>
         <span class="views">{{ views }} views</span>
