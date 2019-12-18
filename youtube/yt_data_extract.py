@@ -1185,7 +1185,7 @@ def extract_watch_info(polymer_json):
     extract_playability_error(info, player_response)
 
     # check age-restriction
-    info['age_restricted'] = (info['playability_status'] == 'LOGIN_REQUIRED' and info['playability_reason'] and ' age' in info['playability_reason'])
+    info['age_restricted'] = (info['playability_status'] == 'LOGIN_REQUIRED' and info['playability_error'] and ' age' in info['playability_error'])
 
     # base_js (for decryption of signatures)
     info['base_js'] = default_multi_get(top_level, 'player', 'assets', 'js')
