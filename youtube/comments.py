@@ -93,11 +93,10 @@ def post_process_comments_info(comments_info):
 
         comment['permalink'] = util.URL_ORIGIN + '/watch?v=' + comments_info['video_id'] + '&lc=' + comment['id']
 
-        if comment['author_channel_id'] in accounts.accounts:
+        if comment['author_id'] in accounts.accounts:
             comment['delete_url'] = (util.URL_ORIGIN + '/delete_comment?video_id='
                 + comments_info['video_id']
-                + '&channel_id='+ comment['author_channel_id']
-                + '&author_id=' + comment['author_id']
+                + '&channel_id='+ comment['author_id']
                 + '&comment_id=' + comment['id'])
 
         reply_count = comment['reply_count']
@@ -135,7 +134,7 @@ def post_process_comments_info(comments_info):
 
 def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
     if settings.comments_mode:
-        comments_info = yt_data_extract.parse_comments_polymer(request_comments(make_comment_ctoken(video_id, sort, offset, lc, secret_key)))
+        comments_info = yt_data_extract.extract_comments_info(request_comments(make_comment_ctoken(video_id, sort, offset, lc, secret_key)))
         post_process_comments_info(comments_info)
 
         post_comment_url = util.URL_ORIGIN + "/post_comment?video_id=" + video_id
@@ -160,7 +159,7 @@ def get_comments_page():
         ctoken = comment_replies_ctoken(video_id, parent_id)
         replies = True
 
-    comments_info = yt_data_extract.parse_comments_polymer(request_comments(ctoken, replies))
+    comments_info = yt_data_extract.extract_comments_info(request_comments(ctoken, replies))
     post_process_comments_info(comments_info)
 
     if not replies:

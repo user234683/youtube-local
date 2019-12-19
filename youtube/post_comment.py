@@ -70,7 +70,7 @@ def _post_comment_reply(text, video_id, parent_comment_id, session_token, cookie
     print("Comment posting code: " + code)
     return code
 
-def _delete_comment(video_id, comment_id, author_id, session_token, cookiejar):
+def _delete_comment(video_id, comment_id, session_token, cookiejar):
     headers = {
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
         'Accept': '*/*',
@@ -79,7 +79,7 @@ def _delete_comment(video_id, comment_id, author_id, session_token, cookiejar):
         'X-YouTube-Client-Version': '2.20180823',
         'Content-Type': 'application/x-www-form-urlencoded',
     }
-    action = proto.uint(1,6) + proto.string(3, comment_id) + proto.string(5, video_id) + proto.string(9, author_id)
+    action = proto.uint(1,6) + proto.string(3, comment_id) + proto.string(5, video_id)
     action = proto.percent_b64encode(action).decode('ascii')
 
     sej = json.dumps({"clickTrackingParams":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=","commandMetadata":{"webCommandMetadata":{"url":"/service_ajax","sendPost":True}},"performCommentActionEndpoint":{"action":action}})
@@ -115,7 +115,7 @@ def delete_comment():
     cookiejar = accounts.account_cookiejar(request.values['channel_id'])
     token = get_session_token(video_id, cookiejar)
 
-    code = _delete_comment(video_id, request.values['comment_id'], request.values['author_id'], token, cookiejar)
+    code = _delete_comment(video_id, request.values['comment_id'], token, cookiejar)
 
     if code == "SUCCESS":
         return flask.redirect(util.URL_ORIGIN + '/comment_delete_success', 303)
@@ -147,7 +147,7 @@ def post_comment():
 
 @yt_app.route('/delete_comment', methods=['GET'])
 def get_delete_comment_page():
-    parameters = [(parameter_name, request.args[parameter_name]) for parameter_name in ('video_id', 'channel_id', 'author_id', 'comment_id')]
+    parameters = [(parameter_name, request.args[parameter_name]) for parameter_name in ('video_id', 'channel_id', 'comment_id')]
     return flask.render_template('delete_comment.html', parameters = parameters)
 
 
