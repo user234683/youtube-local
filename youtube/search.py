@@ -79,9 +79,9 @@ def get_search_page():
     if search_info['error']:
         return flask.render_template('error.html', error_message = search_info['error'])
 
-    for item_info in search_info['items']:
-        yt_data_extract.prefix_urls(item_info)
-        yt_data_extract.add_extra_html_info(item_info)
+    for extract_item_info in search_info['items']:
+        yt_data_extract.prefix_urls(extract_item_info)
+        yt_data_extract.add_extra_html_info(extract_item_info)
 
     corrections = search_info['corrections']
     if corrections['type'] == 'did_you_mean':

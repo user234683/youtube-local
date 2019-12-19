@@ -172,7 +172,7 @@ def _get_videos(cursor, number_per_page, offset, tag = None):
             'id':   db_video[0],
             'title':    db_video[1],
             'duration': db_video[2],
-            'published': exact_timestamp(db_video[3]) if db_video[4] else posix_to_dumbed_down(db_video[3]),
+            'time_published': exact_timestamp(db_video[3]) if db_video[4] else posix_to_dumbed_down(db_video[3]),
             'author':   db_video[5],
         })
 
@@ -462,8 +462,10 @@ def _get_upstream_videos(channel_id):
 
     videos = channel_info['items']
     for i, video_item in enumerate(videos):
-        if 'description' not in video_item:
+        if not video_item.get('description'):
             video_item['description'] = ''
+        else:
+            video_item['description'] = ''.join(run.get('text', '') for run in video_item['description'])
 
         if video_item['id'] in times_published:
             video_item['time_published'] = times_published[video_item['id']]
@@ -471,7 +473,7 @@ def _get_upstream_videos(channel_id):
         else:
             video_item['is_time_published_exact'] = False
             try:
-                video_item['time_published'] = youtube_timestamp_to_posix(video_item['published']) - i  # subtract a few seconds off the videos so they will be in the right order
+                video_item['time_published'] = youtube_timestamp_to_posix(video_item['time_published']) - i  # subtract a few seconds off the videos so they will be in the right order
             except KeyError:
                 print(video_item)
 

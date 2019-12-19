@@ -310,6 +310,8 @@ def uppercase_escape(s):
          lambda m: chr(int(m.group(1), base=16)), s)
 
 def prefix_url(url):
+    if url is None:
+        return None
     url = url.lstrip('/')     # some urls have // before them, which has a special meaning
     return '/' + url
 

@@ -98,13 +98,19 @@ def get_playlist_page():
         info['metadata'] = yt_data_extract.extract_playlist_metadata(first_page_json)
 
     yt_data_extract.prefix_urls(info['metadata'])
-    for item in info['items']:
+    for item in info.get('items', ()):
         yt_data_extract.prefix_urls(item)
         yt_data_extract.add_extra_html_info(item)
+        if 'id' in item:
+            item['thumbnail'] = '/https://i.ytimg.com/vi/' + item['id'] + '/default.jpg'
+
+    video_count = yt_data_extract.default_multi_get(info, 'metadata', 'video_count')
+    if video_count is None:
+        video_count = 40
 
     return flask.render_template('playlist.html',
-        video_list = info['items'],
-        num_pages = math.ceil(info['metadata']['size']/20),
+        video_list = info.get('items', []),
+        num_pages = math.ceil(video_count/20),
         parameters_dictionary = request.args,
 
         **info['metadata']

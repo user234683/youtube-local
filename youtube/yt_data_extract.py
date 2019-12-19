@@ -8,7 +8,7 @@ import collections
 from math import ceil
 import traceback
 
-# videos (all of type str):
+# videos:
 
 # id
 # title
@@ -17,11 +17,12 @@ import traceback
 # author_url
 # thumbnail
 # description
-# published
-# duration
-# likes
-# dislikes
-# views
+# time_published (str)
+# duration (str)
+# like_count (int)
+# dislike_count (int)
+# view_count (int)
+# approx_view_count (str)
 # playlist_index
 
 # playlists:
@@ -33,8 +34,8 @@ import traceback
 # author_url
 # thumbnail
 # description
-# updated
-# size
+# time_published (str)
+# video_count (int)
 # first_video_id
 
 # from https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/extractor/youtube.py
@@ -144,26 +145,6 @@ _formats = {
     '397': {'vcodec': 'av01.0.05M.08'},
 }
 
-
-def get_plain_text(node):
-    try:
-        return node['simpleText']
-    except KeyError:
-        return ''.join(text_run['text'] for text_run in node['runs'])
-
-def format_text_runs(runs):
-    if isinstance(runs, str):
-        return runs
-    result = ''
-    for text_run in runs:
-        if text_run.get("bold", False):
-            result += "<b>" + html.escape(text_run["text"]) + "</b>"
-        elif text_run.get('italics', False):
-            result += "<i>" + html.escape(text_run["text"]) + "</i>"
-        else:
-            result += html.escape(text_run["text"])
-    return result
-
 def default_get(object, key, default=None, types=()):
     '''Like dict.get(), but returns default if the result doesn't match one of the types.
        Also works for indexing lists.'''
@@ -177,6 +158,19 @@ def default_get(object, key, default=None, types=()):
     else:
         return default
 
+def multi_default_get(object, *keys, default=None, types=()):
+    '''Like default_get, but try other keys if the first fails'''
+    for key in keys:
+        try:
+            result = object[key]
+        except (TypeError, IndexError, KeyError):
+            pass
+        else:
+            if not types or isinstance(result, types):
+                return result
+            else:
+                continue
+    return default
 
 
 def default_multi_get(object, *keys, default=None, types=()):
@@ -211,101 +205,85 @@ def multi_default_multi_get(object, *key_sequences, default=None, types=()):
                 continue
     return default
 
+def liberal_update(obj, key, value):
+    '''Updates obj[key] with value as long as value is not None.
+    Ensures obj[key] will at least get a value of None, however'''
+    if (value is not None) or (key not in obj):
+        obj[key] = value
+
+def conservative_update(obj, key, value):
+    '''Only updates obj if it doesn't have key or obj[key] is None'''
+    if obj.get(key) is None:
+        obj[key] = value
+
 def remove_redirect(url):
     if re.fullmatch(r'(((https?:)?//)?(www.)?youtube.com)?/redirect\?.*', url) is not None: # youtube puts these on external links to do tracking
         query_string = url[url.find('?')+1: ]
         return urllib.parse.parse_qs(query_string)['q'][0]
     return url
 
-def get_url(node):
-    try:
-        return node['runs'][0]['navigationEndpoint']['commandMetadata']['webCommandMetadata']['url']
-    except KeyError:
-        return node['navigationEndpoint']['commandMetadata']['webCommandMetadata']['url']
+def _recover_urls(runs):
+    for run in runs:
+        url = default_multi_get(run, 'navigationEndpoint', 'urlEndpoint', 'url')
+        text = run.get('text', '')
+        # second condition is necessary because youtube makes other things into urls, such as hashtags, which we want to keep as text
+        if url is not None and (text.startswith('http://') or text.startswith('https://')):
+            url = remove_redirect(url)
+            run['url'] = url
+            run['text'] = url # youtube truncates the url text, use actual url instead
 
+def extract_str(node, default=None, recover_urls=False):
+    '''default is the value returned if the extraction fails. If recover_urls is true, will attempt to fix Youtube's truncation of url text (most prominently seen in descriptions)'''
+    if isinstance(node, str):
+        return node
 
-def get_text(node):
-    if node == {}:
-        return ''
     try:
         return node['simpleText']
-    except KeyError:
+    except (KeyError, TypeError):
         pass
-    try:
-        return node['runs'][0]['text']
-    except IndexError: # empty text runs
-        return ''
-    except KeyError:
-        print(node)
-        raise
 
-def get_formatted_text(node):
-    try:
+    if isinstance(node, dict) and 'runs' in node:
+        if recover_urls:
+            _recover_urls(node['runs'])
+        return ''.join(text_run.get('text', '') for text_run in node['runs'])
+
+    return default
+
+def extract_formatted_text(node):
+    if not node:
+        return []
+    if 'runs' in node:
+        _recover_urls(node['runs'])
         return node['runs']
-    except KeyError:
-        return node['simpleText']
+    elif 'simpleText' in node:
+        return [{'text': node['simpleText']}]
+    return []
 
-def get_badges(node):
-    badges = []
-    for badge_node in node:
-        badge = badge_node['metadataBadgeRenderer']['label']
-        badges.append(badge)
-    return badges
-
-def get_thumbnail(node):
+def extract_int(string):
+    if isinstance(string, int):
+        return string
+    if not isinstance(string, str):
+        string = extract_str(string)
+    if not string:
+        return None
+    match = re.search(r'(\d+)', string.replace(',', ''))
+    if match is None:
+        return None
     try:
-        return node['thumbnails'][0]['url']     # polymer format
-    except KeyError:
-        return node['url']     # ajax format
+        return int(match.group(1))
+    except ValueError:
+        return None
 
-dispatch = {
-
-# polymer format    
-    'title':                ('title',       get_text),
-    'publishedTimeText':    ('published',   get_text),
-    'videoId':              ('id',          lambda node: node),
-    'descriptionSnippet':   ('description', get_formatted_text),
-    'lengthText':           ('duration',    get_text),
-    'thumbnail':            ('thumbnail',   get_thumbnail),
-    'thumbnails':           ('thumbnail',   lambda node: node[0]['thumbnails'][0]['url']),
-
-    'viewCountText':        ('views',       get_text),
-    'numVideosText':        ('size',        lambda node: get_text(node).split(' ')[0]),     # the format is "324 videos"
-    'videoCountText':       ('size',        get_text),
-    'playlistId':           ('id',          lambda node: node),
-    'descriptionText':      ('description', get_formatted_text),
-
-    'subscriberCountText':  ('subscriber_count',    get_text),
-    'channelId':            ('id',          lambda node: node),
-    'badges':               ('badges',      get_badges),
-
-# ajax format
-    'view_count_text':  ('views',       get_text),
-    'num_videos_text':  ('size',        lambda node: get_text(node).split(' ')[0]),
-    'owner_text':       ('author',      get_text),
-    'owner_endpoint':   ('author_url',  lambda node: node['url']),
-    'description':      ('description', get_formatted_text),
-    'index':            ('playlist_index', get_text),
-    'short_byline':     ('author',      get_text),
-    'length':           ('duration',    get_text),
-    'video_id':         ('id',          lambda node: node),
-
-}
-
-def ajax_info(item_json):
-    try:
-        info = {}          
-        for key, node in item_json.items():
-            try:
-                simple_key, function = dispatch[key]
-            except KeyError:
-                continue
-            info[simple_key] = function(node)
-        return info
-    except KeyError:
-        print(item_json)
-        raise
-
+def extract_approx_int(string):
+    '''e.g. "15M" from "15M subscribers"'''
+    if not isinstance(string, str):
+        string = extract_str(string)
+    if not string:
+        return None
+    match = re.search(r'(\d+[KMBTkmbt])', string.replace(',', ''))
+    if match is None:
+        return None
+    return match.group(1)
 
 youtube_url_re = re.compile(r'^(?:(?:(?:https?:)?//)?(?:www\.)?youtube\.com)?(/.*)$')
 def normalize_url(url):
@@ -330,7 +308,7 @@ def prefix_urls(item):
 
 def add_extra_html_info(item):
     if item['type'] == 'video':
-        item['url'] = util.URL_ORIGIN + '/watch?v=' + item['id']
+        item['url'] = (util.URL_ORIGIN + '/watch?v=' + item['id']) if item.get('id') else None
 
         video_info = {}
         for key in ('id', 'title', 'author', 'duration'):
@@ -342,17 +320,22 @@ def add_extra_html_info(item):
         item['video_info'] = json.dumps(video_info)
 
     elif item['type'] == 'playlist':
-        item['url'] = util.URL_ORIGIN + '/playlist?list=' + item['id']
+        item['url'] = (util.URL_ORIGIN + '/playlist?list=' + item['id']) if item.get('id') else None
     elif item['type'] == 'channel':
-        item['url'] = util.URL_ORIGIN + "/channel/" + item['id']
+        item['url'] = (util.URL_ORIGIN + "/channel/" + item['id']) if item.get('id') else None
 
+def extract_item_info(item, additional_info={}):
+    if not item:
+        return {'error': 'No item given'}
 
-def renderer_info(renderer, additional_info={}):
-    type = list(renderer.keys())[0]
-    renderer = renderer[type]
-    info = {}
+    type = default_get(list(item.keys()), 0)
+    if not type:
+        return {'error': 'Could not find type'}
+    item = item[type]
+
+    info = {'error': None}
     if type in ('itemSectionRenderer', 'compactAutoplayRenderer'):
-        return renderer_info(renderer['contents'][0], additional_info)
+        return extract_item_info(default_multi_get(item, 'contents', 0), additional_info)
 
     if type in ('movieRenderer', 'clarificationRenderer'):
         info['type'] = 'unsupported'
@@ -360,75 +343,78 @@ def renderer_info(renderer, additional_info={}):
 
     info.update(additional_info)
 
-
-    if type in ('compactVideoRenderer', 'videoRenderer', 'playlistVideoRenderer', 'gridVideoRenderer'):
+    # type looks like e.g. 'compactVideoRenderer' or 'gridVideoRenderer'
+    # camelCase split, https://stackoverflow.com/a/37697078
+    type_parts = [s.lower() for s in re.sub(r'([A-Z][a-z]+)', r' \1', type).split()]
+    if len(type_parts) < 2:
+        info['type'] = 'unsupported'
+        return
+    primary_type = type_parts[-2]
+    if primary_type == 'video':
         info['type'] = 'video'
-    elif type in ('playlistRenderer', 'compactPlaylistRenderer', 'gridPlaylistRenderer',
-                  'radioRenderer', 'compactRadioRenderer', 'gridRadioRenderer',
-                  'showRenderer', 'compactShowRenderer', 'gridShowRenderer'):
+    elif primary_type in ('playlist', 'radio', 'show'):
         info['type'] = 'playlist'
-    elif type == 'channelRenderer':
+    elif primary_type == 'channel':
         info['type'] = 'channel'
-    elif type == 'playlistHeaderRenderer':
-        info['type'] = 'playlist_metadata'
     else:
         info['type'] = 'unsupported'
-        return info
 
-    try:
-        if 'viewCountText' in renderer:     # prefer this one as it contains all the digits
-            info['views'] = get_text(renderer['viewCountText'])
-        elif 'shortViewCountText' in renderer:
-            info['views'] = get_text(renderer['shortViewCountText'])
+    info['title'] = extract_str(item.get('title'))
+    info['author'] = extract_str(multi_default_get(item, 'longBylineText', 'shortBylineText', 'ownerText'))
+    info['author_id'] = extract_str(multi_default_multi_get(item,
+        ['longBylineText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId'],
+        ['shortBylineText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId'],
+        ['ownerText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId']
+    ))
+    info['author_url'] = ('https://www.youtube.com/channel/' + info['author_id']) if info['author_id'] else None
+    info['description'] = extract_formatted_text(multi_default_get(item, 'descriptionSnippet', 'descriptionText'))
+    info['thumbnail'] = multi_default_multi_get(item,
+        ['thumbnail', 'thumbnails', 0, 'url'],      # videos
+        ['thumbnails', 0, 'thumbnails', 0, 'url'],  # playlists
+        ['thumbnailRenderer', 'showCustomThumbnailRenderer', 'thumbnail', 'thumbnails', 0, 'url'], # shows
+    )
 
-        if 'ownerText' in renderer:
-            info['author'] = renderer['ownerText']['runs'][0]['text']
-            info['author_url'] = normalize_url(renderer['ownerText']['runs'][0]['navigationEndpoint']['commandMetadata']['webCommandMetadata']['url'])
-        try:
-            overlays = renderer['thumbnailOverlays']
-        except KeyError:
-            pass
+    info['badges'] = []
+    for badge_node in multi_default_get(item, 'badges', 'ownerBadges', default=()):
+        badge = default_multi_get(badge_node, 'metadataBadgeRenderer', 'label')
+        if badge:
+            info['badges'].append(badge)
+
+    if primary_type in ('video', 'playlist'):
+        info['time_published'] = extract_str(item.get('publishedTimeText'))
+
+    if primary_type == 'video':
+        info['id'] = item.get('videoId')
+        info['view_count'] = extract_int(item.get('viewCountText'))
+        if info['view_count']:
+            info['approx_view_count'] = '{:,}'.format(info['view_count'])
         else:
-            for overlay in overlays:
-                if 'thumbnailOverlayTimeStatusRenderer' in overlay:
-                    info['duration'] = get_text(overlay['thumbnailOverlayTimeStatusRenderer']['text'])
-                # show renderers don't have videoCountText
-                elif 'thumbnailOverlayBottomPanelRenderer' in overlay:
-                    info['size'] = get_text(overlay['thumbnailOverlayBottomPanelRenderer']['text'])
+            info['approx_view_count'] = extract_approx_int(multi_default_get(item, 'shortViewCountText'))
+        info['duration'] = extract_str(item.get('lengthText'))
+    elif primary_type == 'playlist':
+        info['id'] = item.get('playlistId')
+        info['video_count'] = extract_int(item.get('videoCount'))
+    elif primary_type == 'channel':
+        info['id'] = item.get('channelId')
+        info['approx_subscriber_count'] = extract_approx_int(item.get('subscriberCountText'))
+    elif primary_type == 'show':
+        info['id'] = default_multi_get(item, 'navigationEndpoint', 'watchEndpoint', 'playlistId')
 
-        # show renderers don't have playlistId, have to dig into the url to get it
-        try:
-            info['id'] = renderer['navigationEndpoint']['watchEndpoint']['playlistId']
-        except KeyError:
-            pass
-        for key, node in renderer.items():
-            if key in ('longBylineText', 'shortBylineText'):
-                info['author'] = get_text(node)
-                try:
-                    info['author_url'] = normalize_url(get_url(node))
-                except KeyError:
-                    pass
+    if primary_type in ('playlist', 'channel'):
+        conservative_update(info, 'video_count', extract_int(item.get('videoCountText')))
 
-            # show renderers don't have thumbnail key at top level, dig into thumbnailRenderer
-            elif key == 'thumbnailRenderer' and 'showCustomThumbnailRenderer' in node:
-                info['thumbnail'] = node['showCustomThumbnailRenderer']['thumbnail']['thumbnails'][0]['url']
-            else:
-                try:
-                    simple_key, function = dispatch[key]
-                except KeyError:
-                    continue
-                info[simple_key] = function(node)
-        if info['type'] == 'video' and 'duration' not in info:
-            info['duration'] = 'Live'
-
-        return info
-    except KeyError:
-        print(renderer)
-        raise
-
+    for overlay in item.get('thumbnailOverlays', []):
+        conservative_update(info, 'duration', extract_str(default_multi_get(
+            overlay, 'thumbnailOverlayTimeStatusRenderer', 'text'
+        )))
+        # show renderers don't have videoCountText
+        conservative_update(info, 'video_count', extract_int(default_multi_get(
+            overlay, 'thumbnailOverlayBottomPanelRenderer', 'text'
+        )))
+    return info
 
 def parse_info_prepare_for_html(renderer, additional_info={}):
-    item = renderer_info(renderer, additional_info)
+    item = extract_item_info(renderer, additional_info)
     prefix_urls(item)
     add_extra_html_info(item)
 
@@ -616,7 +602,7 @@ def extract_channel_info(polymer_json, tab):
     items, _ = extract_items(response)
     if tab in ('videos', 'playlists', 'search'):
         additional_info = {'author': info['channel_name'], 'author_url': 'https://www.youtube.com/channel/' + channel_id}
-        info['items'] = [renderer_info(renderer, additional_info) for renderer in items]
+        info['items'] = [extract_item_info(renderer, additional_info) for renderer in items]
 
     elif tab == 'about':
         for item in items:
@@ -633,7 +619,7 @@ def extract_channel_info(polymer_json, tab):
         for link_json in channel_metadata.get('primaryLinks', ()):
             url = remove_redirect(link_json['navigationEndpoint']['urlEndpoint']['url'])
 
-            text = get_plain_text(link_json['title'])
+            text = extract_str(link_json['title'])
 
             info['links'].append( (text, url) )
 
@@ -644,10 +630,10 @@ def extract_channel_info(polymer_json, tab):
                 stat = channel_metadata[stat_name]
             except KeyError:
                 continue
-            info['stats'].append(get_plain_text(stat))
+            info['stats'].append(extract_str(stat))
 
         if 'description' in channel_metadata:
-            info['description'] = get_text(channel_metadata['description'])
+            info['description'] = extract_str(channel_metadata['description'])
         else:
             info['description'] = ''
 
@@ -693,9 +679,9 @@ def extract_search_info(polymer_json):
             }
             continue
 
-        item_info = renderer_info(renderer)
-        if item_info['type'] != 'unsupported':
-            info['items'].append(item_info)
+        i_info = extract_item_info(renderer)
+        if i_info.get('type') != 'unsupported':
+            info['items'].append(i_info)
 
 
     return info
@@ -704,13 +690,41 @@ def extract_playlist_metadata(polymer_json):
     response, err = extract_response(polymer_json)
     if err:
         return {'error': err}
-    metadata = renderer_info(response['header'])
-    metadata['error'] = None
 
-    if 'description' not in metadata:
-        metadata['description'] = ''
+    metadata = {'error': None}
+    header = default_multi_get(response, 'header', 'playlistHeaderRenderer', default={})
+    metadata['title'] = extract_str(header.get('title'))
 
-    metadata['size'] = int(metadata['size'].replace(',', ''))
+    metadata['first_video_id'] = default_multi_get(header, 'playEndpoint', 'watchEndpoint', 'videoId')
+    first_id = re.search(r'([a-z_\-]{11})', default_multi_get(header,
+        'thumbnail', 'thumbnails', 0, 'url', default=''))
+    if first_id:
+        conservative_update(metadata, 'first_video_id', first_id.group(1))
+    if metadata['first_video_id'] is None:
+        metadata['thumbnail'] = None
+    else:
+        metadata['thumbnail'] = 'https://i.ytimg.com/vi/' + metadata['first_video_id'] + '/mqdefault.jpg'
+
+    metadata['video_count'] = extract_int(header.get('numVideosText'))
+    metadata['description'] = extract_str(header.get('descriptionText'), default='')
+    metadata['author'] = extract_str(header.get('ownerText'))
+    metadata['author_id'] = multi_default_multi_get(header, 
+        ['ownerText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId'],
+        ['ownerEndpoint', 'browseEndpoint', 'browseId'])
+    if metadata['author_id']:
+        metadata['author_url'] = 'https://www.youtube.com/channel/' + metadata['author_id']
+    else:
+        metadata['author_url'] = None
+    metadata['view_count'] = extract_int(header.get('viewCountText'))
+    metadata['like_count'] = extract_int(header.get('likesCountWithoutLikeText'))
+    for stat in header.get('stats', ()):
+        text = extract_str(stat)
+        if 'videos' in text:
+            conservative_update(metadata, 'video_count', extract_int(text))
+        elif 'views' in text:
+            conservative_update(metadata, 'view_count', extract_int(text))
+        elif 'updated' in text:
+            metadata['time_published'] = extract_date(text)
 
     return metadata
 
@@ -722,7 +736,7 @@ def extract_playlist_info(polymer_json):
     first_page = 'continuationContents' not in response
     video_list, _ = extract_items(response)
 
-    info['items'] = [renderer_info(renderer) for renderer in video_list]
+    info['items'] = [extract_item_info(renderer) for renderer in video_list]
 
     if first_page:
         info['metadata'] = extract_playlist_metadata(polymer_json)
@@ -777,7 +791,7 @@ def parse_comments_polymer(polymer_json):
                     video_title = comment_thread['commentTargetTitle']['runs'][0]['text']
 
                 if 'replies' in comment_thread:
-                    view_replies_text = get_plain_text(comment_thread['replies']['commentRepliesRenderer']['moreText'])
+                    view_replies_text = extract_str(comment_thread['replies']['commentRepliesRenderer']['moreText'])
                     view_replies_text = view_replies_text.replace(',', '')
                     match = re.search(r'(\d+)', view_replies_text)
                     if match is None:
@@ -789,15 +803,15 @@ def parse_comments_polymer(polymer_json):
             comment = {
                 'author_id': comment_renderer.get('authorId', ''),
                 'author_avatar': comment_renderer['authorThumbnail']['thumbnails'][0]['url'],
-                'likes': comment_renderer['likeCount'],
-                'published': get_plain_text(comment_renderer['publishedTimeText']),
+                'like_count': comment_renderer['likeCount'],
+                'time_published': extract_str(comment_renderer['publishedTimeText']),
                 'text': comment_renderer['contentText'].get('runs', ''),
-                'number_of_replies': number_of_replies,
-                'comment_id': comment_renderer['commentId'],
+                'reply_count': number_of_replies,
+                'id': comment_renderer['commentId'],
             }
 
             if 'authorText' in comment_renderer:     # deleted channels have no name or channel link
-                comment['author'] = get_plain_text(comment_renderer['authorText'])
+                comment['author'] = extract_str(comment_renderer['authorText'])
                 comment['author_url'] = comment_renderer['authorEndpoint']['commandMetadata']['webCommandMetadata']['url']
                 comment['author_channel_id'] = comment_renderer['authorEndpoint']['browseEndpoint']['browseId']
             else:
@@ -831,66 +845,6 @@ def check_missing_keys(object, *key_sequences):
             return 'Could not find ' + key
 
     return None
-
-def extract_str(node, default=None, recover_urls=False):
-    '''default is the value returned if the extraction fails. If recover_urls is true, will attempt to fix Youtube's truncation of url text (most prominently seen in descriptions)'''
-    if isinstance(node, str):
-        return node
-
-    try:
-        return node['simpleText']
-    except (KeyError, TypeError):
-        pass
-
-    if isinstance(node, dict) and 'runs' in node:
-        if recover_urls:
-            result = ''
-            for run in node['runs']:
-                url = default_multi_get(run, 'navigationEndpoint', 'urlEndpoint', 'url')
-                text = run.get('text', '')
-                # second condition is necessary because youtube makes other things into urls, such as hashtags, which we want to keep as text
-                if url is not None and (text.startswith('http://') or text.startswith('https://')):
-                    url = remove_redirect(url)
-                    result += url # youtube truncates the url text, use actual url instead
-                else:
-                    result += text
-            return result
-        else:
-            return ''.join(text_run.get('text', '') for text_run in node['runs'])
-
-    return default
-
-def extract_formatted_text(node):
-    try:
-        result = []
-        runs = node['runs']
-        for run in runs:
-            url = default_multi_get(run, 'navigationEndpoint', 'urlEndpoint', 'url')
-            if url is not None:
-                run['url'] = remove_redirect(url)
-                run['text'] = run['url'] # youtube truncates the url text, we don't want that nonsense
-        return runs
-    except (KeyError, TypeError):
-        traceback.print_exc()
-        pass
-
-    try:
-        return [{'text': node['simpleText']}]
-    except (KeyError, TypeError):
-        pass
-
-    return []
-
-def extract_int(string):
-    if not isinstance(string, str):
-        return None
-    match = re.search(r'(\d+)', string.replace(',', ''))
-    if match is None:
-        return None
-    try:
-        return int(match.group(1))
-    except ValueError:
-        return None
 
 def extract_metadata_row_info(video_renderer_info):
     # extract category and music list
@@ -944,7 +898,7 @@ def extract_watch_info_mobile(top_level):
     else:
         info['age_restricted'] = not family_safe
     info['allowed_countries'] = microformat.get('availableCountries', [])
-    info['published_date'] = microformat.get('publishDate')
+    info['time_published'] = microformat.get('publishDate')
 
     response = top_level.get('response', {})
 
@@ -962,15 +916,15 @@ def extract_watch_info_mobile(top_level):
     info['author'] = extract_str(default_multi_get(video_info, 'owner', 'slimOwnerRenderer', 'title'))
     info['author_id'] = default_multi_get(video_info, 'owner', 'slimOwnerRenderer', 'navigationEndpoint', 'browseEndpoint', 'browseId')
     info['title'] = extract_str(video_info.get('title'))
-    info['live'] = 'watching' in extract_str(video_info.get('expandedSubtitle'))
+    info['live'] = 'watching' in extract_str(video_info.get('expandedSubtitle'), default='')
     info['unlisted'] = False
     for badge in video_info.get('badges', []):
         if default_multi_get(badge, 'metadataBadgeRenderer', 'label') == 'Unlisted':
             info['unlisted'] = True
     info['like_count'] = None
     info['dislike_count'] = None
-    if not info['published_date']:
-        info['published_date'] = extract_date(extract_str(video_info.get('dateText', None)))
+    if not info['time_published']:
+        info['time_published'] = extract_date(extract_str(video_info.get('dateText', None)))
     for button in video_info.get('buttons', ()):
         button_renderer = button.get('slimMetadataToggleButtonRenderer', {})
 
@@ -1012,7 +966,7 @@ def extract_watch_info_mobile(top_level):
 
     # related videos
     related, _ = extract_items(response)
-    info['related_videos'] = [renderer_info(renderer) for renderer in related]
+    info['related_videos'] = [extract_item_info(renderer) for renderer in related]
 
     return info
 
@@ -1032,7 +986,7 @@ def extract_watch_info_desktop(top_level):
 
     info.update(extract_metadata_row_info(video_info))
     info['description'] = extract_str(video_info.get('description', None), recover_urls=True)
-    info['published_date'] = extract_date(extract_str(video_info.get('dateText', None)))
+    info['time_published'] = extract_date(extract_str(video_info.get('dateText', None)))
 
     likes_dislikes = default_multi_get(video_info, 'sentimentBar', 'sentimentBarRenderer', 'tooltip', default='').split('/')
     if len(likes_dislikes) == 2:
@@ -1048,7 +1002,7 @@ def extract_watch_info_desktop(top_level):
     info['view_count'] = extract_int(extract_str(default_multi_get(video_info, 'viewCount', 'videoViewCountRenderer', 'viewCount')))
 
     related = default_multi_get(top_level, 'response', 'contents', 'twoColumnWatchNextResults', 'secondaryResults', 'secondaryResults', 'results', default=[])
-    info['related_videos'] = [renderer_info(renderer) for renderer in related]
+    info['related_videos'] = [extract_item_info(renderer) for renderer in related]
 
     return info
 
@@ -1113,17 +1067,6 @@ def extract_playability_error(info, player_response, error_prefix=''):
         info['playability_error'] = error_prefix + playability_reason
     else:
         info['playability_error'] = error_prefix + 'Unknown playability error'
-
-def liberal_update(obj, key, value):
-    '''Updates obj[key] with value as long as value is not None.
-    Ensures obj[key] will at least get a value of None, however'''
-    if (value is not None) or (key not in obj):
-        obj[key] = value
-
-def conservative_update(obj, key, value):
-    '''Only updates obj if it doesn't have key or obj[key] is None'''
-    if obj.get(key) is None:
-        obj[key] = value
 
 SUBTITLE_FORMATS = ('srv1', 'srv2', 'srv3', 'ttml', 'vtt')
 def extract_watch_info(polymer_json):
@@ -1223,8 +1166,8 @@ def extract_watch_info(polymer_json):
     conservative_update(info, 'author_id', mf.get('externalChannelId'))
     liberal_update(info, 'unlisted', mf.get('isUnlisted'))
     liberal_update(info, 'category', mf.get('category'))
-    liberal_update(info, 'published_date', mf.get('publishDate'))
-    liberal_update(info, 'uploaded_date', mf.get('uploadDate'))
+    liberal_update(info, 'time_published', mf.get('publishDate'))
+    liberal_update(info, 'time_uploaded', mf.get('uploadDate'))
 
     # other stuff
     info['author_url'] = 'https://www.youtube.com/channel/' + info['author_id'] if info['author_id'] else None

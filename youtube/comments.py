@@ -91,33 +91,33 @@ def post_process_comments_info(comments_info):
         comment['author_url'] = util.URL_ORIGIN + comment['author_url']
         comment['author_avatar'] = '/' + comment['author_avatar']
 
-        comment['permalink'] = util.URL_ORIGIN + '/watch?v=' + comments_info['video_id'] + '&lc=' + comment['comment_id']
+        comment['permalink'] = util.URL_ORIGIN + '/watch?v=' + comments_info['video_id'] + '&lc=' + comment['id']
 
         if comment['author_channel_id'] in accounts.accounts:
             comment['delete_url'] = (util.URL_ORIGIN + '/delete_comment?video_id='
                 + comments_info['video_id']
                 + '&channel_id='+ comment['author_channel_id']
                 + '&author_id=' + comment['author_id']
-                + '&comment_id=' + comment['comment_id'])
+                + '&comment_id=' + comment['id'])
 
-        num_replies = comment['number_of_replies']
-        if num_replies == 0:
-            comment['replies_url'] = util.URL_ORIGIN + '/post_comment?parent_id=' + comment['comment_id'] + "&video_id=" + comments_info['video_id']
+        reply_count = comment['reply_count']
+        if reply_count == 0:
+            comment['replies_url'] = util.URL_ORIGIN + '/post_comment?parent_id=' + comment['id'] + "&video_id=" + comments_info['video_id']
         else:
-            comment['replies_url'] = util.URL_ORIGIN + '/comments?parent_id=' + comment['comment_id'] + "&video_id=" + comments_info['video_id']
+            comment['replies_url'] = util.URL_ORIGIN + '/comments?parent_id=' + comment['id'] + "&video_id=" + comments_info['video_id']
 
-        if num_replies == 0:
+        if reply_count == 0:
             comment['view_replies_text'] = 'Reply'
-        elif num_replies == 1:
+        elif reply_count == 1:
             comment['view_replies_text'] = '1 reply'
         else:
-            comment['view_replies_text'] = str(num_replies) + ' replies'
+            comment['view_replies_text'] = str(reply_count) + ' replies'
 
 
-        if comment['likes'] == 1:
+        if comment['like_count'] == 1:
             comment['likes_text'] = '1 like'
         else:
-            comment['likes_text'] = str(comment['likes']) + ' likes'
+            comment['likes_text'] = str(comment['like_count']) + ' likes'
 
     comments_info['include_avatars'] = settings.enable_comment_avatars
     if comments_info['ctoken']:

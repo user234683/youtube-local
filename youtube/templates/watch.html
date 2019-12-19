@@ -261,11 +261,11 @@
             {%- endif -%}
         </ul>
         <address>Uploaded by <a href="{{ uploader_channel_url }}">{{ uploader }}</a></address>
-        <span class="views">{{ views }} views</span>
+        <span class="views">{{ view_count }} views</span>
 
 
-        <time datetime="$upload_date">Published on {{ upload_date }}</time>
-        <span class="likes-dislikes">{{ likes }} likes {{ dislikes }} dislikes</span>
+        <time datetime="$upload_date">Published on {{ time_published }}</time>
+        <span class="likes-dislikes">{{ like_count }} likes {{ dislike_count }} dislikes</span>
         <details class="download-dropdown">
             <summary class="download-dropdown-label">Download</summary>
             <ul class="download-dropdown-content">

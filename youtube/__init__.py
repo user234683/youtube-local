@@ -23,3 +23,10 @@ def inject_theme_preference():
         'theme_path': '/youtube.com/static/' + theme_names[settings.theme] + '.css',
     }
 
+@yt_app.template_filter('commatize')
+def commatize(num):
+    if num is None:
+        return ''
+    if isinstance(num, str):
+        num = int(num)
+    return '{:,}'.format(num)
