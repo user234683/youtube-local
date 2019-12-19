@@ -386,6 +386,16 @@ def extract_item_info(item, additional_info={}):
     if primary_type == 'video':
         info['id'] = item.get('videoId')
         info['view_count'] = extract_int(item.get('viewCountText'))
+
+        # dig into accessibility data to get view_count for videos marked as recommended, and to get time_published
+        accessibility_label = deep_get(item, 'title', 'accessibility', 'accessibilityData', 'label', default='')
+        timestamp = re.search(r'(\d+ \w+ ago)', accessibility_label)
+        if timestamp:
+            conservative_update(info, 'time_published', timestamp.group(1))
+        view_count = re.search(r'(\d+) views', accessibility_label.replace(',', ''))
+        if view_count:
+            conservative_update(info, 'view_count', int(view_count.group(1)))
+
         if info['view_count']:
             info['approx_view_count'] = '{:,}'.format(info['view_count'])
         else:
