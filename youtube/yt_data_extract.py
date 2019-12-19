@@ -145,7 +145,7 @@ _formats = {
     '397': {'vcodec': 'av01.0.05M.08'},
 }
 
-def default_get(object, key, default=None, types=()):
+def get(object, key, default=None, types=()):
     '''Like dict.get(), but returns default if the result doesn't match one of the types.
        Also works for indexing lists.'''
     try:
@@ -158,8 +158,8 @@ def default_get(object, key, default=None, types=()):
     else:
         return default
 
-def multi_default_get(object, *keys, default=None, types=()):
-    '''Like default_get, but try other keys if the first fails'''
+def multi_get(object, *keys, default=None, types=()):
+    '''Like get, but try other keys if the first fails'''
     for key in keys:
         try:
             result = object[key]
@@ -173,7 +173,7 @@ def multi_default_get(object, *keys, default=None, types=()):
     return default
 
 
-def default_multi_get(object, *keys, default=None, types=()):
+def deep_get(object, *keys, default=None, types=()):
     '''Like dict.get(), but for nested dictionaries/sequences, supporting keys or indices.
        Last argument is the default value to use in case of any IndexErrors or KeyErrors.
        If types is given and the result doesn't match one of those types, default is returned'''
@@ -188,8 +188,8 @@ def default_multi_get(object, *keys, default=None, types=()):
         else:
             return default
 
-def multi_default_multi_get(object, *key_sequences, default=None, types=()):
-    '''Like default_multi_get, but can try different key sequences in case one fails.
+def multi_deep_get(object, *key_sequences, default=None, types=()):
+    '''Like deep_get, but can try different key sequences in case one fails.
        Return default if all of them fail. key_sequences is a list of lists'''
     for key_sequence in key_sequences:
         _object = object
@@ -224,7 +224,7 @@ def remove_redirect(url):
 
 def _recover_urls(runs):
     for run in runs:
-        url = default_multi_get(run, 'navigationEndpoint', 'urlEndpoint', 'url')
+        url = deep_get(run, 'navigationEndpoint', 'urlEndpoint', 'url')
         text = run.get('text', '')
         # second condition is necessary because youtube makes other things into urls, such as hashtags, which we want to keep as text
         if url is not None and (text.startswith('http://') or text.startswith('https://')):
@@ -328,14 +328,14 @@ def extract_item_info(item, additional_info={}):
     if not item:
         return {'error': 'No item given'}
 
-    type = default_get(list(item.keys()), 0)
+    type = get(list(item.keys()), 0)
     if not type:
         return {'error': 'Could not find type'}
     item = item[type]
 
     info = {'error': None}
     if type in ('itemSectionRenderer', 'compactAutoplayRenderer'):
-        return extract_item_info(default_multi_get(item, 'contents', 0), additional_info)
+        return extract_item_info(deep_get(item, 'contents', 0), additional_info)
 
     if type in ('movieRenderer', 'clarificationRenderer'):
         info['type'] = 'unsupported'
@@ -360,23 +360,23 @@ def extract_item_info(item, additional_info={}):
         info['type'] = 'unsupported'
 
     info['title'] = extract_str(item.get('title'))
-    info['author'] = extract_str(multi_default_get(item, 'longBylineText', 'shortBylineText', 'ownerText'))
-    info['author_id'] = extract_str(multi_default_multi_get(item,
+    info['author'] = extract_str(multi_get(item, 'longBylineText', 'shortBylineText', 'ownerText'))
+    info['author_id'] = extract_str(multi_deep_get(item,
         ['longBylineText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId'],
         ['shortBylineText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId'],
         ['ownerText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId']
     ))
     info['author_url'] = ('https://www.youtube.com/channel/' + info['author_id']) if info['author_id'] else None
-    info['description'] = extract_formatted_text(multi_default_get(item, 'descriptionSnippet', 'descriptionText'))
-    info['thumbnail'] = multi_default_multi_get(item,
+    info['description'] = extract_formatted_text(multi_get(item, 'descriptionSnippet', 'descriptionText'))
+    info['thumbnail'] = multi_deep_get(item,
         ['thumbnail', 'thumbnails', 0, 'url'],      # videos
         ['thumbnails', 0, 'thumbnails', 0, 'url'],  # playlists
         ['thumbnailRenderer', 'showCustomThumbnailRenderer', 'thumbnail', 'thumbnails', 0, 'url'], # shows
     )
 
     info['badges'] = []
-    for badge_node in multi_default_get(item, 'badges', 'ownerBadges', default=()):
-        badge = default_multi_get(badge_node, 'metadataBadgeRenderer', 'label')
+    for badge_node in multi_get(item, 'badges', 'ownerBadges', default=()):
+        badge = deep_get(badge_node, 'metadataBadgeRenderer', 'label')
         if badge:
             info['badges'].append(badge)
 
@@ -389,7 +389,7 @@ def extract_item_info(item, additional_info={}):
         if info['view_count']:
             info['approx_view_count'] = '{:,}'.format(info['view_count'])
         else:
-            info['approx_view_count'] = extract_approx_int(multi_default_get(item, 'shortViewCountText'))
+            info['approx_view_count'] = extract_approx_int(multi_get(item, 'shortViewCountText'))
         info['duration'] = extract_str(item.get('lengthText'))
     elif primary_type == 'playlist':
         info['id'] = item.get('playlistId')
@@ -398,17 +398,17 @@ def extract_item_info(item, additional_info={}):
         info['id'] = item.get('channelId')
         info['approx_subscriber_count'] = extract_approx_int(item.get('subscriberCountText'))
     elif primary_type == 'show':
-        info['id'] = default_multi_get(item, 'navigationEndpoint', 'watchEndpoint', 'playlistId')
+        info['id'] = deep_get(item, 'navigationEndpoint', 'watchEndpoint', 'playlistId')
 
     if primary_type in ('playlist', 'channel'):
         conservative_update(info, 'video_count', extract_int(item.get('videoCountText')))
 
     for overlay in item.get('thumbnailOverlays', []):
-        conservative_update(info, 'duration', extract_str(default_multi_get(
+        conservative_update(info, 'duration', extract_str(deep_get(
             overlay, 'thumbnailOverlayTimeStatusRenderer', 'text'
         )))
         # show renderers don't have videoCountText
-        conservative_update(info, 'video_count', extract_int(default_multi_get(
+        conservative_update(info, 'video_count', extract_int(deep_get(
             overlay, 'thumbnailOverlayBottomPanelRenderer', 'text'
         )))
     return info
@@ -422,7 +422,7 @@ def parse_info_prepare_for_html(renderer, additional_info={}):
 
 def extract_response(polymer_json):
     '''return response, error'''
-    response = multi_default_multi_get(polymer_json, [1, 'response'], ['response'], default=None, types=dict)
+    response = multi_deep_get(polymer_json, [1, 'response'], ['response'], default=None, types=dict)
     if response is None:
         return None, 'Failed to extract response'
     else:
@@ -468,25 +468,25 @@ item_types = {
 }
 
 def traverse_browse_renderer(renderer):
-    for tab in default_get(renderer, 'tabs', (), types=(list, tuple)):
-        tab_renderer = multi_default_multi_get(tab, ['tabRenderer'], ['expandableTabRenderer'], default=None, types=dict)
+    for tab in get(renderer, 'tabs', (), types=(list, tuple)):
+        tab_renderer = multi_deep_get(tab, ['tabRenderer'], ['expandableTabRenderer'], default=None, types=dict)
         if tab_renderer is None:
             continue
         if tab_renderer.get('selected', False):
-            return default_get(tab_renderer, 'content', {}, types=(dict))
+            return get(tab_renderer, 'content', {}, types=(dict))
     print('Could not find tab with content')
     return {}
 
 def traverse_standard_list(renderer):
-    renderer_list = multi_default_multi_get(renderer, ['contents'], ['items'], default=(), types=(list, tuple))
-    continuation = default_multi_get(renderer, 'continuations', 0, 'nextContinuationData', 'continuation')
+    renderer_list = multi_deep_get(renderer, ['contents'], ['items'], default=(), types=(list, tuple))
+    continuation = deep_get(renderer, 'continuations', 0, 'nextContinuationData', 'continuation')
     return renderer_list, continuation
 
 # these renderers contain one inside them
 nested_renderer_dispatch = {
     'singleColumnBrowseResultsRenderer': traverse_browse_renderer,
     'twoColumnBrowseResultsRenderer': traverse_browse_renderer,
-    'twoColumnSearchResultsRenderer': lambda renderer: default_get(renderer, 'primaryContents', {}, types=dict),
+    'twoColumnSearchResultsRenderer': lambda renderer: get(renderer, 'primaryContents', {}, types=dict),
 }
 
 # these renderers contain a list of renderers in side them
@@ -495,17 +495,17 @@ nested_renderer_list_dispatch = {
     'itemSectionRenderer': traverse_standard_list,
     'gridRenderer': traverse_standard_list,
     'playlistVideoListRenderer': traverse_standard_list,
-    'singleColumnWatchNextResults': lambda r: (default_multi_get(r, 'results', 'results', 'contents', default=[], types=(list, tuple)), None),
+    'singleColumnWatchNextResults': lambda r: (deep_get(r, 'results', 'results', 'contents', default=[], types=(list, tuple)), None),
 }
 
 def extract_items(response, item_types=item_types):
     '''return items, ctoken'''
     if 'continuationContents' in response:
         # always has just the one [something]Continuation key, but do this just in case they add some tracking key or something
-        for key, renderer_continuation in default_get(response, 'continuationContents', {}, types=dict).items():
+        for key, renderer_continuation in get(response, 'continuationContents', {}, types=dict).items():
             if key.endswith('Continuation'):    # e.g. commentSectionContinuation, playlistVideoListContinuation
-                items = multi_default_multi_get(renderer_continuation, ['contents'], ['items'], default=None, types=(list, tuple))
-                ctoken = default_multi_get(renderer_continuation, 'continuations', 0, 'nextContinuationData', 'continuation', default=None, types=str)
+                items = multi_deep_get(renderer_continuation, ['contents'], ['items'], default=None, types=(list, tuple))
+                ctoken = deep_get(renderer_continuation, 'continuations', 0, 'nextContinuationData', 'continuation', default=None, types=str)
                 return items, ctoken
         return [], None
     elif 'contents' in response:
@@ -515,7 +515,7 @@ def extract_items(response, item_types=item_types):
         iter_stack = collections.deque()
         current_iter = iter(())
 
-        renderer = default_get(response, 'contents', {}, types=dict)
+        renderer = get(response, 'contents', {}, types=dict)
 
         while True:
             # mode 1: dig into the current renderer
@@ -692,11 +692,11 @@ def extract_playlist_metadata(polymer_json):
         return {'error': err}
 
     metadata = {'error': None}
-    header = default_multi_get(response, 'header', 'playlistHeaderRenderer', default={})
+    header = deep_get(response, 'header', 'playlistHeaderRenderer', default={})
     metadata['title'] = extract_str(header.get('title'))
 
-    metadata['first_video_id'] = default_multi_get(header, 'playEndpoint', 'watchEndpoint', 'videoId')
-    first_id = re.search(r'([a-z_\-]{11})', default_multi_get(header,
+    metadata['first_video_id'] = deep_get(header, 'playEndpoint', 'watchEndpoint', 'videoId')
+    first_id = re.search(r'([a-z_\-]{11})', deep_get(header,
         'thumbnail', 'thumbnails', 0, 'url', default=''))
     if first_id:
         conservative_update(metadata, 'first_video_id', first_id.group(1))
@@ -708,7 +708,7 @@ def extract_playlist_metadata(polymer_json):
     metadata['video_count'] = extract_int(header.get('numVideosText'))
     metadata['description'] = extract_str(header.get('descriptionText'), default='')
     metadata['author'] = extract_str(header.get('ownerText'))
-    metadata['author_id'] = multi_default_multi_get(header, 
+    metadata['author_id'] = multi_deep_get(header, 
         ['ownerText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId'],
         ['ownerEndpoint', 'browseEndpoint', 'browseId'])
     if metadata['author_id']:
@@ -854,9 +854,9 @@ def extract_metadata_row_info(video_renderer_info):
     }
 
     current_song = {}
-    for row in default_multi_get(video_renderer_info, 'metadataRowContainer', 'metadataRowContainerRenderer', 'rows', default=[]):
-        row_title = extract_str(default_multi_get(row, 'metadataRowRenderer', 'title'), default='')
-        row_content = extract_str(default_multi_get(row, 'metadataRowRenderer', 'contents', 0))
+    for row in deep_get(video_renderer_info, 'metadataRowContainer', 'metadataRowContainerRenderer', 'rows', default=[]):
+        row_title = extract_str(deep_get(row, 'metadataRowRenderer', 'title'), default='')
+        row_content = extract_str(deep_get(row, 'metadataRowRenderer', 'contents', 0))
         if row_title == 'Category':
             info['category'] = row_content
         elif row_title in ('Song', 'Music'):
@@ -890,7 +890,7 @@ def extract_date(date_text):
 
 def extract_watch_info_mobile(top_level):
     info = {}
-    microformat = default_multi_get(top_level, 'playerResponse', 'microformat', 'playerMicroformatRenderer', default={})
+    microformat = deep_get(top_level, 'playerResponse', 'microformat', 'playerMicroformatRenderer', default={})
 
     family_safe = microformat.get('isFamilySafe')
     if family_safe is None:
@@ -913,13 +913,13 @@ def extract_watch_info_mobile(top_level):
     info.update(extract_metadata_row_info(video_info))
     info['description'] = extract_str(video_info.get('description'), recover_urls=True)
     info['view_count'] = extract_int(extract_str(video_info.get('expandedSubtitle')))
-    info['author'] = extract_str(default_multi_get(video_info, 'owner', 'slimOwnerRenderer', 'title'))
-    info['author_id'] = default_multi_get(video_info, 'owner', 'slimOwnerRenderer', 'navigationEndpoint', 'browseEndpoint', 'browseId')
+    info['author'] = extract_str(deep_get(video_info, 'owner', 'slimOwnerRenderer', 'title'))
+    info['author_id'] = deep_get(video_info, 'owner', 'slimOwnerRenderer', 'navigationEndpoint', 'browseEndpoint', 'browseId')
     info['title'] = extract_str(video_info.get('title'))
     info['live'] = 'watching' in extract_str(video_info.get('expandedSubtitle'), default='')
     info['unlisted'] = False
     for badge in video_info.get('badges', []):
-        if default_multi_get(badge, 'metadataBadgeRenderer', 'label') == 'Unlisted':
+        if deep_get(badge, 'metadataBadgeRenderer', 'label') == 'Unlisted':
             info['unlisted'] = True
     info['like_count'] = None
     info['dislike_count'] = None
@@ -929,10 +929,10 @@ def extract_watch_info_mobile(top_level):
         button_renderer = button.get('slimMetadataToggleButtonRenderer', {})
 
         # all the digits can be found in the accessibility data
-        count = extract_int(default_multi_get(button_renderer, 'button', 'toggleButtonRenderer', 'defaultText', 'accessibility', 'accessibilityData', 'label'))
+        count = extract_int(deep_get(button_renderer, 'button', 'toggleButtonRenderer', 'defaultText', 'accessibility', 'accessibilityData', 'label'))
 
         # this count doesn't have all the digits, it's like 53K for instance
-        dumb_count = extract_int(extract_str(default_multi_get(button_renderer, 'button', 'toggleButtonRenderer', 'defaultText')))
+        dumb_count = extract_int(extract_str(deep_get(button_renderer, 'button', 'toggleButtonRenderer', 'defaultText')))
 
         # the accessibility text will be "No likes" or "No dislikes" or something like that, but dumb count will be 0
         if dumb_count == 0:
@@ -947,7 +947,7 @@ def extract_watch_info_mobile(top_level):
     items, _ = extract_items(response, item_types={'commentSectionRenderer'})
     if items:
         comment_info = items[0]['commentSectionRenderer']
-        comment_count_text = extract_str(default_multi_get(comment_info, 'header', 'commentSectionHeaderRenderer', 'countText'))
+        comment_count_text = extract_str(deep_get(comment_info, 'header', 'commentSectionHeaderRenderer', 'countText'))
         if comment_count_text == 'Comments':    # just this with no number, means 0 comments
             info['comment_count'] = 0
         else:
@@ -980,7 +980,7 @@ def extract_watch_info_desktop(top_level):
     }
 
     video_info = {}
-    for renderer in default_multi_get(top_level, 'response', 'contents', 'twoColumnWatchNextResults', 'results', 'results', 'contents', default=()):
+    for renderer in deep_get(top_level, 'response', 'contents', 'twoColumnWatchNextResults', 'results', 'results', 'contents', default=()):
         if renderer and list(renderer.keys())[0] in ('videoPrimaryInfoRenderer', 'videoSecondaryInfoRenderer'):
             video_info.update(list(renderer.values())[0])
 
@@ -988,7 +988,7 @@ def extract_watch_info_desktop(top_level):
     info['description'] = extract_str(video_info.get('description', None), recover_urls=True)
     info['time_published'] = extract_date(extract_str(video_info.get('dateText', None)))
 
-    likes_dislikes = default_multi_get(video_info, 'sentimentBar', 'sentimentBarRenderer', 'tooltip', default='').split('/')
+    likes_dislikes = deep_get(video_info, 'sentimentBar', 'sentimentBarRenderer', 'tooltip', default='').split('/')
     if len(likes_dislikes) == 2:
         info['like_count'] = extract_int(likes_dislikes[0])
         info['dislike_count'] = extract_int(likes_dislikes[1])
@@ -997,11 +997,11 @@ def extract_watch_info_desktop(top_level):
         info['dislike_count'] = None
 
     info['title'] = extract_str(video_info.get('title', None))
-    info['author'] = extract_str(default_multi_get(video_info, 'owner', 'videoOwnerRenderer', 'title'))
-    info['author_id'] = default_multi_get(video_info, 'owner', 'videoOwnerRenderer', 'navigationEndpoint', 'browseEndpoint', 'browseId')
-    info['view_count'] = extract_int(extract_str(default_multi_get(video_info, 'viewCount', 'videoViewCountRenderer', 'viewCount')))
+    info['author'] = extract_str(deep_get(video_info, 'owner', 'videoOwnerRenderer', 'title'))
+    info['author_id'] = deep_get(video_info, 'owner', 'videoOwnerRenderer', 'navigationEndpoint', 'browseEndpoint', 'browseId')
+    info['view_count'] = extract_int(extract_str(deep_get(video_info, 'viewCount', 'videoViewCountRenderer', 'viewCount')))
 
-    related = default_multi_get(top_level, 'response', 'contents', 'twoColumnWatchNextResults', 'secondaryResults', 'secondaryResults', 'results', default=[])
+    related = deep_get(top_level, 'response', 'contents', 'twoColumnWatchNextResults', 'secondaryResults', 'secondaryResults', 'results', default=[])
     info['related_videos'] = [extract_item_info(renderer) for renderer in related]
 
     return info
@@ -1054,10 +1054,10 @@ def extract_playability_error(info, player_response, error_prefix=''):
         info['playability_error'] = None
         return
 
-    playability_status = default_multi_get(player_response, 'playabilityStatus', 'status', default=None)
+    playability_status = deep_get(player_response, 'playabilityStatus', 'status', default=None)
     info['playability_status'] = playability_status
 
-    playability_reason = extract_str(multi_default_multi_get(player_response,
+    playability_reason = extract_str(multi_deep_get(player_response,
         ['playabilityStatus', 'reason'],
         ['playabilityStatus', 'errorScreen', 'playerErrorMessageRenderer', 'reason'],
         default='Could not find playability error')
@@ -1091,7 +1091,7 @@ def extract_watch_info(polymer_json):
     if error:
         info['playability_error'] = error
 
-    player_args = default_multi_get(top_level, 'player', 'args', default={})
+    player_args = deep_get(top_level, 'player', 'args', default={})
     player_response = json.loads(player_args['player_response']) if 'player_response' in player_args else {}
 
     # captions
@@ -1100,8 +1100,8 @@ def extract_watch_info(polymer_json):
     info['_manual_caption_language_names'] = {}     # language name written in that language, needed in some cases to create the url
     info['translation_languages'] = []
     captions_info = player_response.get('captions', {})
-    info['_captions_base_url'] = normalize_url(default_multi_get(captions_info, 'playerCaptionsRenderer', 'baseUrl'))
-    for caption_track in default_multi_get(captions_info, 'playerCaptionsTracklistRenderer', 'captionTracks', default=()):
+    info['_captions_base_url'] = normalize_url(deep_get(captions_info, 'playerCaptionsRenderer', 'baseUrl'))
+    for caption_track in deep_get(captions_info, 'playerCaptionsTracklistRenderer', 'captionTracks', default=()):
         lang_code = caption_track.get('languageCode')
         if not lang_code:
             continue
@@ -1110,11 +1110,11 @@ def extract_watch_info(polymer_json):
         else:
             info['manual_caption_languages'].append(lang_code)
         base_url = caption_track.get('baseUrl', '')
-        lang_name = default_multi_get(urllib.parse.parse_qs(urllib.parse.urlparse(base_url).query), 'name', 0)
+        lang_name = deep_get(urllib.parse.parse_qs(urllib.parse.urlparse(base_url).query), 'name', 0)
         if lang_name:
             info['_manual_caption_language_names'][lang_code] = lang_name
 
-    for translation_lang_info in default_multi_get(captions_info, 'playerCaptionsTracklistRenderer', 'translationLanguages', default=()):
+    for translation_lang_info in deep_get(captions_info, 'playerCaptionsTracklistRenderer', 'translationLanguages', default=()):
         lang_code = translation_lang_info.get('languageCode')
         if lang_code:
             info['translation_languages'].append(lang_code)
@@ -1131,18 +1131,18 @@ def extract_watch_info(polymer_json):
     info['age_restricted'] = (info['playability_status'] == 'LOGIN_REQUIRED' and info['playability_error'] and ' age' in info['playability_error'])
 
     # base_js (for decryption of signatures)
-    info['base_js'] = default_multi_get(top_level, 'player', 'assets', 'js')
+    info['base_js'] = deep_get(top_level, 'player', 'assets', 'js')
     if info['base_js']:
         info['base_js'] = normalize_url(info['base_js'])
 
-    mobile = 'singleColumnWatchNextResults' in default_multi_get(top_level, 'response', 'contents', default={})
+    mobile = 'singleColumnWatchNextResults' in deep_get(top_level, 'response', 'contents', default={})
     if mobile:
         info.update(extract_watch_info_mobile(top_level))
     else:
         info.update(extract_watch_info_desktop(top_level))
 
     # stuff from videoDetails. Use liberal_update to prioritize info from videoDetails over existing info
-    vd = default_multi_get(top_level, 'playerResponse', 'videoDetails', default={})
+    vd = deep_get(top_level, 'playerResponse', 'videoDetails', default={})
     liberal_update(info, 'title',      extract_str(vd.get('title')))
     liberal_update(info, 'duration',   extract_int(vd.get('lengthSeconds')))
     liberal_update(info, 'view_count', extract_int(vd.get('viewCount')))
@@ -1156,7 +1156,7 @@ def extract_watch_info(polymer_json):
     liberal_update(info, 'tags',        vd.get('keywords', []))
 
     # fallback stuff from microformat
-    mf = default_multi_get(top_level, 'playerResponse', 'microformat', 'playerMicroformatRenderer', default={})
+    mf = deep_get(top_level, 'playerResponse', 'microformat', 'playerMicroformatRenderer', default={})
     conservative_update(info, 'title',      extract_str(mf.get('title')))
     conservative_update(info, 'duration', extract_int(mf.get('lengthSeconds')))
     # this gives the view count for limited state videos
@@ -1177,7 +1177,7 @@ def update_with_age_restricted_info(info, video_info_page):
     ERROR_PREFIX = 'Error bypassing age-restriction: '
 
     video_info = urllib.parse.parse_qs(video_info_page)
-    player_response = default_multi_get(video_info, 'player_response', 0)
+    player_response = deep_get(video_info, 'player_response', 0)
     if player_response is None:
         info['playability_error'] = ERROR_PREFIX + 'Could not find player_response in video_info_page'
         return

@@ -185,7 +185,7 @@ def decrypt_signatures(info):
         return False    # No decryption needed
     if not info['base_js']:
         return 'Failed to find base.js'
-    player_name = yt_data_extract.default_get(info['base_js'].split('/'), -2)
+    player_name = yt_data_extract.get(info['base_js'].split('/'), -2)
     if not player_name:
         return 'Could not find player name'
 
@@ -204,7 +204,7 @@ def decrypt_signatures(info):
         if not function_body:
             return 'Empty decryption function body'
 
-        var_name = yt_data_extract.default_get(function_body[0].split('.'), 0)
+        var_name = yt_data_extract.get(function_body[0].split('.'), 0)
         if var_name is None:
             return 'Could not find var_name'
 
@@ -397,8 +397,8 @@ def get_watch_page():
         })
 
     video_sources = get_video_sources(info)
-    video_height = yt_data_extract.default_multi_get(video_sources, 0, 'height', default=360)
-    video_width = yt_data_extract.default_multi_get(video_sources, 0, 'width', default=640)
+    video_height = yt_data_extract.deep_get(video_sources, 0, 'height', default=360)
+    video_width = yt_data_extract.deep_get(video_sources, 0, 'width', default=640)
     # 1 second per pixel, or the actual video width
     theater_video_target_width = max(640, info['duration'] or 0, video_width)
 
