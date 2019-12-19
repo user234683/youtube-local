@@ -31,18 +31,18 @@
 
                 <div class="title"><a class="title" href="{{ info['url'] }}" title="{{ info['title'] }}">{{ info['title'] }}</a></div>
 
-                <ul class="stats {{'vertical-stats' if horizontal and not description and include_author else 'horizontal-stats'}}">
+                {% if include_author %}
+                    {% if info.get('author_url') %}
+                        <address title="{{ info['author'] }}">By <a href="{{ info['author_url'] }}">{{ info['author'] }}</a></address>
+                    {% else %}
+                        <address title="{{ info['author'] }}"><b>{{ info['author'] }}</b></address>
+                    {% endif %}
+                {% endif %}
+                <ul class="stats {{'horizontal-stats' if horizontal else 'vertical-stats'}}">
                     {% if info['type'] == 'channel' %}
                         <li><span>{{ info['approx_subscriber_count'] }} subscribers</span></li>
                         <li><span>{{ info['video_count'] }} videos</span></li>
                     {% else %}
-                        {% if include_author %}
-                            {% if info.get('author_url') %}
-                                <li><address title="{{ info['author'] }}">By <a href="{{ info['author_url'] }}">{{ info['author'] }}</a></address></li>
-                            {% else %}
-                                <li><address title="{{ info['author'] }}"><b>{{ info['author'] }}</b></address></li>
-                            {% endif %}
-                        {% endif %}
                         {% if info.get('approx_view_count') %}
                             <li><span class="views">{{ info['approx_view_count'] }} views</span></li>
                         {% endif %}
