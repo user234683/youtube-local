@@ -12,6 +12,9 @@
         padding-left: 10px;
         padding-top: 10px;
     }
+        .current-tag{
+            margin-bottom:10px;
+        }
         .video-section .page-button-row{
             justify-content: center;
         }
@@ -47,6 +50,9 @@
 
 {% block main %}
     <div class="video-section">
+        {% if current_tag %}
+            <h2 class="current-tag">{{ current_tag }}</h2>
+        {% endif %}
         <nav class="item-grid">
             {% for video_info in videos %}
                 {{ common_elements.item(video_info) }}
