@@ -115,7 +115,7 @@ _formats = {
     '397': {'vcodec': 'av01.0.05M.08'},
 }
 
-def extract_metadata_row_info(video_renderer_info):
+def _extract_metadata_row_info(video_renderer_info):
     # extract category and music list
     info = {
         'category': None,
@@ -145,7 +145,7 @@ def extract_metadata_row_info(video_renderer_info):
 
     return info
 
-def extract_watch_info_mobile(top_level):
+def _extract_watch_info_mobile(top_level):
     info = {}
     microformat = deep_get(top_level, 'playerResponse', 'microformat', 'playerMicroformatRenderer', default={})
 
@@ -167,7 +167,7 @@ def extract_watch_info_mobile(top_level):
         print('Failed to extract video metadata')
         video_info = {}
 
-    info.update(extract_metadata_row_info(video_info))
+    info.update(_extract_metadata_row_info(video_info))
     info['description'] = extract_str(video_info.get('description'), recover_urls=True)
     info['view_count'] = extract_int(extract_str(video_info.get('expandedSubtitle')))
     info['author'] = extract_str(deep_get(video_info, 'owner', 'slimOwnerRenderer', 'title'))
@@ -228,7 +228,7 @@ def extract_watch_info_mobile(top_level):
     return info
 
 month_abbreviations = {'jan':'1', 'feb':'2', 'mar':'3', 'apr':'4', 'may':'5', 'jun':'6', 'jul':'7', 'aug':'8', 'sep':'9', 'oct':'10', 'nov':'11', 'dec':'12'}
-def extract_watch_info_desktop(top_level):
+def _extract_watch_info_desktop(top_level):
     info = {
         'comment_count': None,
         'comments_disabled': None,
@@ -241,7 +241,7 @@ def extract_watch_info_desktop(top_level):
         if renderer and list(renderer.keys())[0] in ('videoPrimaryInfoRenderer', 'videoSecondaryInfoRenderer'):
             video_info.update(list(renderer.values())[0])
 
-    info.update(extract_metadata_row_info(video_info))
+    info.update(_extract_metadata_row_info(video_info))
     info['description'] = extract_str(video_info.get('description', None), recover_urls=True)
     info['time_published'] = extract_date(extract_str(video_info.get('dateText', None)))
 
@@ -263,21 +263,7 @@ def extract_watch_info_desktop(top_level):
 
     return info
 
-def get_caption_url(info, language, format, automatic=False, translation_language=None):
-    '''Gets the url for captions with the given language and format. If automatic is True, get the automatic captions for that language. If translation_language is given, translate the captions from `language` to `translation_language`. If automatic is true and translation_language is given, the automatic captions will be translated.'''
-    url = info['_captions_base_url']
-    url += '&lang=' + language
-    url += '&fmt=' + format
-    if automatic:
-        url += '&kind=asr'
-    elif language in info['_manual_caption_language_names']:
-        url += '&name=' + urllib.parse.quote(info['_manual_caption_language_names'][language], safe='')
-
-    if translation_language:
-        url += '&tlang=' + translation_language
-    return url
-
-def extract_formats(info, player_response):
+def _extract_formats(info, player_response):
     streaming_data = player_response.get('streamingData', {})
     yt_formats = streaming_data.get('formats', []) + streaming_data.get('adaptiveFormats', [])
 
@@ -305,7 +291,7 @@ def extract_formats(info, player_response):
 
         info['formats'].append(fmt)
 
-def extract_playability_error(info, player_response, error_prefix=''):
+def _extract_playability_error(info, player_response, error_prefix=''):
     if info['formats']:
         info['playability_status'] = None
         info['playability_error'] = None
@@ -379,10 +365,10 @@ def extract_watch_info(polymer_json):
             print('WARNING: Found non-translatable caption language')
 
     # formats
-    extract_formats(info, player_response)
+    _extract_formats(info, player_response)
 
     # playability errors
-    extract_playability_error(info, player_response)
+    _extract_playability_error(info, player_response)
 
     # check age-restriction
     info['age_restricted'] = (info['playability_status'] == 'LOGIN_REQUIRED' and info['playability_error'] and ' age' in info['playability_error'])
@@ -394,9 +380,9 @@ def extract_watch_info(polymer_json):
 
     mobile = 'singleColumnWatchNextResults' in deep_get(top_level, 'response', 'contents', default={})
     if mobile:
-        info.update(extract_watch_info_mobile(top_level))
+        info.update(_extract_watch_info_mobile(top_level))
     else:
-        info.update(extract_watch_info_desktop(top_level))
+        info.update(_extract_watch_info_desktop(top_level))
 
     # stuff from videoDetails. Use liberal_update to prioritize info from videoDetails over existing info
     vd = deep_get(top_level, 'playerResponse', 'videoDetails', default={})
@@ -430,6 +416,20 @@ def extract_watch_info(polymer_json):
     info['author_url'] = 'https://www.youtube.com/channel/' + info['author_id'] if info['author_id'] else None
     return info
 
+def get_caption_url(info, language, format, automatic=False, translation_language=None):
+    '''Gets the url for captions with the given language and format. If automatic is True, get the automatic captions for that language. If translation_language is given, translate the captions from `language` to `translation_language`. If automatic is true and translation_language is given, the automatic captions will be translated.'''
+    url = info['_captions_base_url']
+    url += '&lang=' + language
+    url += '&fmt=' + format
+    if automatic:
+        url += '&kind=asr'
+    elif language in info['_manual_caption_language_names']:
+        url += '&name=' + urllib.parse.quote(info['_manual_caption_language_names'][language], safe='')
+
+    if translation_language:
+        url += '&tlang=' + translation_language
+    return url
+
 def update_with_age_restricted_info(info, video_info_page):
     ERROR_PREFIX = 'Error bypassing age-restriction: '
 
@@ -445,5 +445,5 @@ def update_with_age_restricted_info(info, video_info_page):
         info['playability_error'] = ERROR_PREFIX + 'Failed to parse json response'
         return
 
-    extract_formats(info, player_response)
-    extract_playability_error(info, player_response, error_prefix=ERROR_PREFIX)
+    _extract_formats(info, player_response)
+    _extract_playability_error(info, player_response, error_prefix=ERROR_PREFIX)

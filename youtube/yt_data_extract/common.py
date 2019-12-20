@@ -322,7 +322,7 @@ item_types = {
     'channelAboutFullMetadataRenderer',
 }
 
-def traverse_browse_renderer(renderer):
+def _traverse_browse_renderer(renderer):
     for tab in get(renderer, 'tabs', (), types=(list, tuple)):
         tab_renderer = multi_deep_get(tab, ['tabRenderer'], ['expandableTabRenderer'], default=None, types=dict)
         if tab_renderer is None:
@@ -332,24 +332,24 @@ def traverse_browse_renderer(renderer):
     print('Could not find tab with content')
     return {}
 
-def traverse_standard_list(renderer):
+def _traverse_standard_list(renderer):
     renderer_list = multi_deep_get(renderer, ['contents'], ['items'], default=(), types=(list, tuple))
     continuation = deep_get(renderer, 'continuations', 0, 'nextContinuationData', 'continuation')
     return renderer_list, continuation
 
 # these renderers contain one inside them
 nested_renderer_dispatch = {
-    'singleColumnBrowseResultsRenderer': traverse_browse_renderer,
-    'twoColumnBrowseResultsRenderer': traverse_browse_renderer,
+    'singleColumnBrowseResultsRenderer': _traverse_browse_renderer,
+    'twoColumnBrowseResultsRenderer': _traverse_browse_renderer,
     'twoColumnSearchResultsRenderer': lambda renderer: get(renderer, 'primaryContents', {}, types=dict),
 }
 
 # these renderers contain a list of renderers inside them
 nested_renderer_list_dispatch = {
-    'sectionListRenderer': traverse_standard_list,
-    'itemSectionRenderer': traverse_standard_list,
-    'gridRenderer': traverse_standard_list,
-    'playlistVideoListRenderer': traverse_standard_list,
+    'sectionListRenderer': _traverse_standard_list,
+    'itemSectionRenderer': _traverse_standard_list,
+    'gridRenderer': _traverse_standard_list,
+    'playlistVideoListRenderer': _traverse_standard_list,
     'singleColumnWatchNextResults': lambda r: (deep_get(r, 'results', 'results', 'contents', default=[], types=(list, tuple)), None),
 }
 
@@ -411,6 +411,5 @@ def extract_items(response, item_types=item_types):
                         current_iter = iter_stack.pop()   # go back up the stack
                     except IndexError:
                         return items, ctoken
-
     else:
         return [], None

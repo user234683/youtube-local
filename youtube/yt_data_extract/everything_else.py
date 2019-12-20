@@ -192,7 +192,7 @@ def extract_playlist_info(polymer_json):
 
     return info
 
-def ctoken_metadata(ctoken):
+def _ctoken_metadata(ctoken):
     result = dict()
     params = proto.parse(proto.b64_to_bytes(ctoken))
     result['video_id'] = proto.parse(params[2])[2].decode('ascii')
@@ -220,7 +220,7 @@ def extract_comments_info(polymer_json):
     url = multi_deep_get(polymer_json, [1, 'url'], ['url'])
     if url:
         ctoken = urllib.parse.parse_qs(url[url.find('?')+1:])['ctoken'][0]
-        metadata = ctoken_metadata(ctoken)
+        metadata = _ctoken_metadata(ctoken)
     else:
         metadata = {}
     info['video_id'] = metadata.get('video_id')
