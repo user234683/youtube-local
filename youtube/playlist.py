@@ -97,10 +97,10 @@ def get_playlist_page():
     if page != '1':
         info['metadata'] = yt_data_extract.extract_playlist_metadata(first_page_json)
 
-    yt_data_extract.prefix_urls(info['metadata'])
+    util.prefix_urls(info['metadata'])
     for item in info.get('items', ()):
-        yt_data_extract.prefix_urls(item)
-        yt_data_extract.add_extra_html_info(item)
+        util.prefix_urls(item)
+        util.add_extra_html_info(item)
         if 'id' in item:
             item['thumbnail'] = '/https://i.ytimg.com/vi/' + item['id'] + '/default.jpg'
 

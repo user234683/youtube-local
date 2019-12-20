@@ -142,8 +142,8 @@ def post_process_channel_info(info):
     info['avatar'] = util.prefix_url(info['avatar'])
     info['channel_url'] = util.prefix_url(info['channel_url'])
     for item in info['items']:
-        yt_data_extract.prefix_urls(item)
-        yt_data_extract.add_extra_html_info(item)
+        util.prefix_urls(item)
+        util.add_extra_html_info(item)
 
 
 

@@ -1,6 +1,3 @@
-from youtube import util
-
-import json
 import re
 import urllib.parse
 import collections
@@ -179,35 +176,6 @@ def check_missing_keys(object, *key_sequences):
 
     return None
 
-def prefix_urls(item):
-    try:
-        item['thumbnail'] = util.prefix_url(item['thumbnail'])
-    except KeyError:
-        pass
-
-    try:
-        item['author_url'] = util.prefix_url(item['author_url'])
-    except KeyError:
-        pass
-
-def add_extra_html_info(item):
-    if item['type'] == 'video':
-        item['url'] = (util.URL_ORIGIN + '/watch?v=' + item['id']) if item.get('id') else None
-
-        video_info = {}
-        for key in ('id', 'title', 'author', 'duration'):
-            try:
-                video_info[key] = item[key]
-            except KeyError:
-                video_info[key] = ''
-
-        item['video_info'] = json.dumps(video_info)
-
-    elif item['type'] == 'playlist':
-        item['url'] = (util.URL_ORIGIN + '/playlist?list=' + item['id']) if item.get('id') else None
-    elif item['type'] == 'channel':
-        item['url'] = (util.URL_ORIGIN + "/channel/" + item['id']) if item.get('id') else None
-
 def extract_item_info(item, additional_info={}):
     if not item:
         return {'error': 'No item given'}
@@ -306,13 +274,6 @@ def extract_item_info(item, additional_info={}):
             overlay, 'thumbnailOverlayBottomPanelRenderer', 'text'
         )))
     return info
-
-def parse_info_prepare_for_html(renderer, additional_info={}):
-    item = extract_item_info(renderer, additional_info)
-    prefix_urls(item)
-    add_extra_html_info(item)
-
-    return item
 
 def extract_response(polymer_json):
     '''return response, error'''

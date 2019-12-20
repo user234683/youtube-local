@@ -57,7 +57,7 @@ def get_local_playlist_videos(name, offset=0, amount=50):
                 info['thumbnail'] = util.get_thumbnail_url(info['id'])
                 missing_thumbnails.append(info['id'])
             info['type'] = 'video'
-            yt_data_extract.add_extra_html_info(info)
+            util.add_extra_html_info(info)
             videos.append(info)
         except json.decoder.JSONDecodeError:
             if not video_json.strip() == '':

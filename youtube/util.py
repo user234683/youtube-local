@@ -1,4 +1,5 @@
 import settings
+from youtube import yt_data_extract
 import socks, sockshandler
 import gzip
 import brotli
@@ -6,6 +7,7 @@ import urllib.parse
 import re
 import time
 import os
+import json
 import gevent
 import gevent.queue
 import gevent.lock
@@ -321,3 +323,39 @@ def left_remove(string, substring):
         return string[len(substring):]
     return string
 
+
+def prefix_urls(item):
+    try:
+        item['thumbnail'] = prefix_url(item['thumbnail'])
+    except KeyError:
+        pass
+
+    try:
+        item['author_url'] = prefix_url(item['author_url'])
+    except KeyError:
+        pass
+
+def add_extra_html_info(item):
+    if item['type'] == 'video':
+        item['url'] = (URL_ORIGIN + '/watch?v=' + item['id']) if item.get('id') else None
+
+        video_info = {}
+        for key in ('id', 'title', 'author', 'duration'):
+            try:
+                video_info[key] = item[key]
+            except KeyError:
+                video_info[key] = ''
+
+        item['video_info'] = json.dumps(video_info)
+
+    elif item['type'] == 'playlist':
+        item['url'] = (URL_ORIGIN + '/playlist?list=' + item['id']) if item.get('id') else None
+    elif item['type'] == 'channel':
+        item['url'] = (URL_ORIGIN + "/channel/" + item['id']) if item.get('id') else None
+
+def parse_info_prepare_for_html(renderer, additional_info={}):
+    item = yt_data_extract.extract_item_info(renderer, additional_info)
+    prefix_urls(item)
+    add_extra_html_info(item)
+
+    return item

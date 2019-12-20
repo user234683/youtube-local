@@ -370,8 +370,8 @@ def get_watch_page():
     }
 
     for item in info['related_videos']:
-        yt_data_extract.prefix_urls(item)
-        yt_data_extract.add_extra_html_info(item)
+        util.prefix_urls(item)
+        util.add_extra_html_info(item)
 
     if settings.gather_googlevideo_domains:
         with open(os.path.join(settings.data_dir, 'googlevideo-domains.txt'), 'a+', encoding='utf-8') as f:
