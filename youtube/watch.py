@@ -5,49 +5,20 @@ import settings
 from flask import request
 import flask
 
-from youtube_dl.YoutubeDL import YoutubeDL
-from youtube_dl.extractor.youtube import YoutubeError
 import json
 import html
 import gevent
 import os
+import math
+import traceback
+import urllib
 
+try:
+    with open(os.path.join(settings.data_dir, 'decrypt_function_cache.json'), 'r') as f:
+        decrypt_cache = json.loads(f.read())['decrypt_cache']
+except FileNotFoundError:
+    decrypt_cache = {}
 
-def get_related_items(info):
-    results = []
-    for item in info['related_vids']:
-        if 'list' in item:  # playlist:
-            result = watch_page_related_playlist_info(item)
-        else:
-            result = watch_page_related_video_info(item)
-        yt_data_extract.prefix_urls(result)
-        yt_data_extract.add_extra_html_info(result)
-        results.append(result)
-    return results
-
-    
-# json of related items retrieved directly from the watch page has different names for everything
-# converts these to standard names
-def watch_page_related_video_info(item):
-    result = {key: item[key] for key in ('id', 'title', 'author')}
-    result['duration'] = util.seconds_to_timestamp(item['length_seconds'])
-    try:
-        result['views'] = item['short_view_count_text']
-    except KeyError:
-        result['views'] = ''
-    result['thumbnail'] = util.get_thumbnail_url(item['id'])
-    result['type'] = 'video'
-    return result
-    
-def watch_page_related_playlist_info(item):
-    return {
-        'size': item['playlist_length'] if item['playlist_length'] != "0" else "50+",
-        'title': item['playlist_title'],
-        'id': item['list'],
-        'first_video_id': item['video_id'],
-        'thumbnail': util.get_thumbnail_url(item['video_id']),
-        'type': 'playlist',
-    }
 
 def get_video_sources(info):
     video_sources = []
@@ -55,9 +26,10 @@ def get_video_sources(info):
         max_resolution = 360
     else:
         max_resolution = settings.default_resolution
-
     for format in info['formats']:
-        if format['acodec'] != 'none' and format['vcodec'] != 'none' and format['height'] <= max_resolution:
+        if not all(format[attr] for attr in ('height', 'width', 'ext', 'url')):
+            continue
+        if format['acodec'] and format['vcodec'] and format['height'] <= max_resolution:
             video_sources.append({
                 'src': format['url'],
                 'type': 'video/' + format['ext'],
@@ -71,50 +43,108 @@ def get_video_sources(info):
 
     return video_sources
 
+def make_caption_src(info, lang, auto=False, trans_lang=None):
+    label = lang
+    if auto:
+        label += ' (Automatic)'
+    if trans_lang:
+        label += ' -> ' + trans_lang
+    return {
+        'url': '/' + yt_data_extract.get_caption_url(info, lang, 'vtt', auto, trans_lang),
+        'label': label,
+        'srclang': trans_lang[0:2] if trans_lang else lang[0:2],
+        'on': False,
+    }
+
+def lang_in(lang, sequence):
+    '''Tests if the language is in sequence, with e.g. en and en-US considered the same'''
+    if lang is None:
+        return False
+    lang = lang[0:2]
+    return lang in (l[0:2] for l in sequence)
+
+def lang_eq(lang1, lang2):
+    '''Tests if two iso 639-1 codes are equal, with en and en-US considered the same.
+       Just because the codes are equal does not mean the dialects are mutually intelligible, but this will have to do for now without a complex language model'''
+    if lang1 is None or lang2 is None:
+        return False
+    return lang1[0:2] == lang2[0:2]
+
+def equiv_lang_in(lang, sequence):
+    '''Extracts a language in sequence which is equivalent to lang.
+    e.g. if lang is en, extracts en-GB from sequence.
+    Necessary because if only a specific variant like en-GB is available, can't ask Youtube for simply en. Need to get the available variant.'''
+    lang = lang[0:2]
+    for l in sequence:
+        if l[0:2] == lang:
+            return l
+    return None
+
 def get_subtitle_sources(info):
+    '''Returns these sources, ordered from least to most intelligible:
+    native_video_lang (Automatic)
+    foreign_langs (Manual)
+    native_video_lang (Automatic) -> pref_lang
+    foreign_langs (Manual) -> pref_lang
+    native_video_lang (Manual) -> pref_lang
+    pref_lang (Automatic)
+    pref_lang (Manual)'''
     sources = []
-    default_found = False
-    default = None
-    for language, formats in info['subtitles'].items():
-        for format in formats:
-            if format['ext'] == 'vtt':
-                source = {
-                    'url': '/' + format['url'],
-                    'label': language,
-                    'srclang': language,
+    pref_lang = settings.subtitles_language
+    native_video_lang = None
+    if info['automatic_caption_languages']:
+        native_video_lang = info['automatic_caption_languages'][0]
 
-                    # set as on by default if this is the preferred language and a default-on subtitles mode is in settings
-                    'on': language == settings.subtitles_language and settings.subtitles_mode > 0,
-                }
+    highest_fidelity_is_manual = False
 
-                if language == settings.subtitles_language:
-                    default_found = True
-                    default = source
-                else:
-                    sources.append(source)
-                break
-
-    # Put it at the end to avoid browser bug when there are too many languages
+    # Sources are added in very specific order outlined above
+    # More intelligible sources are put further down to avoid browser bug when there are too many languages
     # (in firefox, it is impossible to select a language near the top of the list because it is cut off)
-    if default_found:
-        sources.append(default)
 
-    try:
-        formats = info['automatic_captions'][settings.subtitles_language]
-    except KeyError:
-        pass
-    else:
-        for format in formats:
-            if format['ext'] == 'vtt':
-                sources.append({
-                    'url': '/' + format['url'],
-                    'label': settings.subtitles_language + ' - Automatic',
-                    'srclang': settings.subtitles_language,
+    # native_video_lang (Automatic)
+    if native_video_lang and not lang_eq(native_video_lang, pref_lang):
+        sources.append(make_caption_src(info, native_video_lang, auto=True))
 
-                    # set as on by default if this is the preferred language and a default-on subtitles mode is in settings
-                    'on': settings.subtitles_mode == 2 and not default_found,
+    # foreign_langs (Manual)
+    for lang in info['manual_caption_languages']:
+        if not lang_eq(lang, pref_lang):
+            sources.append(make_caption_src(info, lang))
 
-                })
+    if (lang_in(pref_lang, info['translation_languages'])
+            and not lang_in(pref_lang, info['automatic_caption_languages'])
+            and not lang_in(pref_lang, info['manual_caption_languages'])):
+        # native_video_lang (Automatic) -> pref_lang
+        if native_video_lang and not lang_eq(pref_lang, native_video_lang):
+            sources.append(make_caption_src(info, native_video_lang, auto=True, trans_lang=pref_lang))
+
+        # foreign_langs (Manual) -> pref_lang
+        for lang in info['manual_caption_languages']:
+            if not lang_eq(lang, native_video_lang) and not lang_eq(lang, pref_lang):
+                sources.append(make_caption_src(info, lang, trans_lang=pref_lang))
+
+        # native_video_lang (Manual) -> pref_lang
+        if lang_in(native_video_lang, info['manual_caption_languages']):
+            sources.append(make_caption_src(info, native_video_lang, trans_lang=pref_lang))
+
+    # pref_lang (Automatic)
+    if lang_in(pref_lang, info['automatic_caption_languages']):
+        sources.append(make_caption_src(info, equiv_lang_in(pref_lang, info['automatic_caption_languages']), auto=True))
+
+    # pref_lang (Manual)
+    if lang_in(pref_lang, info['manual_caption_languages']):
+        sources.append(make_caption_src(info, equiv_lang_in(pref_lang, info['manual_caption_languages'])))
+        highest_fidelity_is_manual = True
+
+    if sources and sources[-1]['srclang'] == pref_lang:
+        # set as on by default since it's manual a default-on subtitles mode is in settings
+        if highest_fidelity_is_manual and settings.subtitles_mode > 0:
+            sources[-1]['on'] = True
+        # set as on by default since settings indicate to set it as such even if it's not manual
+        elif settings.subtitles_mode == 2:
+            sources[-1]['on'] = True
+
+    if len(sources) == 0:
+        assert len(info['automatic_caption_languages']) == 0 and len(info['manual_caption_languages']) == 0
 
     return sources
 
@@ -134,14 +164,111 @@ def get_ordered_music_list_attributes(music_list):
 
     return ordered_attributes
 
-
-def extract_info(downloader, *args, **kwargs):
+def save_decrypt_cache():
     try:
-        return downloader.extract_info(*args, **kwargs)
-    except YoutubeError as e:
-        return str(e)
+        f = open(os.path.join(settings.data_dir, 'decrypt_function_cache.json'), 'w')
+    except FileNotFoundError:
+        os.makedirs(settings.data_dir)
+        f = open(os.path.join(settings.data_dir, 'decrypt_function_cache.json'), 'w')
 
+    f.write(json.dumps({'version': 1, 'decrypt_cache':decrypt_cache}, indent=4, sort_keys=True))
+    f.close()
 
+def decrypt_signatures(info):
+    '''return error string, or False if no errors'''
+    if not yt_data_extract.requires_decryption(info):
+        return False
+    if not info['player_name']:
+        return 'Could not find player name'
+    if not info['base_js']:
+        return 'Failed to find base.js'
+
+    player_name = info['player_name']
+    if player_name in decrypt_cache:
+        print('Using cached decryption function for: ' + player_name)
+        info['decryption_function'] = decrypt_cache[player_name]
+    else:
+        base_js = util.fetch_url(info['base_js'], debug_name='base.js', report_text='Fetched player ' + player_name)
+        base_js = base_js.decode('utf-8')
+        err = yt_data_extract.extract_decryption_function(info, base_js)
+        if err:
+            return err
+        decrypt_cache[player_name] = info['decryption_function']
+        save_decrypt_cache()
+    err = yt_data_extract.decrypt_signatures(info)
+    return err
+
+headers = (
+    ('Accept', '*/*'),
+    ('Accept-Language', 'en-US,en;q=0.5'),
+    ('X-YouTube-Client-Name', '2'),
+    ('X-YouTube-Client-Version', '2.20180830'),
+) + util.mobile_ua
+
+def extract_info(video_id):
+    polymer_json = util.fetch_url('https://m.youtube.com/watch?v=' + video_id + '&pbj=1&bpctr=9999999999', headers=headers, debug_name='watch').decode('utf-8')
+    # TODO: Decide whether this should be done in yt_data_extract.extract_watch_info
+    try:
+        polymer_json = json.loads(polymer_json)
+    except json.decoder.JSONDecodeError:
+        traceback.print_exc()
+        return {'error': 'Failed to parse json response'}
+    info = yt_data_extract.extract_watch_info(polymer_json)
+
+    # age restriction bypass
+    if info['age_restricted']:
+        print('Fetching age restriction bypass page')
+        data = {
+            'video_id': video_id,
+            'eurl': 'https://youtube.googleapis.com/v/' + video_id,
+        }
+        url = 'https://www.youtube.com/get_video_info?' + urllib.parse.urlencode(data)
+        video_info_page = util.fetch_url(url, debug_name='get_video_info', report_text='Fetched age restriction bypass page').decode('utf-8')
+        yt_data_extract.update_with_age_restricted_info(info, video_info_page)
+
+    # signature decryption
+    decryption_error = decrypt_signatures(info)
+    if decryption_error:
+        decryption_error = 'Error decrypting url signatures: ' + decryption_error
+        info['playability_error'] = decryption_error
+
+    return info
+
+def video_quality_string(format):
+    if format['vcodec']:
+        result =str(format['width'] or '?') + 'x' + str(format['height'] or '?')
+        if format['fps']:
+            result += ' ' + str(format['fps']) + 'fps'
+        return result
+    elif format['acodec']:
+        return 'audio only'
+
+    return '?'
+
+def audio_quality_string(format):
+    if format['acodec']:
+        result = str(format['audio_bitrate'] or '?') + 'k'
+        if format['audio_sample_rate']:
+            result += ' ' + str(format['audio_sample_rate']) + ' Hz'
+        return result
+    elif format['vcodec']:
+        return 'video only'
+
+    return '?'
+
+# from https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/utils.py
+def format_bytes(bytes):
+    if bytes is None:
+        return 'N/A'
+    if type(bytes) is str:
+        bytes = float(bytes)
+    if bytes == 0.0:
+        exponent = 0
+    else:
+        exponent = int(math.log(bytes, 1024.0))
+    suffix = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'][exponent]
+    converted = float(bytes) / float(1024 ** exponent)
+    return '%.2f%s' % (converted, suffix)
 
 
 @yt_app.route('/watch')
@@ -152,38 +279,26 @@ def get_watch_page():
         flask.abort(flask.Response('Incomplete video id (too short): ' + video_id))
 
     lc = request.args.get('lc', '')
-    if settings.route_tor:
-        proxy = 'socks5://127.0.0.1:9150/'
-    else:
-        proxy = ''
-    yt_dl_downloader = YoutubeDL(params={'youtube_include_dash_manifest':False, 'proxy':proxy})
     tasks = (
         gevent.spawn(comments.video_comments, video_id, int(settings.default_comment_sorting), lc=lc ),
-        gevent.spawn(extract_info, yt_dl_downloader, "https://www.youtube.com/watch?v=" + video_id, download=False)
+        gevent.spawn(extract_info, video_id)
     )
     gevent.joinall(tasks)
     comments_info, info = tasks[0].value, tasks[1].value
 
-    if isinstance(info, str): # youtube error
-        return flask.render_template('error.html', error_message = info)
+    if info['error']:
+        return flask.render_template('error.html', error_message = info['error'])
 
     video_info = {
-        "duration": util.seconds_to_timestamp(info["duration"]),
+        "duration": util.seconds_to_timestamp(info["duration"] or 0),
         "id":       info['id'],
         "title":    info['title'],
-        "author":   info['uploader'],
+        "author":   info['author'],
     }
 
-    upload_year = info["upload_date"][0:4]
-    upload_month = info["upload_date"][4:6]
-    upload_day = info["upload_date"][6:8]
-    upload_date = upload_month + "/" + upload_day + "/" + upload_year
-    
-    if settings.related_videos_mode:
-        related_videos = get_related_items(info)
-    else:
-        related_videos = []
-
+    for item in info['related_videos']:
+        util.prefix_urls(item)
+        util.add_extra_html_info(item)
 
     if settings.gather_googlevideo_domains:
         with open(os.path.join(settings.data_dir, 'googlevideo-domains.txt'), 'a+', encoding='utf-8') as f:
@@ -195,31 +310,37 @@ def get_watch_page():
     download_formats = []
 
     for format in info['formats']:
+        if format['acodec'] and format['vcodec']:
+            codecs_string = format['acodec'] + ', ' + format['vcodec']
+        else:
+            codecs_string = format['acodec'] or format['vcodec'] or '?'
         download_formats.append({
             'url': format['url'],
-            'ext': format['ext'],
-            'resolution': yt_dl_downloader.format_resolution(format),
-            'note': yt_dl_downloader._format_note(format),
+            'ext': format['ext'] or '?',
+            'audio_quality': audio_quality_string(format),
+            'video_quality': video_quality_string(format),
+            'file_size': format_bytes(format['file_size']),
+            'codecs': codecs_string,
         })
 
     video_sources = get_video_sources(info)
-    video_height = video_sources[0]['height']
-
+    video_height = yt_data_extract.deep_get(video_sources, 0, 'height', default=360)
+    video_width = yt_data_extract.deep_get(video_sources, 0, 'width', default=640)
     # 1 second per pixel, or the actual video width
-    theater_video_target_width = max(640, info['duration'], video_sources[0]['width'])
+    theater_video_target_width = max(640, info['duration'] or 0, video_width)
 
     return flask.render_template('watch.html',
         header_playlist_names   = local_playlist.get_playlist_names(),
-        uploader_channel_url    = '/' + info['uploader_url'],
-        upload_date             = upload_date,
-        views           = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("view_count", None)),
-        likes           = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("like_count", None)),
-        dislikes        = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("dislike_count", None)),
+        uploader_channel_url    = ('/' + info['author_url']) if info['author_url'] else '',
+        time_published             = info['time_published'],
+        view_count    = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("view_count", None)),
+        like_count    = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("like_count", None)),
+        dislike_count = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("dislike_count", None)),
         download_formats        = download_formats,
         video_info              = json.dumps(video_info),
         video_sources           = video_sources,
         subtitle_sources        = get_subtitle_sources(info),
-        related                 = related_videos,
+        related                 = info['related_videos'],
         music_list              = info['music_list'],
         music_attributes        = get_ordered_music_list_attributes(info['music_list']),
         comments_info           = comments_info,
@@ -232,9 +353,12 @@ def get_watch_page():
         theater_video_target_width = theater_video_target_width,
 
         title       = info['title'],
-        uploader    = info['uploader'],
+        uploader    = info['author'],
         description = info['description'],
         unlisted    = info['unlisted'],
+        limited_state = info['limited_state'],
+        age_restricted    = info['age_restricted'],
+        playability_error = info['playability_error'],
     )
 
 

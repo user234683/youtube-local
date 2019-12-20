@@ -1,4 +1,5 @@
 import settings
+from youtube import yt_data_extract
 import socks, sockshandler
 import gzip
 import brotli
@@ -6,6 +7,7 @@ import urllib.parse
 import re
 import time
 import os
+import json
 import gevent
 import gevent.queue
 import gevent.lock
@@ -176,7 +178,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookieja
         return content, response
     return content
 
-mobile_user_agent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1'
+mobile_user_agent = 'Mozilla/5.0 (Linux; Android 7.0; Redmi Note 4 Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Mobile Safari/537.36'
 mobile_ua = (('User-Agent', mobile_user_agent),)
 desktop_user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0'
 desktop_ua = (('User-Agent', desktop_user_agent),)
@@ -277,15 +279,6 @@ def video_id(url):
     url_parts = urllib.parse.urlparse(url)
     return urllib.parse.parse_qs(url_parts.query)['v'][0]
 
-def default_multi_get(object, *keys, default):
-    ''' Like dict.get(), but for nested dictionaries/sequences, supporting keys or indices. Last argument is the default value to use in case of any IndexErrors or KeyErrors '''
-    try:
-        for key in keys:
-            object = object[key]
-        return object
-    except (IndexError, KeyError):
-        return default
-
 
 # default, sddefault, mqdefault, hqdefault, hq720
 def get_thumbnail_url(video_id):
@@ -317,3 +310,52 @@ def uppercase_escape(s):
      return re.sub(
          r'\\U([0-9a-fA-F]{8})',
          lambda m: chr(int(m.group(1), base=16)), s)
+
+def prefix_url(url):
+    if url is None:
+        return None
+    url = url.lstrip('/')     # some urls have // before them, which has a special meaning
+    return '/' + url
+
+def left_remove(string, substring):
+    '''removes substring from the start of string, if present'''
+    if string.startswith(substring):
+        return string[len(substring):]
+    return string
+
+
+def prefix_urls(item):
+    try:
+        item['thumbnail'] = prefix_url(item['thumbnail'])
+    except KeyError:
+        pass
+
+    try:
+        item['author_url'] = prefix_url(item['author_url'])
+    except KeyError:
+        pass
+
+def add_extra_html_info(item):
+    if item['type'] == 'video':
+        item['url'] = (URL_ORIGIN + '/watch?v=' + item['id']) if item.get('id') else None
+
+        video_info = {}
+        for key in ('id', 'title', 'author', 'duration'):
+            try:
+                video_info[key] = item[key]
+            except KeyError:
+                video_info[key] = ''
+
+        item['video_info'] = json.dumps(video_info)
+
+    elif item['type'] == 'playlist':
+        item['url'] = (URL_ORIGIN + '/playlist?list=' + item['id']) if item.get('id') else None
+    elif item['type'] == 'channel':
+        item['url'] = (URL_ORIGIN + "/channel/" + item['id']) if item.get('id') else None
+
+def parse_info_prepare_for_html(renderer, additional_info={}):
+    item = yt_data_extract.extract_item_info(renderer, additional_info)
+    prefix_urls(item)
+    add_extra_html_info(item)
+
+    return item

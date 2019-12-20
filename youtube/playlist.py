@@ -89,28 +89,29 @@ def get_playlist_page():
         )
         gevent.joinall(tasks)
         first_page_json, this_page_json = tasks[0].value, tasks[1].value
-    
-    try:    # first page
-        video_list = this_page_json['response']['contents']['singleColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents'][0]['playlistVideoListRenderer']['contents']
-    except KeyError:    # other pages
-        video_list = this_page_json['response']['continuationContents']['playlistVideoListContinuation']['contents']
 
-    parsed_video_list = [yt_data_extract.parse_info_prepare_for_html(video_json) for video_json in video_list]
+    info = yt_data_extract.extract_playlist_info(this_page_json)
+    if info['error']:
+        return flask.render_template('error.html', error_message = info['error'])
 
+    if page != '1':
+        info['metadata'] = yt_data_extract.extract_playlist_metadata(first_page_json)
 
-    metadata = yt_data_extract.renderer_info(first_page_json['response']['header'])
-    yt_data_extract.prefix_urls(metadata)
+    util.prefix_urls(info['metadata'])
+    for item in info.get('items', ()):
+        util.prefix_urls(item)
+        util.add_extra_html_info(item)
+        if 'id' in item:
+            item['thumbnail'] = '/https://i.ytimg.com/vi/' + item['id'] + '/default.jpg'
 
-    if 'description' not in metadata:
-        metadata['description'] = ''
-
-    video_count = int(metadata['size'].replace(',', ''))
-    metadata['size'] += ' videos'
+    video_count = yt_data_extract.deep_get(info, 'metadata', 'video_count')
+    if video_count is None:
+        video_count = 40
 
     return flask.render_template('playlist.html',
-        video_list = parsed_video_list,
+        video_list = info.get('items', []),
         num_pages = math.ceil(video_count/20),
         parameters_dictionary = request.args,
 
-        **metadata
+        **info['metadata']
     ).encode('utf-8')

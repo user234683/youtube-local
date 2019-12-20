@@ -29,10 +29,10 @@
             <div id="result-info">
                 <div id="number-of-results">Approximately {{ '{:,}'.format(estimated_results) }} results ({{ '{:,}'.format(estimated_pages) }} pages)</div>
 {% if corrections['type'] == 'showing_results_for' %}
-                <div>Showing results for <a>{{ corrections['corrected_query']|safe }}</a></div>
-                <div>Search instead for <a href="{{ corrections['original_query_url'] }}">{{ corrections['original_query'] }}</a></div>
+                <div>Showing results for <a>{{ common_elements.text_runs(corrections['corrected_query_text']) }}</a></div>
+                <div>Search instead for <a href="{{ corrections['original_query_url'] }}">{{ corrections['original_query_text'] }}</a></div>
 {% elif corrections['type'] == 'did_you_mean' %}
-                <div>Did you mean <a href="{{ corrections['corrected_query_url'] }}">{{ corrections['corrected_query']|safe }}</a></div>
+                <div>Did you mean <a href="{{ corrections['corrected_query_url'] }}">{{ common_elements.text_runs(corrections['corrected_query_text']) }}</a></div>
 {% endif %}
             </div>
             <div class="item-list">

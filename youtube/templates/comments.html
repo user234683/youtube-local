@@ -12,11 +12,11 @@
                 <a class="author" href="{{ comment['author_url'] }}" title="{{ comment['author'] }}">{{ comment['author'] }}</a>
             </address>
             <a class="permalink" href="{{ comment['permalink'] }}" title="permalink">
-                <time datetime="">{{ comment['published'] }}</time>
+                <time datetime="">{{ comment['time_published'] }}</time>
             </a>
             <span class="text">{{ common_elements.text_runs(comment['text']) }}</span>
 
-            <span class="likes">{{ comment['likes_text'] if comment['likes'] else ''}}</span>
+            <span class="likes">{{ comment['likes_text'] if comment['like_count'] else ''}}</span>
             <div class="bottom-row">
                 <a href="{{ comment['replies_url'] }}" class="replies">{{ comment['view_replies_text'] }}</a>
                 {% if 'delete_url' is in comment %}

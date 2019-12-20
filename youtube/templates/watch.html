@@ -14,6 +14,19 @@
         text-decoration: underline;
     }
 
+    .playability-error{
+        height: 360px;
+        width: 640px;
+        grid-column: 2;
+        background-color: var(--video-background-color);
+        text-align:center;
+    }
+        .playability-error span{
+            position: relative;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
     {% if theater_mode %}
         video{
             grid-column: 1 / span 5;
@@ -61,12 +74,21 @@
                 grid-column: 1 / span 2;
                 min-width: 0;
             }
-            .video-info > .is-unlisted{
-                background-color: var(--interface-color);
+            .video-info > .labels{
                 justify-self:start;
-                padding-left:2px;
-                padding-right:2px;
+                list-style: none;
+                padding: 0px;
+                margin: 5px 0px;
             }
+            .video-info > .labels:empty{
+                margin: 0px;
+            }
+                .labels > li{
+                    display: inline;
+                    margin-right:5px;
+                    background-color: var(--interface-color);
+                    padding: 2px 5px
+                }
             .video-info > address{
                 grid-column: 1;
                 grid-row: 3;
@@ -143,9 +165,13 @@
         .related-videos-inner{
             padding-top: 10px;
             display: grid;
-            grid-auto-rows: 94px;
+            grid-auto-rows: 90px;
             grid-row-gap: 10px;
         }
+            .thumbnail-box{     /* overides rule in shared.css */
+                height: 90px !important;
+                width: 120px !important;
+            }
 
     /* Put related vids below videos when window is too small */
     /* 1100px instead of 1080 because W3C is full of idiots who include scrollbar width */
@@ -187,38 +213,59 @@
                 .format-ext{
                     width: 60px;
                 }
-                .format-res{
-                    width:90px;
+                .format-video-quality{
+                    width: 140px;
+                }
+                .format-audio-quality{
+                    width: 120px;
+                }
+                .format-file-size{
+                    width: 80px;
+                }
+                .format-codecs{
+                    width: 120px;
                 }
 {% endblock style %}
 
 {% block main %}
-    <video controls autofocus>
-        {% for video_source in video_sources %}
-            <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
-        {% endfor %}
+    {% if playability_error %}
+        <div class="playability-error"><span>{{ 'Error: ' + playability_error }}</span></div>
+    {% else %}
+        <video controls autofocus class="video">
+            {% for video_source in video_sources %}
+                <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
+            {% endfor %}
 
-        {% for source in subtitle_sources %}
-            {% if source['on'] %}
-                <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
-            {% else %}
-                <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
-            {% endif %}
-        {% endfor %}
+            {% for source in subtitle_sources %}
+                {% if source['on'] %}
+                    <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
+                {% else %}
+                    <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
+                {% endif %}
+            {% endfor %}
 
-    </video>
+        </video>
+    {% endif %}
 
     <div class="video-info">
         <h2 class="title">{{ title }}</h2>
-        {% if unlisted %}
-            <span class="is-unlisted">Unlisted</span>
-        {% endif %}
+        <ul class="labels">
+            {%- if unlisted -%}
+                <li class="is-unlisted">Unlisted</li>
+            {%- endif -%}
+            {%- if age_restricted -%}
+                <li class="age-restricted">Age-restricted</li>
+            {%- endif -%}
+            {%- if limited_state -%}
+                <li>Limited state</li>
+            {%- endif -%}
+        </ul>
         <address>Uploaded by <a href="{{ uploader_channel_url }}">{{ uploader }}</a></address>
-        <span class="views">{{ views }} views</span>
+        <span class="views">{{ view_count }} views</span>
 
 
-        <time datetime="$upload_date">Published on {{ upload_date }}</time>
-        <span class="likes-dislikes">{{ likes }} likes {{ dislikes }} dislikes</span>
+        <time datetime="$upload_date">Published on {{ time_published }}</time>
+        <span class="likes-dislikes">{{ like_count }} likes {{ dislike_count }} dislikes</span>
         <details class="download-dropdown">
             <summary class="download-dropdown-label">Download</summary>
             <ul class="download-dropdown-content">
@@ -227,8 +274,10 @@
                         <a class="download-link" href="{{ format['url'] }}">
                             <ol class="format-attributes">
                                 <li class="format-ext">{{ format['ext'] }}</li>
-                                <li class="format-res">{{ format['resolution'] }}</li>
-                                <li class="format-note">{{ format['note'] }}</li>
+                                <li class="format-video-quality">{{ format['video_quality'] }}</li>
+                                <li class="format-audio-quality">{{ format['audio_quality'] }}</li>
+                                <li class="format-file-size">{{ format['file_size'] }}</li>
+                                <li class="format-codecs">{{ format['codecs'] }}</li>
                             </ol>
                         </a>
                     </li>
@@ -238,7 +287,7 @@
         <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
 
 
-        <span class="description">{{ description }}</span>
+        <span class="description">{{ common_elements.text_runs(description) }}</span>
         <div class="music-list">
             {% if music_list.__len__() != 0 %}
                 <hr>
@@ -266,7 +315,7 @@
             <summary>Related Videos</summary>
             <nav class="related-videos-inner">
                 {% for info in related %}
-                    {{ common_elements.item(info) }}
+                    {{ common_elements.item(info, include_badges=false) }}
                 {% endfor %}
             </nav>
         </details>
