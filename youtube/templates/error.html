@@ -1,7 +1,40 @@
 {% set page_title = 'Error' %}
 {% extends "base.html" %}
 
+{% block style %}
+    h1{
+        font-size: 32px;
+        font-weight: normal;
+    }
+    #error-box, #error-message{
+        background-color: var(--interface-color);
+        width: 80%;
+        margin: auto;
+        margin-top: 20px;
+        padding: 5px;
+    }
+    #error-box > div, #error-box > p, #error-box > h1{
+        white-space: pre-wrap;
+        margin-bottom: 10px;
+    }
+    .code-box{
+        padding: 5px;
+        border-style:solid;
+        border-width:1px;
+        border-radius:5px;
+    }
+{% endblock style %}
+
 {% block main %}
-    {{ error_message }}
+    {% if traceback %}
+        <div id="error-box">
+            <h1>500 Uncaught exception:</h1>
+            <div class="code-box"><code>{{ traceback }}</code></div>
+            <p>Please report this issue at <a href="https://github.com/user234683/youtube-local/issues" target="_blank">https://github.com/user234683/youtube-local/issues</a></p>
+            <p>Remember to include the traceback in your issue and redact any information in it you do not want to share</p>
+        </div>
+    {% else %}
+        <div id="error-message">{{ error_message }}</div>
+    {% endif %}
 {% endblock %}
 

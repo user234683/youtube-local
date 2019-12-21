@@ -1,5 +1,6 @@
 import flask
 import settings
+import traceback
 yt_app = flask.Flask(__name__)
 yt_app.url_map.strict_slashes = False
 
@@ -30,3 +31,7 @@ def commatize(num):
     if isinstance(num, str):
         num = int(num)
     return '{:,}'.format(num)
+
+@yt_app.errorhandler(500)
+def error_page(e):
+    return flask.render_template('error.html', traceback=traceback.format_exc()), 500
