@@ -130,6 +130,7 @@
                 word-wrap: break-word;
                 grid-column: 1 / span 2;
                 grid-row: 7;
+                padding: 5px;
             }
 
             .music-list{
@@ -294,7 +295,7 @@
         <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
 
 
-        <span class="description">{{ common_elements.text_runs(description) }}</span>
+        <span class="description">{{ common_elements.text_runs(description)|urlize }}</span>
         <div class="music-list">
             {% if music_list.__len__() != 0 %}
                 <hr>
