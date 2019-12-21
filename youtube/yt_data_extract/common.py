@@ -152,6 +152,7 @@ def extract_approx_int(string):
         return None
     return match.group(1)
 
+MONTH_ABBREVIATIONS = {'jan':'1', 'feb':'2', 'mar':'3', 'apr':'4', 'may':'5', 'jun':'6', 'jul':'7', 'aug':'8', 'sep':'9', 'oct':'10', 'nov':'11', 'dec':'12'}
 def extract_date(date_text):
     '''Input: "Mar 9, 2019". Output: "2019-3-9"'''
     if date_text is None:
@@ -161,7 +162,7 @@ def extract_date(date_text):
     parts = date_text.split()
     if len(parts) >= 3:
         month, day, year = parts[-3:]
-        month = month_abbreviations.get(month[0:3]) # slicing in case they start writing out the full month name
+        month = MONTH_ABBREVIATIONS.get(month[0:3]) # slicing in case they start writing out the full month name
         if month and (re.fullmatch(r'\d\d?', day) is not None) and (re.fullmatch(r'\d{4}', year) is not None):
             return year + '-' + month + '-' + day
 
