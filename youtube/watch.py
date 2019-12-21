@@ -272,12 +272,14 @@ def format_bytes(bytes):
 
 
 @yt_app.route('/watch')
+@yt_app.route('/embed')
 @yt_app.route('/embed/<video_id>')
 def get_watch_page(video_id=None):
     video_id = request.args.get('v') or video_id
+    if not video_id:
+        return flask.render_template('error.html', error_message='Missing video id'), 404
     if len(video_id) < 11:
-        flask.abort(404)
-        flask.abort(flask.Response('Incomplete video id (too short): ' + video_id))
+        return flask.render_template('error.html', error_message='Incomplete video id (too short): ' + video_id), 404
 
     lc = request.args.get('lc', '')
     tasks = (
