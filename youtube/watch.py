@@ -272,8 +272,9 @@ def format_bytes(bytes):
 
 
 @yt_app.route('/watch')
-def get_watch_page():
-    video_id = request.args['v']
+@yt_app.route('/embed/<video_id>')
+def get_watch_page(video_id=None):
+    video_id = request.args.get('v') or video_id
     if len(video_id) < 11:
         flask.abort(404)
         flask.abort(flask.Response('Incomplete video id (too short): ' + video_id))
