@@ -142,12 +142,12 @@ def extract_int(string, default=None):
         return default
 
 def extract_approx_int(string):
-    '''e.g. "15M" from "15M subscribers"'''
+    '''e.g. "15.1M" from "15.1M subscribers"'''
     if not isinstance(string, str):
         string = extract_str(string)
     if not string:
         return None
-    match = re.search(r'(\d+[KMBTkmbt])', string.replace(',', ''))
+    match = re.search(r'(\d+(?:\.\d+)?[KMBTkmbt])', string.replace(',', ''))
     if match is None:
         return None
     return match.group(1)
