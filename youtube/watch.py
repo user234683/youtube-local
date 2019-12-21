@@ -347,6 +347,8 @@ def get_watch_page(video_id=None):
         music_list              = info['music_list'],
         music_attributes        = get_ordered_music_list_attributes(info['music_list']),
         comments_info           = comments_info,
+        comment_count           = info['comment_count'],
+        comments_disabled       = info['comments_disabled'],
 
         theater_mode            = settings.theater_mode,
         related_videos_mode     = settings.related_videos_mode,

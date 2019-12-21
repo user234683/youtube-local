@@ -154,6 +154,11 @@
             grid-row: 3;
             margin-top:10px;
         }
+        .comments-disabled{
+            background-color: var(--interface-color);
+            padding: 5px;
+            font-weight: bold;
+        }
         .comments-area-inner{
             padding-top: 10px;
         }
@@ -324,13 +329,17 @@
     {% endif %}
 
     {% if comments_mode != 0 %}
-        <details class="comments-area-outer" {{'open' if comments_mode == 1 else ''}}>
-            <summary>Comments</summary>
-            <section class="comments-area-inner comments-area">
-                {% if comments_info %}
-                    {{ comments.video_comments(comments_info) }}
-                {% endif %}
-            </section>
-        </details>
+        {% if comments_disabled %}
+            <div class="comments-area-outer comments-disabled">Comments disabled</div>
+        {% else %}
+            <details class="comments-area-outer" {{'open' if comments_mode == 1 else ''}}>
+                <summary>{{ comment_count|commatize }} comment{{'s' if comment_count != 1 else ''}}</summary>
+                <section class="comments-area-inner comments-area">
+                    {% if comments_info %}
+                        {{ comments.video_comments(comments_info) }}
+                    {% endif %}
+                </section>
+            </details>
+        {% endif %}
     {% endif %}
 {% endblock main %}
