@@ -74,6 +74,8 @@ def conservative_update(obj, key, value):
         obj[key] = value
 
 def remove_redirect(url):
+    if url is None:
+        return None
     if re.fullmatch(r'(((https?:)?//)?(www.)?youtube.com)?/redirect\?.*', url) is not None: # youtube puts these on external links to do tracking
         query_string = url[url.find('?')+1: ]
         return urllib.parse.parse_qs(query_string)['q'][0]
@@ -155,6 +157,8 @@ def extract_approx_int(string):
 MONTH_ABBREVIATIONS = {'jan':'1', 'feb':'2', 'mar':'3', 'apr':'4', 'may':'5', 'jun':'6', 'jul':'7', 'aug':'8', 'sep':'9', 'oct':'10', 'nov':'11', 'dec':'12'}
 def extract_date(date_text):
     '''Input: "Mar 9, 2019". Output: "2019-3-9"'''
+    if not isinstance(date_text, str):
+        date_text = extract_str(date_text)
     if date_text is None:
         return None
 
@@ -165,6 +169,7 @@ def extract_date(date_text):
         month = MONTH_ABBREVIATIONS.get(month[0:3]) # slicing in case they start writing out the full month name
         if month and (re.fullmatch(r'\d\d?', day) is not None) and (re.fullmatch(r'\d{4}', year) is not None):
             return year + '-' + month + '-' + day
+    return None
 
 def check_missing_keys(object, *key_sequences):
     for key_sequence in key_sequences:
@@ -319,8 +324,6 @@ item_types = {
     'channelRenderer',
     'compactChannelRenderer',
     'gridChannelRenderer',
-
-    'channelAboutFullMetadataRenderer',
 }
 
 def _traverse_browse_renderer(renderer):

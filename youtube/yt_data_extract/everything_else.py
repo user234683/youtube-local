@@ -20,72 +20,64 @@ def extract_channel_info(polymer_json, tab):
     # channel doesn't exist or was terminated
     # example terminated channel: https://www.youtube.com/channel/UCnKJeK_r90jDdIuzHXC0Org
     except KeyError:
-        if 'alerts' in response and len(response['alerts']) > 0:
-            return {'error': ' '.join(alert['alertRenderer']['text']['simpleText'] for alert in response['alerts']) }
-        elif 'errors' in response['responseContext']:
-            for error in response['responseContext']['errors']['error']:
-                if error['code'] == 'INVALID_VALUE' and error['location'] == 'browse_id':
+        if response.get('alerts'):
+            return {'error': ' '.join(
+                deep_get(alert, 'alertRenderer', 'text', 'simpleText', default='')
+                for alert in response['alerts']
+            )}
+        elif deep_get(response, 'responseContext', 'errors'):
+            for error in response['responseContext']['errors'].get('error', []):
+                if error.get('code') == 'INVALID_VALUE' and error.get('location') == 'browse_id':
                     return {'error': 'This channel does not exist'}
         return {'error': 'Failure getting microformat'}
 
     info = {'error': None}
     info['current_tab'] = tab
 
+    info['approx_subscriber_count'] = extract_approx_int(deep_get(response,
+        'header', 'c4TabbedHeaderRenderer', 'subscriberCountText'))
 
     # stuff from microformat (info given by youtube for every page on channel)
-    info['short_description'] = microformat['description']
-    info['channel_name'] = microformat['title']
-    info['avatar'] = microformat['thumbnail']['thumbnails'][0]['url']
-    channel_url = microformat['urlCanonical'].rstrip('/')
-    channel_id = channel_url[channel_url.rfind('/')+1:]
-    info['channel_id'] = channel_id
-    info['channel_url'] = 'https://www.youtube.com/channel/' + channel_id
-
-    info['items'] = []
+    info['short_description'] = microformat.get('description')
+    info['channel_name'] = microformat.get('title')
+    info['avatar'] = deep_get(microformat, 'thumbnail', 'thumbnails', 0, 'url')
+    channel_url = microformat.get('urlCanonical')
+    if channel_url:
+        channel_id = get(channel_url.rstrip('/').split('/'), -1)
+        info['channel_id'] = channel_id
+    else:
+        info['channel_id'] = deep_get(response, 'metadata', 'channelMetadataRenderer', 'externalId')
+    if info['channel_id']:
+        info['channel_url'] = 'https://www.youtube.com/channel/' + channel_id
+    else:
+        info['channel_url'] = None
 
     # empty channel
     if 'contents' not in response and 'continuationContents' not in response:
         return info
 
-
-    items, _ = extract_items(response)
+    # get items
+    info['items'] = []
     if tab in ('videos', 'playlists', 'search'):
-        additional_info = {'author': info['channel_name'], 'author_url': 'https://www.youtube.com/channel/' + channel_id}
+        items, _ = extract_items(response)
+        additional_info = {'author': info['channel_name'], 'author_url': info['channel_url']}
         info['items'] = [extract_item_info(renderer, additional_info) for renderer in items]
-
     elif tab == 'about':
-        for item in items:
-            try:
-                channel_metadata = item['channelAboutFullMetadataRenderer']
-                break
-            except KeyError:
-                pass
-        else:
+        items, _ = extract_items(response, item_types={'channelAboutFullMetadataRenderer'})
+        if not items:
             info['error'] = 'Could not find channelAboutFullMetadataRenderer'
             return info
+        channel_metadata = items[0]['channelAboutFullMetadataRenderer']
 
         info['links'] = []
         for link_json in channel_metadata.get('primaryLinks', ()):
-            url = remove_redirect(link_json['navigationEndpoint']['urlEndpoint']['url'])
-
-            text = extract_str(link_json['title'])
-
+            url = remove_redirect(deep_get(link_json, 'navigationEndpoint', 'urlEndpoint', 'url'))
+            text = extract_str(link_json.get('title'))
             info['links'].append( (text, url) )
 
-
-        info['stats'] = []
-        for stat_name in ('subscriberCountText', 'joinedDateText', 'viewCountText', 'country'):
-            try:
-                stat = channel_metadata[stat_name]
-            except KeyError:
-                continue
-            info['stats'].append(extract_str(stat))
-
-        if 'description' in channel_metadata:
-            info['description'] = extract_str(channel_metadata['description'])
-        else:
-            info['description'] = ''
-
+        info['date_joined'] = extract_date(channel_metadata.get('joinedDateText'))
+        info['view_count'] = extract_int(channel_metadata.get('viewCountText'))
+        info['description'] = extract_str(channel_metadata.get('description'), default='')
     else:
         raise NotImplementedError('Unknown or unsupported channel tab: ' + tab)
 

@@ -116,8 +116,14 @@
     {% if current_tab == 'about' %}
         <div class="channel-info">
             <ul>
-                {% for stat in stats %}
-                    <li>{{ stat }}</li>
+                {% for (before_text, stat, after_text) in [
+                    ('Joined ', date_joined, ''),
+                    ('', view_count|commatize, ' views'),
+                    ('', approx_subscriber_count, ' subscribers'),
+                ] %}
+                    {% if stat %}
+                        <li>{{ before_text + stat|string + after_text }}</li>
+                    {% endif %}
                 {% endfor %}
             </ul>
             <hr>
