@@ -1,4 +1,8 @@
-{% set page_title = 'Subscriptions' %}
+{% if current_tag %}
+    {% set page_title = 'Subscriptions - ' + current_tag %}
+{% else %}
+    {% set page_title = 'Subscriptions' %}
+{% endif %}
 {% extends "base.html" %}
 {% import "common_elements.html" as common_elements %}
 
