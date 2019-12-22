@@ -151,36 +151,42 @@ def post_process_channel_info(info):
 
 playlist_sort_codes = {'2': "da", '3': "dd", '4': "lad"}
 
-@yt_app.route('/channel/<channel_id>/')
-@yt_app.route('/channel/<channel_id>/<tab>')
-def get_channel_page(channel_id, tab='videos'):
+# youtube.com/[channel_id]/[tab]
+# youtube.com/user/[username]/[tab]
+# youtube.com/c/[custom]/[tab]
+# youtube.com/[custom]/[tab]
+def get_channel_page_general_url(base_url, tab, request, channel_id=None):
 
     page_number = int(request.args.get('page', 1))
     sort = request.args.get('sort', '3')
     view = request.args.get('view', '1')
     query = request.args.get('query', '')
 
-
-    if tab == 'videos':
+    if tab == 'videos' and channel_id:
         tasks = (
             gevent.spawn(get_number_of_videos, channel_id ), 
             gevent.spawn(get_channel_tab, channel_id, page_number, sort, 'videos', view)
         )
         gevent.joinall(tasks)
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
-
+    elif tab == 'videos':
+        polymer_json = util.fetch_url(base_url + '/videos?pbj=1&view=0', util.desktop_ua + headers_1, debug_name='gen_channel_videos')
+        number_of_videos = 1000
     elif tab == 'about':
-        polymer_json = util.fetch_url('https://www.youtube.com/channel/' + channel_id + '/about?pbj=1', util.desktop_ua + headers_1, debug_name='channel_about')
+        polymer_json = util.fetch_url(base_url + '/about?pbj=1', util.desktop_ua + headers_1, debug_name='gen_channel_about')
     elif tab == 'playlists':
-        polymer_json = util.fetch_url('https://www.youtube.com/channel/' + channel_id + '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], util.desktop_ua + headers_1, debug_name='channel_playlists')
-    elif tab == 'search':
+        polymer_json = util.fetch_url(base_url+ '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], util.desktop_ua + headers_1, debug_name='gen_channel_playlists')
+    elif tab == 'search' and channel_id:
         tasks = (
             gevent.spawn(get_number_of_videos, channel_id ), 
             gevent.spawn(get_channel_search_json, channel_id, query, page_number)
         )
         gevent.joinall(tasks)
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
-
+    elif tab == 'search':
+        url = base_url + '/search?pbj=1&query=' + urllib.parse.quote(query, safe='')
+        polymer_json = util.fetch_url(url, util.desktop_ua + headers_1, debug_name='gen_channel_search')
+        number_of_videos = 1000
     else:
         flask.abort(404, 'Unknown channel tab: ' + tab)
 
@@ -188,6 +194,7 @@ def get_channel_page(channel_id, tab='videos'):
     info = yt_data_extract.extract_channel_info(json.loads(polymer_json), tab)
     if info['error']:
         return flask.render_template('error.html', error_message = info['error'])
+
     post_process_channel_info(info)
     if tab in ('videos', 'search'):
         info['number_of_videos'] = number_of_videos
@@ -204,49 +211,10 @@ def get_channel_page(channel_id, tab='videos'):
         **info
     )
 
-
-# youtube.com/user/[username]/[tab]
-# youtube.com/c/[custom]/[tab]
-# youtube.com/[custom]/[tab]
-def get_channel_page_general_url(base_url, tab, request):
-
-    page_number = int(request.args.get('page', 1))
-    sort = request.args.get('sort', '3')
-    view = request.args.get('view', '1')
-    query = request.args.get('query', '')
-
-    if tab == 'videos':
-        polymer_json = util.fetch_url(base_url + '/videos?pbj=1&view=0', util.desktop_ua + headers_1, debug_name='gen_channel_videos')
-    elif tab == 'about':
-        polymer_json = util.fetch_url(base_url + '/about?pbj=1', util.desktop_ua + headers_1, debug_name='gen_channel_about')
-    elif tab == 'playlists':
-        polymer_json = util.fetch_url(base_url+ '/playlists?pbj=1&view=1', util.desktop_ua + headers_1, debug_name='gen_channel_playlists')
-    elif tab == 'search':
-        raise NotImplementedError()
-    else:
-        flask.abort(404, 'Unknown channel tab: ' + tab)
-
-
-    info = yt_data_extract.extract_channel_info(json.loads(polymer_json), tab)
-    if info['error']:
-        return flask.render_template('error.html', error_message = info['error'])
-
-    post_process_channel_info(info)
-    if tab in ('videos', 'search'):
-        info['number_of_videos'] = 1000
-        info['number_of_pages'] = math.ceil(1000/30)
-        info['header_playlist_names'] = local_playlist.get_playlist_names()
-    if tab in ('videos', 'playlists'):
-        info['current_sort'] = sort
-    elif tab == 'search':
-        info['search_box_value'] = query
-    info['subscribed'] = subscriptions.is_subscribed(info['channel_id'])
-
-    return flask.render_template('channel.html',
-        parameters_dictionary = request.args,
-        **info
-    )
-
+@yt_app.route('/channel/<channel_id>/')
+@yt_app.route('/channel/<channel_id>/<tab>')
+def get_channel_page(channel_id, tab='videos'):
+    return get_channel_page_general_url('https://www.youtube.com/channel/' + channel_id, tab, request, channel_id)
 
 @yt_app.route('/user/<username>/')
 @yt_app.route('/user/<username>/<tab>')
