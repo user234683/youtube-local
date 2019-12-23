@@ -1,4 +1,9 @@
-{% set page_title = channel_name + ' - Channel' %}
+{% if current_tab == 'search' %}
+    {% set page_title = search_box_value + ' - Page ' + page_number|string %}
+{% else %}
+    {% set page_title = channel_name + ' - Channel' %}
+{% endif %}
+
 {% extends "base.html" %}
 {% import "common_elements.html" as common_elements %}
 {% block style %}
@@ -52,18 +57,29 @@
             #number-of-results{
                 font-weight:bold;
             }
-        .item-grid{
-            padding-left: 20px;
-            grid-row:4;
+        .content{
+            grid-row: 4;
             grid-column: 1 / span 2;
         }
-        .item-list{
-            width:1000px;
-            grid-column: 1 / span 2;
+        .search-content{
+            width: 800px;
+            margin-left: 10px;
         }
-        .page-button-row{
-            grid-column: 1 / span 2;
-        }
+            .item-grid{
+                padding-left: 20px;
+            }
+            .item-list{
+                width:800px;
+                margin: auto;
+            }
+            .page-button-row{
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .next-previous-button-row{
+                margin-left: auto;
+                margin-right: auto;
+            }
         .tab{
             padding: 5px 75px;
         }
@@ -137,38 +153,43 @@
             </ul>
         </div>
     {% else %}
-        <div id="links-metadata">
-            {% if current_tab == 'videos' %}
-                {% set sorts = [('1', 'views'), ('2', 'oldest'), ('3', 'newest')] %}
-                <div id="number-of-results">{{ number_of_videos }} videos</div>
-            {% elif current_tab == 'playlists' %}
-                {% set sorts = [('2', 'oldest'), ('3', 'newest'), ('4', 'last video added')] %}
-            {% else %}
-                {% set sorts = [] %}
-            {% endif %}
-
-            {% for sort_number, sort_name in sorts %}
-                {% if sort_number == current_sort.__str__() %}
-                    <a class="sort-button">{{ 'Sorted by ' + sort_name }}</a>
+        <div class="content {{ current_tab + '-content'}}">
+            <div id="links-metadata">
+                {% if current_tab == 'videos' %}
+                    {% set sorts = [('1', 'views'), ('2', 'oldest'), ('3', 'newest')] %}
+                    <div id="number-of-results">{{ number_of_videos }} videos</div>
+                {% elif current_tab == 'playlists' %}
+                    {% set sorts = [('2', 'oldest'), ('3', 'newest'), ('4', 'last video added')] %}
+                {% elif current_tab == 'search' %}
+                    <h2 class="page-number">Page {{ page_number }}</h2>
                 {% else %}
-                    <a class="sort-button" href="{{ channel_url + '/' + current_tab + '?sort=' + sort_number }}">{{ 'Sort by ' + sort_name }}</a>
+                    {% set sorts = [] %}
                 {% endif %}
-            {% endfor %}
-        </div>
 
-        {% if current_tab != 'about' %}
+                {% for sort_number, sort_name in sorts %}
+                    {% if sort_number == current_sort.__str__() %}
+                        <a class="sort-button">{{ 'Sorted by ' + sort_name }}</a>
+                    {% else %}
+                        <a class="sort-button" href="{{ channel_url + '/' + current_tab + '?sort=' + sort_number }}">{{ 'Sort by ' + sort_name }}</a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
             <nav class="{{ 'item-list' if current_tab == 'search' else 'item-grid' }}">
                 {% for item_info in items %}
                     {{ common_elements.item(item_info, include_author=false) }}
                 {% endfor %}
             </nav>
 
-            {% if current_tab != 'playlists' %}
+            {% if current_tab == 'videos' %}
                 <nav class="page-button-row">
                     {{ common_elements.page_buttons(number_of_pages, channel_url + '/' + current_tab, parameters_dictionary) }}
                 </nav>
+            {% elif current_tab == 'search' %}
+                <nav class="next-previous-button-row">
+                    {{ common_elements.next_previous_buttons(is_last_page, channel_url + '/' + current_tab, parameters_dictionary) }}
+                </nav>
             {% endif %}
-        {% endif %}
-
+        </div>
     {% endif %}
 {% endblock main %}

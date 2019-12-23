@@ -90,3 +90,18 @@
     {% endfor %}
 
 {% endmacro %}
+
+{% macro next_previous_buttons(is_last_page, url, parameters_dictionary) %}
+    {% set current_page = parameters_dictionary.get('page', 1)|int %}
+    {% set parameters_dictionary = parameters_dictionary.to_dict() %}
+
+    {% if current_page != 1 %}
+            {% set _ = parameters_dictionary.__setitem__('page', current_page - 1) %}
+            <a class="page-button previous-page" href="{{ url + '?' + parameters_dictionary|urlencode }}">Previous page</a>
+    {% endif %}
+
+    {% if not is_last_page %}
+            {% set _ = parameters_dictionary.__setitem__('page', current_page + 1) %}
+            <a class="page-button next-page" href="{{ url + '?' + parameters_dictionary|urlencode }}">Next page</a>
+    {% endif %}
+{% endmacro %}

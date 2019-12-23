@@ -299,12 +299,23 @@ body{
     grid-auto-flow: column; 
     height: 40px;
 }
+.next-previous-button-row{
+    margin: 10px 0px;
+    display: flex;
+    justify-self:center;
+    justify-content: center;
+    height: 40px;
+}
     .page-button{
         background-color: var(--interface-color);
         border-style: outset;
         border-width: 2px;
         font-weight: bold;
         text-align: center;
+        padding: 5px;
+    }
+    .next-page:nth-child(2){    /* only if there's also a previous page button */
+        margin-left: 10px;
     }
 .sort-button{
     background-color: var(--interface-color);

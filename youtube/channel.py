@@ -192,16 +192,10 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     elif tab == 'playlists':
         polymer_json = util.fetch_url(base_url+ '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], util.desktop_ua + headers_1, debug_name='gen_channel_playlists')
     elif tab == 'search' and channel_id:
-        tasks = (
-            gevent.spawn(get_number_of_videos_channel, channel_id ), 
-            gevent.spawn(get_channel_search_json, channel_id, query, page_number)
-        )
-        gevent.joinall(tasks)
-        number_of_videos, polymer_json = tasks[0].value, tasks[1].value
+        polymer_json = get_channel_search_json(channel_id, query, page_number)
     elif tab == 'search':
         url = base_url + '/search?pbj=1&query=' + urllib.parse.quote(query, safe='')
         polymer_json = util.fetch_url(url, util.desktop_ua + headers_1, debug_name='gen_channel_search')
-        number_of_videos = 1000
     else:
         flask.abort(404, 'Unknown channel tab: ' + tab)
 
@@ -211,7 +205,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         return flask.render_template('error.html', error_message = info['error'])
 
     post_process_channel_info(info)
-    if tab in ('videos', 'search'):
+    if tab == 'videos':
         info['number_of_videos'] = number_of_videos
         info['number_of_pages'] = math.ceil(number_of_videos/30)
     if tab in ('videos', 'playlists'):
@@ -219,6 +213,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     elif tab == 'search':
         info['search_box_value'] = query
         info['header_playlist_names'] = local_playlist.get_playlist_names()
+        info['page_number'] = page_number
     info['subscribed'] = subscriptions.is_subscribed(info['channel_id'])
 
     return flask.render_template('channel.html',
