@@ -4,3 +4,4 @@ Brotli>=1.0.7
 PySocks>=1.6.8
 urllib3>=1.24.1
 defusedxml>=0.5.0
+cachetools>=4.0.0

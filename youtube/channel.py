@@ -10,7 +10,8 @@ import html
 import math
 import gevent
 import re
-import functools
+import cachetools.func
+import traceback
 
 import flask
 from flask import request
@@ -95,23 +96,25 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1, print_st
 
     return content
 
-def get_number_of_videos(channel_id):
+# cache entries expire after 30 minutes
+@cachetools.func.ttl_cache(maxsize=128, ttl=30*60)
+def get_number_of_videos_channel(channel_id):
+    if channel_id is None:
+        return 1000
+
     # Uploads playlist
     playlist_id = 'UU' + channel_id[2:]
     url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&pbj=1'
-    print("Getting number of videos")
 
-    # Sometimes retrieving playlist info fails with 403 for no discernable reason
     try:
-        response = util.fetch_url(url, util.mobile_ua + headers_pbj, debug_name='number_of_videos')
+        response = util.fetch_url(url, util.mobile_ua + headers_pbj, 
+            debug_name='number_of_videos', report_text='Got number of videos')
     except urllib.error.HTTPError as e:
-        if e.code != 403:
-            raise
+        traceback.print_exc()
         print("Couldn't retrieve number of videos")
         return 1000
 
     response = response.decode('utf-8')
-    print("Got response for number of videos")
 
     match = re.search(r'"numVideosText":\s*{\s*"runs":\s*\[{"text":\s*"([\d,]*) videos"', response)
     if match:
@@ -119,13 +122,21 @@ def get_number_of_videos(channel_id):
     else:
         return 0
 
-@functools.lru_cache(maxsize=128)
-def get_channel_id(username):
-    # method that gives the smallest possible response at ~10 kb
+channel_id_re = re.compile(r'videos\.xml\?channel_id=([a-zA-Z0-9_-]{24})"')
+@cachetools.func.lru_cache(maxsize=128)
+def get_channel_id(base_url):
+    # method that gives the smallest possible response at ~4 kb
     # needs to be as fast as possible
-    url = 'https://m.youtube.com/user/' + username + '/about?ajax=1&disable_polymer=true'
-    response = util.fetch_url(url, util.mobile_ua + headers_1).decode('utf-8')
-    return re.search(r'"channel_id":\s*"([a-zA-Z0-9_-]*)"', response).group(1)
+    base_url = base_url.replace('https://www', 'https://m') # avoid redirect
+    response = util.fetch_url(base_url + '/about?pbj=1', util.mobile_ua + headers_pbj,
+        debug_name='get_channel_id', report_text='Got channel id').decode('utf-8')
+    match = channel_id_re.search(response)
+    if match:
+        return match.group(1)
+    return None
+
+def get_number_of_videos_general(base_url):
+    return get_number_of_videos_channel(get_channel_id(base_url))
 
 def get_channel_search_json(channel_id, query, page):
     params = proto.string(2, 'search') + proto.string(15, str(page))
@@ -164,21 +175,25 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
 
     if tab == 'videos' and channel_id:
         tasks = (
-            gevent.spawn(get_number_of_videos, channel_id ), 
+            gevent.spawn(get_number_of_videos_channel, channel_id), 
             gevent.spawn(get_channel_tab, channel_id, page_number, sort, 'videos', view)
         )
         gevent.joinall(tasks)
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
     elif tab == 'videos':
-        polymer_json = util.fetch_url(base_url + '/videos?pbj=1&view=0', util.desktop_ua + headers_1, debug_name='gen_channel_videos')
-        number_of_videos = 1000
+        tasks = (
+            gevent.spawn(get_number_of_videos_general, base_url), 
+            gevent.spawn(util.fetch_url, base_url + '/videos?pbj=1&view=0', util.desktop_ua + headers_1, debug_name='gen_channel_videos')
+        )
+        gevent.joinall(tasks)
+        number_of_videos, polymer_json = tasks[0].value, tasks[1].value
     elif tab == 'about':
         polymer_json = util.fetch_url(base_url + '/about?pbj=1', util.desktop_ua + headers_1, debug_name='gen_channel_about')
     elif tab == 'playlists':
         polymer_json = util.fetch_url(base_url+ '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], util.desktop_ua + headers_1, debug_name='gen_channel_playlists')
     elif tab == 'search' and channel_id:
         tasks = (
-            gevent.spawn(get_number_of_videos, channel_id ), 
+            gevent.spawn(get_number_of_videos_channel, channel_id ), 
             gevent.spawn(get_channel_search_json, channel_id, query, page_number)
         )
         gevent.joinall(tasks)
@@ -199,11 +214,11 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     if tab in ('videos', 'search'):
         info['number_of_videos'] = number_of_videos
         info['number_of_pages'] = math.ceil(number_of_videos/30)
-        info['header_playlist_names'] = local_playlist.get_playlist_names()
     if tab in ('videos', 'playlists'):
         info['current_sort'] = sort
     elif tab == 'search':
         info['search_box_value'] = query
+        info['header_playlist_names'] = local_playlist.get_playlist_names()
     info['subscribed'] = subscriptions.is_subscribed(info['channel_id'])
 
     return flask.render_template('channel.html',
