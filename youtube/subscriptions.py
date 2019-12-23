@@ -453,9 +453,11 @@ def _get_upstream_videos(channel_id):
             time_published = int(calendar.timegm(time.strptime(time_published_element.text, '%Y-%m-%dT%H:%M:%S+00:00')))
             times_published[video_id_element.text] = time_published
 
-    except (AssertionError, defusedxml.ElementTree.ParseError) as e:
+    except AssertionError:
         print('Failed to read atoma feed for ' + channel_status_name)
         traceback.print_exc()
+    except defusedxml.ElementTree.ParseError:
+        print('Failed to read atoma feed for ' + channel_status_name)
 
     channel_info = yt_data_extract.extract_channel_info(json.loads(channel_tab), 'videos')
     if channel_info['error']:
