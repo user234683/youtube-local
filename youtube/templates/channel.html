@@ -161,7 +161,11 @@
                 {% elif current_tab == 'playlists' %}
                     {% set sorts = [('2', 'oldest'), ('3', 'newest'), ('4', 'last video added')] %}
                 {% elif current_tab == 'search' %}
-                    <h2 class="page-number">Page {{ page_number }}</h2>
+                    {% if items %}
+                        <h2 class="page-number">Page {{ page_number }}</h2>
+                    {% else %}
+                        <h2 class="page-number">No results</h2>
+                    {% endif %}
                 {% else %}
                     {% set sorts = [] %}
                 {% endif %}
