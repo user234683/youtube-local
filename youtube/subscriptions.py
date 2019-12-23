@@ -149,7 +149,7 @@ def _get_videos(cursor, number_per_page, offset, tag = None):
     # We cannot use tricks with the sql id for the video since we frequently have filters and other restrictions in place on the results anyway
     # TODO: This is probably not the ideal solution
     if tag is not None:
-        db_videos = cursor.execute('''SELECT video_id, title, duration, time_published, is_time_published_exact, channel_name
+        db_videos = cursor.execute('''SELECT video_id, title, duration, time_published, is_time_published_exact, channel_name, yt_channel_id
                                       FROM videos
                                       INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
                                       INNER JOIN tag_associations on videos.sql_channel_id = tag_associations.sql_channel_id
@@ -157,7 +157,7 @@ def _get_videos(cursor, number_per_page, offset, tag = None):
                                       ORDER BY time_noticed DESC, time_published DESC
                                       LIMIT ? OFFSET ?''', (tag, number_per_page*9, offset)).fetchall()
     else:
-        db_videos = cursor.execute('''SELECT video_id, title, duration, time_published, is_time_published_exact, channel_name
+        db_videos = cursor.execute('''SELECT video_id, title, duration, time_published, is_time_published_exact, channel_name, yt_channel_id
                                       FROM videos
                                       INNER JOIN subscribed_channels on videos.sql_channel_id = subscribed_channels.id
                                       WHERE muted = 0
@@ -174,6 +174,8 @@ def _get_videos(cursor, number_per_page, offset, tag = None):
             'duration': db_video[2],
             'time_published': exact_timestamp(db_video[3]) if db_video[4] else posix_to_dumbed_down(db_video[3]),
             'author':   db_video[5],
+            'author_id': db_video[6],
+            'author_url': 'https://www.youtube.com/channel/' + db_video[6],
         })
 
     return videos, pseudo_number_of_videos
