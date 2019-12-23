@@ -52,12 +52,13 @@ def extract_channel_info(polymer_json, tab):
     else:
         info['channel_url'] = None
 
+    # get items
+    info['items'] = []
+
     # empty channel
     if 'contents' not in response and 'continuationContents' not in response:
         return info
 
-    # get items
-    info['items'] = []
     if tab in ('videos', 'playlists', 'search'):
         items, ctoken = extract_items(response)
         additional_info = {'author': info['channel_name'], 'author_url': info['channel_url']}
