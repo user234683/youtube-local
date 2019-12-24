@@ -24,7 +24,7 @@
                     <img class="thumbnail-img" src="{{ info['thumbnail'] }}">
                     {% if info['type'] != 'channel' %}
                         <div class="thumbnail-info">
-                            <span>{{ (info['video_count']|string + ' videos') if info['type'] == 'playlist' else info['duration'] }}</span>
+                            <span>{{ (info['video_count']|commatize + ' videos') if info['type'] == 'playlist' else info['duration'] }}</span>
                         </div>
                     {% endif %}
                 </a>
@@ -41,7 +41,7 @@
                 <ul class="stats {{'horizontal-stats' if horizontal else 'vertical-stats'}}">
                     {% if info['type'] == 'channel' %}
                         <li><span>{{ info['approx_subscriber_count'] }} subscribers</span></li>
-                        <li><span>{{ info['video_count'] }} videos</span></li>
+                        <li><span>{{ info['video_count']|commatize }} videos</span></li>
                     {% else %}
                         {% if info.get('approx_view_count') %}
                             <li><span class="views">{{ info['approx_view_count'] }} views</span></li>
