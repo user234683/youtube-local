@@ -135,7 +135,7 @@ def extract_int(string, default=None):
         string = extract_str(string)
     if not string:
         return default
-    match = re.search(r'(\d+)', string.replace(',', ''))
+    match = re.search(r'\b(\d+)\b', string.replace(',', ''))
     if match is None:
         return default
     try:
@@ -149,7 +149,7 @@ def extract_approx_int(string):
         string = extract_str(string)
     if not string:
         return None
-    match = re.search(r'(\d+(?:\.\d+)?[KMBTkmbt])', string.replace(',', ''))
+    match = re.search(r'\b(\d+(?:\.\d+)?[KMBTkmbt]?)\b', string.replace(',', ''))
     if match is None:
         return None
     return match.group(1)
