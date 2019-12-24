@@ -218,13 +218,14 @@ def extract_item_info(item, additional_info={}):
         info['type'] = 'unsupported'
 
     info['title'] = extract_str(item.get('title'))
-    info['author'] = extract_str(multi_get(item, 'longBylineText', 'shortBylineText', 'ownerText'))
-    info['author_id'] = extract_str(multi_deep_get(item,
-        ['longBylineText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId'],
-        ['shortBylineText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId'],
-        ['ownerText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId']
-    ))
-    info['author_url'] = ('https://www.youtube.com/channel/' + info['author_id']) if info['author_id'] else None
+    if primary_type != 'channel':
+        info['author'] = extract_str(multi_get(item, 'longBylineText', 'shortBylineText', 'ownerText'))
+        info['author_id'] = extract_str(multi_deep_get(item,
+            ['longBylineText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId'],
+            ['shortBylineText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId'],
+            ['ownerText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId']
+        ))
+        info['author_url'] = ('https://www.youtube.com/channel/' + info['author_id']) if info['author_id'] else None
     info['description'] = extract_formatted_text(multi_get(item, 'descriptionSnippet', 'descriptionText'))
     info['thumbnail'] = multi_deep_get(item,
         ['thumbnail', 'thumbnails', 0, 'url'],      # videos
