@@ -284,19 +284,12 @@ def extract_item_info(item, additional_info={}):
 
 def extract_response(polymer_json):
     '''return response, error'''
-    response = multi_deep_get(polymer_json, [1, 'response'], ['response'], default=None, types=dict)
+    response = multi_deep_get(polymer_json, [1, 'response'], ['response'])
     if response is None:
         return None, 'Failed to extract response'
     else:
         return response, None
 
-
-list_types = {
-    'sectionListRenderer',
-    'itemSectionRenderer',
-    'gridRenderer',
-    'playlistVideoListRenderer',
-}
 
 item_types = {
     'movieRenderer',
@@ -328,17 +321,17 @@ item_types = {
 }
 
 def _traverse_browse_renderer(renderer):
-    for tab in get(renderer, 'tabs', (), types=(list, tuple)):
-        tab_renderer = multi_deep_get(tab, ['tabRenderer'], ['expandableTabRenderer'], default=None, types=dict)
+    for tab in get(renderer, 'tabs', ()):
+        tab_renderer = multi_get(tab, 'tabRenderer', 'expandableTabRenderer')
         if tab_renderer is None:
             continue
         if tab_renderer.get('selected', False):
-            return get(tab_renderer, 'content', {}, types=(dict))
+            return get(tab_renderer, 'content', {})
     print('Could not find tab with content')
     return {}
 
 def _traverse_standard_list(renderer):
-    renderer_list = multi_deep_get(renderer, ['contents'], ['items'], default=(), types=(list, tuple))
+    renderer_list = multi_get(renderer, 'contents', 'items', default=())
     continuation = deep_get(renderer, 'continuations', 0, 'nextContinuationData', 'continuation')
     return renderer_list, continuation
 
@@ -346,7 +339,7 @@ def _traverse_standard_list(renderer):
 nested_renderer_dispatch = {
     'singleColumnBrowseResultsRenderer': _traverse_browse_renderer,
     'twoColumnBrowseResultsRenderer': _traverse_browse_renderer,
-    'twoColumnSearchResultsRenderer': lambda renderer: get(renderer, 'primaryContents', {}, types=dict),
+    'twoColumnSearchResultsRenderer': lambda renderer: get(renderer, 'primaryContents', {}),
 }
 
 # these renderers contain a list of renderers inside them
@@ -355,17 +348,17 @@ nested_renderer_list_dispatch = {
     'itemSectionRenderer': _traverse_standard_list,
     'gridRenderer': _traverse_standard_list,
     'playlistVideoListRenderer': _traverse_standard_list,
-    'singleColumnWatchNextResults': lambda r: (deep_get(r, 'results', 'results', 'contents', default=[], types=(list, tuple)), None),
+    'singleColumnWatchNextResults': lambda r: (deep_get(r, 'results', 'results', 'contents', default=[]), None),
 }
 
 def extract_items(response, item_types=item_types):
     '''return items, ctoken'''
     if 'continuationContents' in response:
         # always has just the one [something]Continuation key, but do this just in case they add some tracking key or something
-        for key, renderer_continuation in get(response, 'continuationContents', {}, types=dict).items():
+        for key, renderer_continuation in get(response, 'continuationContents', {}).items():
             if key.endswith('Continuation'):    # e.g. commentSectionContinuation, playlistVideoListContinuation
-                items = multi_deep_get(renderer_continuation, ['contents'], ['items'], default=[], types=(list, tuple))
-                ctoken = deep_get(renderer_continuation, 'continuations', 0, 'nextContinuationData', 'continuation', default=None, types=str)
+                items = multi_get(renderer_continuation, 'contents', 'items', default=[])
+                ctoken = deep_get(renderer_continuation, 'continuations', 0, 'nextContinuationData', 'continuation')
                 return items, ctoken
         return [], None
     elif 'contents' in response:
@@ -375,7 +368,7 @@ def extract_items(response, item_types=item_types):
         iter_stack = collections.deque()
         current_iter = iter(())
 
-        renderer = get(response, 'contents', {}, types=dict)
+        renderer = get(response, 'contents', {})
 
         while True:
             # mode 1: get a new renderer by iterating.
