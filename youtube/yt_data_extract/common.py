@@ -378,43 +378,42 @@ def extract_items(response, item_types=item_types):
         renderer = get(response, 'contents', {}, types=dict)
 
         while True:
-            # mode 1: dig into the current renderer
-            # Will stay in mode 1 (via continue) if a new renderer is found inside this one
-            # Otherwise, after finding that it is an item renderer,
-            # contains a list, or contains nothing,
-            # falls through into mode 2 to get a new renderer
-            if len(renderer) != 0:
-                key, value = list(renderer.items())[0]
+            # mode 1: get a new renderer by iterating.
+            # goes down the stack for an iterator if one has been exhausted
+            if not renderer:
+                try:
+                    renderer = current_iter.__next__()
+                except StopIteration:
+                    try:
+                        current_iter = iter_stack.pop()
+                    except IndexError:
+                        return items, ctoken
+                # Get new renderer or check that the one we got is good before
+                # proceeding to mode 2
+                continue
 
-                # has a list in it, add it to the iter stack
-                if key in nested_renderer_list_dispatch:
-                    renderer_list, continuation = nested_renderer_list_dispatch[key](value)
-                    if renderer_list:
-                        iter_stack.append(current_iter)
-                        current_iter = iter(renderer_list)
+
+            # mode 2: dig into the current renderer
+            key, value = list(renderer.items())[0]
+
+            # has a list in it, add it to the iter stack
+            if key in nested_renderer_list_dispatch:
+                renderer_list, continuation = nested_renderer_list_dispatch[key](value)
+                if renderer_list:
+                    iter_stack.append(current_iter)
+                    current_iter = iter(renderer_list)
                     if continuation:
                         ctoken = continuation
 
-                # new renderer nested inside this one
-                elif key in nested_renderer_dispatch:
-                    renderer = nested_renderer_dispatch[key](value)
-                    continue    # back to mode 1
+            # new renderer nested inside this one
+            elif key in nested_renderer_dispatch:
+                renderer = nested_renderer_dispatch[key](value)
+                continue    # don't reset renderer to None
 
-                # the renderer is an item
-                elif key in item_types:
-                    items.append(renderer)
+            # the renderer is an item
+            elif key in item_types:
+                items.append(renderer)
 
-
-            # mode 2: get a new renderer by iterating.
-            # goes up the stack for an iterator if one has been exhausted
-            while current_iter is not None:
-                try:
-                    renderer = current_iter.__next__()
-                    break
-                except StopIteration:
-                    try:
-                        current_iter = iter_stack.pop()   # go back up the stack
-                    except IndexError:
-                        return items, ctoken
+            renderer = None
     else:
         return [], None
