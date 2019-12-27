@@ -376,8 +376,12 @@ def extract_items_from_renderer(renderer, item_types=_item_types):
         # mode 2: dig into the current renderer
         key, value = list(renderer.items())[0]
 
+        # the renderer is an item
+        if key in item_types:
+            items.append(renderer)
+
         # has a list in it, add it to the iter stack
-        if key in nested_renderer_list_dispatch:
+        elif key in nested_renderer_list_dispatch:
             renderer_list, continuation = nested_renderer_list_dispatch[key](value)
             if renderer_list:
                 iter_stack.append(current_iter)
@@ -389,10 +393,6 @@ def extract_items_from_renderer(renderer, item_types=_item_types):
         elif key in nested_renderer_dispatch:
             renderer = nested_renderer_dispatch[key](value)
             continue    # don't reset renderer to None
-
-        # the renderer is an item
-        elif key in item_types:
-            items.append(renderer)
 
         renderer = None
 
