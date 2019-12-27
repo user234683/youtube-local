@@ -291,7 +291,7 @@ def extract_response(polymer_json):
         return response, None
 
 
-item_types = {
+_item_types = {
     'movieRenderer',
     'didYouMeanRenderer',
     'showingResultsForRenderer',
@@ -350,8 +350,53 @@ nested_renderer_list_dispatch = {
     'playlistVideoListRenderer': _traverse_standard_list,
     'singleColumnWatchNextResults': lambda r: (deep_get(r, 'results', 'results', 'contents', default=[]), None),
 }
+def extract_items_from_renderer(renderer, item_types=_item_types):
+    ctoken = None
+    items = []
 
-def extract_items(response, item_types=item_types):
+    iter_stack = collections.deque()
+    current_iter = iter(())
+
+    while True:
+        # mode 1: get a new renderer by iterating.
+        # goes down the stack for an iterator if one has been exhausted
+        if not renderer:
+            try:
+                renderer = current_iter.__next__()
+            except StopIteration:
+                try:
+                    current_iter = iter_stack.pop()
+                except IndexError:
+                    return items, ctoken
+            # Get new renderer or check that the one we got is good before
+            # proceeding to mode 2
+            continue
+
+
+        # mode 2: dig into the current renderer
+        key, value = list(renderer.items())[0]
+
+        # has a list in it, add it to the iter stack
+        if key in nested_renderer_list_dispatch:
+            renderer_list, continuation = nested_renderer_list_dispatch[key](value)
+            if renderer_list:
+                iter_stack.append(current_iter)
+                current_iter = iter(renderer_list)
+                if continuation:
+                    ctoken = continuation
+
+        # new renderer nested inside this one
+        elif key in nested_renderer_dispatch:
+            renderer = nested_renderer_dispatch[key](value)
+            continue    # don't reset renderer to None
+
+        # the renderer is an item
+        elif key in item_types:
+            items.append(renderer)
+
+        renderer = None
+
+def extract_items(response, item_types=_item_types):
     '''return items, ctoken'''
     if 'continuationContents' in response:
         # always has just the one [something]Continuation key, but do this just in case they add some tracking key or something
@@ -362,51 +407,7 @@ def extract_items(response, item_types=item_types):
                 return items, ctoken
         return [], None
     elif 'contents' in response:
-        ctoken = None
-        items = []
-
-        iter_stack = collections.deque()
-        current_iter = iter(())
-
         renderer = get(response, 'contents', {})
-
-        while True:
-            # mode 1: get a new renderer by iterating.
-            # goes down the stack for an iterator if one has been exhausted
-            if not renderer:
-                try:
-                    renderer = current_iter.__next__()
-                except StopIteration:
-                    try:
-                        current_iter = iter_stack.pop()
-                    except IndexError:
-                        return items, ctoken
-                # Get new renderer or check that the one we got is good before
-                # proceeding to mode 2
-                continue
-
-
-            # mode 2: dig into the current renderer
-            key, value = list(renderer.items())[0]
-
-            # has a list in it, add it to the iter stack
-            if key in nested_renderer_list_dispatch:
-                renderer_list, continuation = nested_renderer_list_dispatch[key](value)
-                if renderer_list:
-                    iter_stack.append(current_iter)
-                    current_iter = iter(renderer_list)
-                    if continuation:
-                        ctoken = continuation
-
-            # new renderer nested inside this one
-            elif key in nested_renderer_dispatch:
-                renderer = nested_renderer_dispatch[key](value)
-                continue    # don't reset renderer to None
-
-            # the renderer is an item
-            elif key in item_types:
-                items.append(renderer)
-
-            renderer = None
+        return extract_items_from_renderer(renderer, item_types=item_types)
     else:
         return [], None
