@@ -258,7 +258,15 @@ def extract_item_info(item, additional_info={}):
         if info['view_count']:
             info['approx_view_count'] = '{:,}'.format(info['view_count'])
         else:
-            info['approx_view_count'] = extract_approx_int(multi_get(item, 'shortViewCountText'))
+            info['approx_view_count'] = extract_approx_int(item.get('shortViewCountText'))
+
+        # handle case where it is "No views"
+        if not info['approx_view_count']:
+            if ('No views' in item.get('shortViewCountText', '')
+                    or 'no views' in accessibility_label.lower()):
+                info['view_count'] = 0
+                info['approx_view_count'] = '0'
+
         info['duration'] = extract_str(item.get('lengthText'))
     elif primary_type == 'playlist':
         info['id'] = item.get('playlistId')
