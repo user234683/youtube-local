@@ -268,7 +268,7 @@ def extract_item_info(item, additional_info={}):
                 info['approx_view_count'] = '0'
 
         info['duration'] = extract_str(item.get('lengthText'))
-    elif primary_type == 'playlist':
+    elif primary_type in ('playlist', 'radio'):
         info['id'] = item.get('playlistId')
         info['video_count'] = extract_int(item.get('videoCount'))
     elif primary_type == 'channel':
