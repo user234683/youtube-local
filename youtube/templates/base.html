@@ -155,6 +155,16 @@
                         var XHR = new XMLHttpRequest();
                         var FD = new FormData(playlistAddForm);
 
+                        if(FD.getAll('video_info_list').length === 0){
+                            displayMessage('Error: No videos selected', true);
+                            return;
+                        }
+
+                        if(FD.get('playlist_name') === ""){
+                            displayMessage('Error: No playlist selected', true);
+                            return;
+                        }
+
                         // https://stackoverflow.com/questions/48322876/formdata-doesnt-include-value-of-buttons
                         FD.append('action', 'add');
 
