@@ -457,7 +457,7 @@ def requires_decryption(info):
 
 # adapted from youtube-dl and invidious:
 # https://github.com/omarroth/invidious/blob/master/src/invidious/helpers/signatures.cr
-decrypt_function_re = re.compile(r'function\(a\)\{(a=a\.split\(""\)[^\}]+)\}')
+decrypt_function_re = re.compile(r'function\(a\)\{(a=a\.split\(""\)[^\}{]+)return a\.join\(""\)\}')
 op_with_arg_re = re.compile(r'[^\.]+\.([^\(]+)\(a,(\d+)\)')
 def extract_decryption_function(info, base_js):
     '''Insert decryption function into info. Return error string if not successful.
