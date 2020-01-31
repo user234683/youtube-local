@@ -9,5 +9,6 @@ banned_addresses.txt
 settings.txt
 get-pip.py
 latest-dist.zip
+*.7z
 *.zip
 *venv*

@@ -8,14 +8,9 @@ import urllib.request
 import subprocess
 import shutil
 import os
+import hashlib
 
 latest_version = sys.argv[1]
-if sys.argv[2] == '-nd':
-    downloads_enabled = False
-elif sys.argv[2] == '-d':
-    downloads_enabled = True
-else:
-    raise Exception('No download switch specified')
 
 def check(code):
     if code != 0:
@@ -30,6 +25,21 @@ def remove_files_with_extensions(path, extensions):
         for file in files:
             if os.path.splitext(file)[1] in extensions:
                 os.remove(os.path.join(root, file))
+
+def download_if_not_exists(file_name, url, sha256=None):
+    if not os.path.exists('./' + file_name):
+        log('Downloading ' + file_name + '..')
+        data = urllib.request.urlopen(url).read()
+        log('Finished downloading ' + file_name)
+        with open('./' + file_name, 'wb') as f:
+            f.write(data)
+        if sha256:
+            digest = hashlib.sha256(data).hexdigest()
+            if digest != sha256:
+                log('Error: ' + file_name + ' has wrong hash: ' + digest)
+                sys.exit(1)
+    else:
+        log('Using existing ' + file_name)
 
 # ---------- Get current release version, for later ----------
 log('Getting current release version')
@@ -63,20 +73,16 @@ os.environ['PYTHONDONTWRITEBYTECODE'] = '1'     # *.pyc files double the size of
 get_pip_url = 'https://bootstrap.pypa.io/get-pip.py'
 latest_dist_url = 'https://www.python.org/ftp/python/' + latest_version + '/python-' + latest_version + '-embed-win32.zip'
 
-if downloads_enabled:
-    log('Downloading get-pip.py...')
-    get_pip = urllib.request.urlopen(get_pip_url).read()
-    log('Finished downloading get-pip.py')
+# I've verified that all the dlls in the following are signed by Microsoft.
+# Using this because Microsoft only provides installers whose files can't be
+# extracted without a special tool.
+visual_c_runtime_url = 'https://github.com/eladkarako/vc-archive/raw/master/archives/vc15_(14.10.25017.0)_2017_x86.7z'
+visual_c_runtime_sha256 = '2549eb4d2ce4cf3a87425ea01940f74368bf1cda378ef8a8a1f1a12ed59f1547'
 
-    with open('./get-pip.py', 'wb') as f:
-        f.write(get_pip)
-
-    log('Downloading latest python distribution...')
-    latest_dist= urllib.request.urlopen(latest_dist_url).read()
-    log('Finished downloading python distribution')
-
-    with open('./latest-dist.zip', 'wb') as f:
-        f.write(latest_dist)
+download_if_not_exists('get-pip.py', get_pip_url)
+download_if_not_exists('python-dist-' + latest_version + '.zip', latest_dist_url)
+download_if_not_exists('vc15_(14.10.25017.0)_2017_x86.7z',
+    visual_c_runtime_url, sha256=visual_c_runtime_sha256)
 
 if os.path.exists('./python'):
     log('Removing old python distribution')
@@ -85,7 +91,7 @@ if os.path.exists('./python'):
 
 log('Extracting python distribution')
 
-check(os.system(r'7z -y x -opython latest-dist.zip'))
+check(os.system(r'7z -y x -opython python-dist-' + latest_version + '.zip'))
 
 log('Executing get-pip.py')
 os.system(r'.\python\python.exe -I get-pip.py')
@@ -149,7 +155,7 @@ with open('./python/python3' + major_release + '._pth', 'a', encoding='utf-8') a
     f.write('..\n')'''
 
 log('Inserting Microsoft C Runtime')
-check(os.system(r'copy C:\Windows\SysWOW64\msvcp140.dll .\python\msvcp140.dll'))
+check(os.system(r'7z -y e -opython vc15_(14.10.25017.0)_2017_x86.7z runtime_minimum\System'))
 
 log('Installing dependencies')
 check(os.system(r'.\python\python.exe -I -m pip install --no-compile -r .\requirements.txt'))
