@@ -263,6 +263,31 @@ def _extract_watch_info_desktop(top_level):
 
     return info
 
+fmt_type_re = re.compile(
+    r'(audio|video)/([\w0-9]+); codecs="([\w0-9\.]+(?:, [\w0-9\.]+)*)"')
+def update_format_with_type_info(fmt, yt_fmt):
+    # 'type' for invidious api format
+    mime_type = multi_get(yt_fmt, 'mimeType', 'type')
+    if mime_type is None:
+        return
+    match = re.fullmatch(fmt_type_re, mime_type)
+
+    type, fmt['ext'], codecs = match.groups()
+    codecs = codecs.split(', ')
+    for codec in codecs:
+        if (codec.startswith('av')
+                or codec in ('vp9', 'vp8', 'vp8.0', 'h263', 'h264', 'mp4v')):
+            if codec == 'vp8.0':
+                codec = 'vp8'
+            conservative_update(fmt, 'vcodec', codec)
+        elif (codec.startswith('mp4a')
+                or codec in ('opus', 'mp3', 'aac', 'dtse', 'ec-3', 'vorbis')):
+            conservative_update(fmt, 'acodec', codec)
+        else:
+            print('Warning: unrecognized codec: ' + codec)
+    if type == 'audio':
+        assert len(codecs) == 1
+
 def _extract_formats(info, player_response):
     streaming_data = player_response.get('streamingData', {})
     yt_formats = streaming_data.get('formats', []) + streaming_data.get('adaptiveFormats', [])
@@ -275,11 +300,13 @@ def _extract_formats(info, player_response):
         fmt['audio_bitrate'] = None
         fmt['acodec'] = None
         fmt['vcodec'] = None
+        fmt['itag'] = yt_fmt.get('itag')
         fmt['width'] = yt_fmt.get('width')
         fmt['height'] = yt_fmt.get('height')
         fmt['file_size'] = yt_fmt.get('contentLength')
         fmt['audio_sample_rate'] = yt_fmt.get('audioSampleRate')
         fmt['fps'] = yt_fmt.get('fps')
+        update_format_with_type_info(fmt, yt_fmt)
         cipher = dict(urllib.parse.parse_qsl(yt_fmt.get('cipher', '')))
         if cipher:
             fmt['url'] = cipher.get('url')
