@@ -88,6 +88,7 @@ def get_playlist_page():
             gevent.spawn(get_videos, playlist_id, page)
         )
         gevent.joinall(tasks)
+        util.check_gevent_exceptions(*tasks)
         first_page_json, this_page_json = tasks[0].value, tasks[1].value
 
     info = yt_data_extract.extract_playlist_info(this_page_json)

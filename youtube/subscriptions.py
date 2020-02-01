@@ -405,7 +405,14 @@ def check_channels_if_necessary(channel_ids):
             checking_channels.add(channel_id)
             check_channels_queue.put(channel_id)
 
-
+def _get_atoma_feed(channel_id):
+    url = 'https://www.youtube.com/feeds/videos.xml?channel_id=' + channel_id
+    try:
+        return util.fetch_url(url).decode('utf-8')
+    except util.FetchError as e:
+        if e.code == '404': # 404 is expected for terminated channels
+            return ''
+        raise
 
 def _get_upstream_videos(channel_id):
     try:
@@ -417,7 +424,7 @@ def _get_upstream_videos(channel_id):
 
     tasks = (
         gevent.spawn(channel.get_channel_tab, channel_id, print_status=False), # channel page, need for video duration
-        gevent.spawn(util.fetch_url, 'https://www.youtube.com/feeds/videos.xml?channel_id=' + channel_id) # atoma feed, need for exact published time
+        gevent.spawn(_get_atoma_feed, channel_id) # need atoma feed for exact published time
     )
     gevent.joinall(tasks)
 
@@ -438,7 +445,7 @@ def _get_upstream_videos(channel_id):
                     return element
             return None
 
-        root = defusedxml.ElementTree.fromstring(feed.decode('utf-8'))
+        root = defusedxml.ElementTree.fromstring(feed)
         assert remove_bullshit(root.tag) == 'feed'
         for entry in root:
             if (remove_bullshit(entry.tag) != 'entry'):

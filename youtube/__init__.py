@@ -1,6 +1,8 @@
+from youtube import util
 import flask
 import settings
 import traceback
+from sys import exc_info
 yt_app = flask.Flask(__name__)
 yt_app.url_map.strict_slashes = False
 
@@ -34,4 +36,14 @@ def commatize(num):
 
 @yt_app.errorhandler(500)
 def error_page(e):
+    if (exc_info()[0] == util.FetchError
+        and exc_info()[1].code == '429'
+        and settings.route_tor
+    ):
+        error_message = ('Error: Youtube blocked the request because the Tor'
+            ' exit node is overcrowded. Try getting a new exit node by'
+            ' restarting the Tor Browser.')
+        if exc_info()[1].ip:
+            error_message += ' Exit node IP address: ' + exc_info()[1].ip
+        return flask.render_template('error.html', error_message=error_message), 502
     return flask.render_template('error.html', traceback=traceback.format_exc()), 500

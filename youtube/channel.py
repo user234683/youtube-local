@@ -179,6 +179,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
             gevent.spawn(get_channel_tab, channel_id, page_number, sort, 'videos', view)
         )
         gevent.joinall(tasks)
+        util.check_gevent_exceptions(*tasks)
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
     elif tab == 'videos':
         tasks = (
@@ -186,6 +187,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
             gevent.spawn(util.fetch_url, base_url + '/videos?pbj=1&view=0', util.desktop_ua + headers_1, debug_name='gen_channel_videos')
         )
         gevent.joinall(tasks)
+        util.check_gevent_exceptions(*tasks)
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
     elif tab == 'about':
         polymer_json = util.fetch_url(base_url + '/about?pbj=1', util.desktop_ua + headers_1, debug_name='gen_channel_about')

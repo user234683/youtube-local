@@ -287,6 +287,7 @@ def get_watch_page(video_id=None):
         gevent.spawn(extract_info, video_id)
     )
     gevent.joinall(tasks)
+    util.check_gevent_exceptions(tasks[1])
     comments_info, info = tasks[0].value, tasks[1].value
 
     if info['error']:

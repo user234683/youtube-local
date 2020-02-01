@@ -97,6 +97,12 @@ class HTTPAsymmetricCookieProcessor(urllib.request.BaseHandler):
     https_request = http_request
     https_response = http_response
 
+class FetchError(Exception):
+    def __init__(self, code, reason='', ip=None):
+        Exception.__init__(self, 'HTTP error during request: ' + code + ' ' + reason)
+        self.code = code
+        self.reason = reason
+        self.ip = ip
 
 def decode_content(content, encoding_header):
     encodings = encoding_header.replace(' ', '').split(',')
@@ -160,6 +166,17 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookieja
 
         content = response.read()
         response.release_conn()
+
+    if (response.status == 429
+            and content.startswith(b'<!DOCTYPE')
+            and b'Our systems have detected unusual traffic' in content):
+        ip = re.search(br'IP address: ((?:[\da-f]*:)+[\da-f]+|(?:\d+\.)+\d+)',
+            content)
+        ip = ip.group(1).decode('ascii') if ip else None
+        raise FetchError('429', reason=response.reason, ip=ip)
+
+    elif response.status >= 400:
+        raise FetchError(str(response.status), reason=response.reason, ip=None)
 
     read_finish = time.time()
     if report_text:
@@ -359,3 +376,9 @@ def parse_info_prepare_for_html(renderer, additional_info={}):
     add_extra_html_info(item)
 
     return item
+
+def check_gevent_exceptions(*tasks):
+    for task in tasks:
+        if task.exception:
+            raise task.exception
+
