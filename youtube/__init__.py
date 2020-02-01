@@ -41,8 +41,8 @@ def error_page(e):
         and settings.route_tor
     ):
         error_message = ('Error: Youtube blocked the request because the Tor'
-            ' exit node is overcrowded. Try getting a new exit node by'
-            ' restarting the Tor Browser.')
+            ' exit node is overutilized. Try getting a new exit node by'
+            ' using the New Identity button in the Tor Browser.')
         if exc_info()[1].ip:
             error_message += ' Exit node IP address: ' + exc_info()[1].ip
         return flask.render_template('error.html', error_message=error_message), 502
