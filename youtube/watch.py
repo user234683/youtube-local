@@ -12,6 +12,8 @@ import os
 import math
 import traceback
 import urllib
+import re
+import urllib3.exceptions
 
 try:
     with open(os.path.join(settings.data_dir, 'decrypt_function_cache.json'), 'r') as f:
@@ -232,6 +234,57 @@ def extract_info(video_id):
         decryption_error = 'Error decrypting url signatures: ' + decryption_error
         info['playability_error'] = decryption_error
 
+    # check for 403
+    if settings.route_tor and info['formats'] and info['formats'][0]['url']:
+        response = util.head(info['formats'][0]['url'],
+            report_text='Checked for URL access')
+        if response.status == 403:
+            print(('Access denied (403) for video urls.'
+                ' Retrieving urls from Invidious...'))
+            try:
+                video_info = util.fetch_url(
+                    'https://invidio.us/api/v1/videos/'
+                    + video_id
+                    + '?fields=adaptiveFormats,formatStreams',
+                    report_text='Retrieved urls from Invidious',
+                    debug_name='invidious_urls')
+            except (urllib3.exceptions.HTTPError) as e:
+                traceback.print_exc()
+                playability_error = ('Access denied (403) for video urls.'
+                        + ' Failed to use Invidious to get the urls: '
+                        + str(e))
+                if info['playability_error']:
+                    info['playability_error'] += '\n' + playability_error
+                else:
+                    info['playability_error'] = playability_error
+                
+                return info
+
+            video_info = json.loads(video_info.decode('utf-8'))
+            info['formats'] = []
+            for fmt in (video_info['adaptiveFormats']
+                        + video_info['formatStreams']):
+                # adjust keys to match our conventions
+                fmt['file_size'] = fmt.get('clen')
+                fmt['ext'] = fmt.get('container')
+                if 'resolution' in fmt:
+                    fmt['height'] = int(fmt['resolution'].rstrip('p'))
+
+                # update with information from _formats table such as ext
+                itag = fmt.get('itag')
+                fmt.update(yt_data_extract._formats.get(itag, {}))
+
+                # extract acodec, vcodec, and ext
+                # (need for 'ext' because 'container' not always present)
+                yt_data_extract.update_format_with_type_info(fmt, fmt)
+
+                # ensure keys are present
+                for key in ('ext', 'audio_bitrate', 'acodec', 'vcodec',
+                        'width', 'height', 'audio_sample_rate', 'fps'):
+                    if key not in fmt:
+                        fmt[key] = None
+
+                info['formats'].append(fmt)
     return info
 
 def video_quality_string(format):

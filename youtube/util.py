@@ -195,6 +195,14 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookieja
         return content, response
     return content
 
+def head(url, use_tor=False, report_text=None):
+    pool = get_pool(use_tor and settings.route_tor)
+    start_time = time.time()
+    response = pool.request('HEAD', url)
+    if report_text:
+        print(report_text, '    Latency:', round(time.time() - start_time,3))
+    return response
+
 mobile_user_agent = 'Mozilla/5.0 (Linux; Android 7.0; Redmi Note 4 Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Mobile Safari/537.36'
 mobile_ua = (('User-Agent', mobile_user_agent),)
 desktop_user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0'

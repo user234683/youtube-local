@@ -8,4 +8,5 @@ from .everything_else import (extract_channel_info, extract_search_info,
 
 from .watch_extraction import (extract_watch_info, get_caption_url,
     update_with_age_restricted_info, requires_decryption,
-    extract_decryption_function, decrypt_signatures)
+    extract_decryption_function, decrypt_signatures, _formats,
+    update_format_with_type_info)
