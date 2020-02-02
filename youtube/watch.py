@@ -235,12 +235,14 @@ def extract_info(video_id):
         info['playability_error'] = decryption_error
 
     # check for 403
+    info['invidious_used'] = False
     if settings.route_tor and info['formats'] and info['formats'][0]['url']:
         response = util.head(info['formats'][0]['url'],
             report_text='Checked for URL access')
         if response.status == 403:
             print(('Access denied (403) for video urls.'
                 ' Retrieving urls from Invidious...'))
+            info['invidious_used'] = True
             try:
                 video_info = util.fetch_url(
                     'https://invidio.us/api/v1/videos/'
@@ -418,6 +420,10 @@ def get_watch_page(video_id=None):
         limited_state = info['limited_state'],
         age_restricted    = info['age_restricted'],
         playability_error = info['playability_error'],
+
+        allowed_countries = info['allowed_countries'],
+        ip_address   = info['ip_address'] if settings.route_tor else None,
+        invidious_used    = info['invidious_used'],
     )
 
 

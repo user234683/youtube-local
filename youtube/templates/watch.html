@@ -137,6 +137,7 @@
                 grid-row:8;
                 grid-column: 1 / span 2;
                 background-color: var(--interface-color);
+                padding-bottom: 7px;
             }
                 .music-list table,th,td{
                     border: 1px solid;
@@ -150,6 +151,22 @@
                     font-weight:bold;
                     margin-bottom:5px;
                 }
+            .more-info{
+                grid-row: 9;
+                grid-column: 1 / span 2;
+                background-color: var(--interface-color);
+            }
+                .more-info > summary{
+                    font-weight: normal;
+                    border-width: 1px 0px;
+                    border-style: solid;
+                }
+                .more-info-content{
+                    padding: 5px;
+                }
+                    .more-info-content p{
+                        margin: 8px 0px;
+                    }
         .comments-area-outer{
             grid-column: 2;
             grid-row: 3;
@@ -316,6 +333,16 @@
                 </table>
             {% endif %}
         </div>
+        <details class="more-info">
+            <summary>More info</summary>
+            <div class="more-info-content">
+                <p>Tor exit node: {{ ip_address }}</p>
+                {% if invidious_used %}
+                    <p>Used Invidious as fallback.</p>
+                {% endif %}
+                <p class="allowed-countries">Allowed countries: {{ allowed_countries|join(', ') }}</p>
+            </div>
+        </details>
     </div>
 
     {% if related_videos_mode != 0 %}
