@@ -1,7 +1,7 @@
 # youtube-local
 
 ![screenshot](https://user-images.githubusercontent.com/28744867/64483429-8a890780-d1b6-11e9-8423-6956ff7c588d.png)
-youtube-local is a browser-based client written in Python for watching Youtube anonymously and without the lag of the slow page used by Youtube. One of the primary features is that all requests are routed through Tor, except for the video file at googlevideo.com. This is analogous to what HookTube (defunct) and invidious do, except that you do not have to trust a third-party to respect your privacy. The assumption here is that Google won't put the effort in to incorporate the video file requests into their tracking, as it's not worth pursuing the incredibly small number of users who care about privacy. Tor has high latency, so this will not be as fast as regular Youtube. However, using Tor is optional; when not routing through Tor, video pages may load faster than they do with Youtube's laggy page depending on your browser.
+youtube-local is a browser-based client written in Python for watching Youtube anonymously and without the lag of the slow page used by Youtube. One of the primary features is that all requests are routed through Tor, except for the video file at googlevideo.com. This is analogous to what HookTube (defunct) and Invidious do, except that you do not have to trust a third-party to respect your privacy. The assumption here is that Google won't put the effort in to incorporate the video file requests into their tracking, as it's not worth pursuing the incredibly small number of users who care about privacy. Tor has high latency, so this will not be as fast as regular Youtube. However, using Tor is optional; when not routing through Tor, video pages may load faster than they do with Youtube's page depending on your browser.
 
 The Youtube API is not used, so no keys or anything are needed. It uses the same requests as the Youtube webpage.
 
@@ -23,10 +23,12 @@ The Youtube API is not used, so no keys or anything are needed. It uses the same
 * Themes: Light, Gray, and Dark
 * Subtitles
 * Easily download videos or their audio
+* No ads
 * View or post comments
 * Works without Javascript
 * Theater and non-theater mode
 * Subscriptions that are independent from Youtube
+  * Can import subscriptions from Youtube
   * Works by checking channels individually
   * Can be set to automatically check channels.
   * For efficiency of requests, frequency of checking is based on how quickly channel posts videos
@@ -42,7 +44,7 @@ The Youtube API is not used, so no keys or anything are needed. It uses the same
 
 ## Planned features
 - [ ] Putting videos from subscriptions or local playlists into the related videos
-- [ ] Information about video (geographic regions, region of Tor exit node, etc)
+- [x] Information about video (geographic regions, region of Tor exit node, etc)
 - [ ] Ability to delete playlists
 - [ ] Auto-saving of local playlist videos
 - [ ] Import youtube playlist into a local playlist
@@ -51,8 +53,8 @@ The Youtube API is not used, so no keys or anything are needed. It uses the same
 - [ ] Corrected .m4a downloads
 - [ ] Replying to comment replies
 - [ ] Editing comments
-- [ ] Indicate if comments are disabled
-- [ ] Indicate how many comments a video has
+- [x] Indicate if comments are disabled
+- [x] Indicate how many comments a video has
 - [ ] Featured channels page
 - [ ] Channel comments
 - [ ] Video transcript
@@ -74,7 +76,7 @@ Download the tarball under the Releases page and extract it. `cd` into the direc
 pip3 install -r requirements.txt
 ```
 
-**Note**: If pip isn't installed, install it according to [this answer](https://unix.stackexchange.com/a/182467), but make sure you run `python3 get-pip.py` instead of `python get-pip.py`
+**Note**: If pip isn't installed, first try installing it from your package manager. Make sure you install pip for python 3. For example, the package you need on debian is python3-pip rather than python-pip. If your package manager doesn't provide it, try to install it according to [this answer](https://unix.stackexchange.com/a/182467), but make sure you run `python3 get-pip.py` instead of `python get-pip.py`
 
 ## Usage
 
@@ -83,8 +85,8 @@ Firstly, if you wish to run this in portable mode, create the empty file "settin
 To run the program on windows, open `run.bat`. On Linux/MacOS, run `python3 server.py`.
 
 
-Access youtube URLs by prefixing them with `localhost:8080/`, For instance, `http://localhost:8080/https://www.youtube.com/watch?v=vBgulDeV2RU`
-You can use an addon such as [Redirector](https://addons.mozilla.org/en-US/firefox/addon/redirector/) to automatically redirect Youtube URLs to youtube-local. I use the include pattern `^(https?://(?:[a-zA-Z0-9_-]*\.)?(?:youtube\.com|youtu\.be)/.*)` and the redirect pattern `http://localhost:8080/$1`.
+Access youtube URLs by prefixing them with `http://localhost:8080/`, For instance, `http://localhost:8080/https://www.youtube.com/watch?v=vBgulDeV2RU`
+You can use an addon such as Redirector ([Firefox](https://addons.mozilla.org/en-US/firefox/addon/redirector/)|[Chrome](https://chrome.google.com/webstore/detail/redirector/ocgpenflpmgnfapjedencafcfakcekcd)) to automatically redirect Youtube URLs to youtube-local. I use the include pattern `^(https?://(?:[a-zA-Z0-9_-]*\.)?(?:youtube\.com|youtu\.be)/.*)` and the redirect pattern `http://localhost:8080/$1`.
 
 youtube-local can be added as a search engine in firefox to make searching more convenient. See [here](https://support.mozilla.org/en-US/kb/add-or-remove-search-engine-firefox) for information on firefox search plugins.
 
@@ -103,7 +105,7 @@ This project is licensed under the GNU Affero General Public License v3 (GNU AGP
 Permission is hereby granted to the youtube-dl project at [https://github.com/rg3/youtube-dl](https://github.com/rg3/youtube-dl) to relicense any portion of this software under the Unlicense, public domain, or whichever license is in use by youtube-dl at the time of relicensing, for the purpose of inclusion of said portion into youtube-dl. Relicensing permission is not granted for any purpose outside of direct inclusion into the [official repository](https://github.com/rg3/youtube-dl) of youtube-dl. If inclusion happens during the process of a pull-request, relicensing happens at the moment the pull request is merged into youtube-dl; until that moment, any cloned repositories of youtube-dl which make use of this software are subject to the terms of the GNU AGPLv3.
 
 ## Similar projects
-- [youtube-dl](https://rg3.github.io/youtube-dl/), which this project is based off
+- [youtube-dl](https://rg3.github.io/youtube-dl/), which this project was based off
 - [invidious](https://github.com/omarroth/invidious) Nearly identical to this project. More polished and with more features.
 - [NewPipe](https://newpipe.schabi.org/) (app for android)
 - [mps-youtube](https://github.com/mps-youtube/mps-youtube) (terminal-only program)
@@ -112,4 +114,3 @@ Permission is hereby granted to the youtube-dl project at [https://github.com/rg
 - [smtube](https://www.smtube.org/)
 - [Minitube](https://flavio.tordini.org/minitube), [github here](https://github.com/flaviotordini/minitube)
 - [toogles](https://github.com/mikecrittenden/toogles) (only embeds videos, doesn't use mp4)
-- [goyt](https://gitgud.io/m712/goyt/)
