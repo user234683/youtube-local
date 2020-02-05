@@ -263,30 +263,20 @@ def extract_info(video_id):
                 return info
 
             video_info = json.loads(video_info.decode('utf-8'))
-            info['formats'] = []
-            for fmt in (video_info['adaptiveFormats']
+            # collect invidious urls for each itag
+            itag_to_url = {}
+            for invidious_fmt in (video_info['adaptiveFormats']
                         + video_info['formatStreams']):
-                # adjust keys to match our conventions
-                fmt['file_size'] = fmt.get('clen')
-                fmt['ext'] = fmt.get('container')
-                if 'resolution' in fmt:
-                    fmt['height'] = int(fmt['resolution'].rstrip('p'))
+                itag_to_url[invidious_fmt['itag']] = invidious_fmt['url']
 
-                # update with information from _formats table such as ext
-                itag = fmt.get('itag')
-                fmt.update(yt_data_extract._formats.get(itag, {}))
-
-                # extract acodec, vcodec, and ext
-                # (need for 'ext' because 'container' not always present)
-                yt_data_extract.update_format_with_type_info(fmt, fmt)
-
-                # ensure keys are present
-                for key in ('ext', 'audio_bitrate', 'acodec', 'vcodec',
-                        'width', 'height', 'audio_sample_rate', 'fps'):
-                    if key not in fmt:
-                        fmt[key] = None
-
-                info['formats'].append(fmt)
+            # replace urls with urls from invidious
+            for fmt in info['formats']:
+                itag = str(fmt['itag'])
+                if itag not in itag_to_url:
+                    print(('Warning: itag '
+                        + itag + ' not found in invidious urls'))
+                    continue
+                fmt['url'] = itag_to_url[itag]
     return info
 
 def video_quality_string(format):
