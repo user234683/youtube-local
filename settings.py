@@ -147,6 +147,7 @@ For security reasons, enabling this is not recommended.''',
     }),
 ])
 
+program_directory = os.path.dirname(os.path.realpath(__file__))
 acceptable_targets = settings_info.keys() | {'enable_comments', 'enable_related_videos'}
 
 

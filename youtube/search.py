@@ -8,6 +8,7 @@ import base64
 import mimetypes
 from flask import request
 import flask
+import os
 
 # Sort: 1
     # Upload date: 2
@@ -106,6 +107,6 @@ def get_search_page():
 
 @yt_app.route('/opensearch.xml')
 def get_search_engine_xml():
-    with open("youtube/opensearch.xml", 'rb') as f:
+    with open(os.path.join(settings.program_directory, 'youtube/opensearch.xml'), 'rb') as f:
         content = f.read().replace(b'$port_number', str(settings.port_number).encode())
         return flask.Response(content, mimetype='application/xml')
