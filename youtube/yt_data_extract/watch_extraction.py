@@ -232,7 +232,7 @@ def _extract_watch_info_desktop(top_level):
     info = {
         'comment_count': None,
         'comments_disabled': None,
-        'allowed_countries': None,
+        'allowed_countries': [],
         'limited_state': None,
     }
 
@@ -323,7 +323,8 @@ def _extract_formats(info, player_response):
         query_string = info['formats'][0].get('url', '?').split('?')[1]
         info['ip_address'] = deep_get(
             urllib.parse.parse_qs(query_string), 'ip', 0)
-
+    else:
+        info['ip_address'] = None
 
 
 def _extract_playability_error(info, player_response, error_prefix=''):
