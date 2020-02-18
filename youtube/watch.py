@@ -208,6 +208,8 @@ headers = (
 ) + util.mobile_ua
 
 def extract_info(video_id):
+    # bpctr=9999999999 will bypass are-you-sure dialogs for controversial
+    # videos
     polymer_json = util.fetch_url('https://m.youtube.com/watch?v=' + video_id + '&pbj=1&bpctr=9999999999', headers=headers, debug_name='watch').decode('utf-8')
     # TODO: Decide whether this should be done in yt_data_extract.extract_watch_info
     try:
@@ -237,8 +239,14 @@ def extract_info(video_id):
     # check for 403
     info['invidious_used'] = False
     if settings.route_tor and info['formats'] and info['formats'][0]['url']:
-        response = util.head(info['formats'][0]['url'],
-            report_text='Checked for URL access')
+        try:
+            response = util.head(info['formats'][0]['url'],
+                report_text='Checked for URL access')
+        except urllib3.exceptions.HTTPError:
+            print('Error while checking for URL access:\n')
+            traceback.print_exc()
+            return info
+
         if response.status == 403:
             print(('Access denied (403) for video urls.'
                 ' Retrieving urls from Invidious...'))
@@ -277,6 +285,8 @@ def extract_info(video_id):
                         + itag + ' not found in invidious urls'))
                     continue
                 fmt['url'] = itag_to_url[itag]
+        elif 300 <= response.status < 400:
+            print('Error: exceeded max redirects while checking video URL')
     return info
 
 def video_quality_string(format):

@@ -195,10 +195,18 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookieja
         return content, response
     return content
 
-def head(url, use_tor=False, report_text=None):
+def head(url, use_tor=False, report_text=None, max_redirects=10):
     pool = get_pool(use_tor and settings.route_tor)
     start_time = time.time()
-    response = pool.request('HEAD', url)
+
+    # default: Retry.DEFAULT = Retry(3)
+    # (in connectionpool.py in urllib3)
+    # According to the documentation for urlopen, a redirect counts as a retry
+    # by default. So there are 3 redirects max by default. Let's change that
+    # to 10 since googlevideo redirects a lot.
+    retries = urllib3.Retry(3+max_redirects, redirect=max_redirects,
+        raise_on_redirect=False)
+    response = pool.request('HEAD', url, retries=retries)
     if report_text:
         print(report_text, '    Latency:', round(time.time() - start_time,3))
     return response
