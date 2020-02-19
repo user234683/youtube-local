@@ -410,8 +410,24 @@ def _get_atoma_feed(channel_id):
     try:
         return util.fetch_url(url).decode('utf-8')
     except util.FetchError as e:
-        if e.code == '404': # 404 is expected for terminated channels
+        # 404 is expected for terminated channels
+        if e.code in ('404', '429'):
             return ''
+        raise
+
+def _get_channel_tab(channel_id, channel_status_name):
+    try:
+        return channel.get_channel_tab(channel_id, print_status=False)
+    except util.FetchError as e:
+        if e.code == '429' and settings.route_tor:
+            error_message = ('Error checking channel ' + channel_status_name
+                + ': Youtube blocked the request because the'
+                + ' Tor exit node is overutilized. Try getting a new exit node'
+                + ' by using the New Identity button in the Tor Browser.')
+            if e.ip:
+                error_message += ' Exit node IP address: ' + e.ip
+            print(error_message)
+            return None
         raise
 
 def _get_upstream_videos(channel_id):
@@ -423,8 +439,10 @@ def _get_upstream_videos(channel_id):
     print("Checking channel: " + channel_status_name)
 
     tasks = (
-        gevent.spawn(channel.get_channel_tab, channel_id, print_status=False), # channel page, need for video duration
-        gevent.spawn(_get_atoma_feed, channel_id) # need atoma feed for exact published time
+        # channel page, need for video duration
+        gevent.spawn(_get_channel_tab, channel_id, channel_status_name),
+        # need atoma feed for exact published time
+        gevent.spawn(_get_atoma_feed, channel_id)
     )
     gevent.joinall(tasks)
 
@@ -466,6 +484,8 @@ def _get_upstream_videos(channel_id):
     except defusedxml.ElementTree.ParseError:
         print('Failed to read atoma feed for ' + channel_status_name)
 
+    if channel_tab is None: # there was an error
+        return
     channel_info = yt_data_extract.extract_channel_info(json.loads(channel_tab), 'videos')
     if channel_info['error']:
         print('Error checking channel ' + channel_status_name + ': ' + channel_info['error'])
