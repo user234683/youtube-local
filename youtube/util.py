@@ -206,7 +206,8 @@ def head(url, use_tor=False, report_text=None, max_redirects=10):
     # to 10 since googlevideo redirects a lot.
     retries = urllib3.Retry(3+max_redirects, redirect=max_redirects,
         raise_on_redirect=False)
-    response = pool.request('HEAD', url, retries=retries)
+    headers = {'User-Agent': 'Python-urllib'}
+    response = pool.request('HEAD', url, headers=headers, retries=retries)
     if report_text:
         print(report_text, '    Latency:', round(time.time() - start_time,3))
     return response
