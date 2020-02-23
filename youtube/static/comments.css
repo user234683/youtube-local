@@ -12,7 +12,7 @@
     }
     .video-metadata > h2{
         grid-row: 2;
-        font-size: 15px;
+        font-size: 0.875rem;
     }
     .video-metadata > span{
         grid-row:3;
