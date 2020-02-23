@@ -319,6 +319,8 @@ def check_channel_worker():
         channel_id = check_channels_queue.get()
         try:
             _get_upstream_videos(channel_id)
+        except Exception:
+            traceback.print_exc()
         finally:
             checking_channels.remove(channel_id)
 
