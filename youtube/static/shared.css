@@ -11,6 +11,10 @@ address{
     font-style:normal;
 }
 
+html{
+    font-family: "liberation serif", "times new roman", calibri, carlito, serif;
+}
+
 body{
     margin:0;
     padding: 0;
@@ -168,7 +172,7 @@ body{
     .item{
         background-color:var(--interface-color);
         text-decoration:none;
-        font-size: 0.75rem;
+        font-size: 0.8125rem;
         color: #767676;
     }
 
@@ -205,7 +209,7 @@ body{
                 right: 2px;
                 opacity: .8;
                 color: #ffffff;
-                font-size: 0.75rem;
+                font-size: 0.8125rem;
                 background-color: #000000;
             }
             .playlist-item .thumbnail-info{
@@ -218,7 +222,7 @@ body{
                 white-space: pre-line;
                 opacity: .8;
                 color: #cfcfcf;
-                font-size: 0.75rem;
+                font-size: 0.8125rem;
                 background-color: #000000;
             }
                 .playlist-item .thumbnail-info span{ /* trick to vertically center the text */
