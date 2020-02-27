@@ -531,22 +531,19 @@ def _get_upstream_videos(channel_id):
         with connection as cursor:
 
             # calculate how many new videos there are
-            row = cursor.execute('''SELECT video_id
-                                    FROM videos
-                                    INNER JOIN subscribed_channels ON videos.sql_channel_id = subscribed_channels.id
-                                    WHERE yt_channel_id=?
-                                    ORDER BY time_published DESC
-                                    LIMIT 1''', [channel_id]).fetchone()
-            if row is None:
-                number_of_new_videos = len(videos)
-            else:
-                latest_video_id = row[0]
-                index = 0
-                for video in videos:
-                    if video['id'] == latest_video_id:
-                        break
-                    index += 1
-                number_of_new_videos = index
+            existing_vids = set(row[0] for row in cursor.execute(
+                '''SELECT video_id
+                   FROM videos
+                   INNER JOIN subscribed_channels
+                       ON videos.sql_channel_id = subscribed_channels.id
+                   WHERE yt_channel_id=?
+                   ORDER BY time_published DESC
+                   LIMIT 30''', [channel_id]).fetchall())
+            number_of_new_videos = 0
+            for video in videos:
+                if video['id'] in existing_vids:
+                    break
+                number_of_new_videos += 1
 
             is_first_check = cursor.execute('''SELECT time_last_checked FROM subscribed_channels WHERE yt_channel_id=?''', [channel_id]).fetchone()[0] in (None, 0)
             time_videos_retrieved = int(time.time())
