@@ -357,6 +357,15 @@ def left_remove(string, substring):
         return string[len(substring):]
     return string
 
+def concat_or_none(*strings):
+    '''Concatenates strings. Returns None if any of the arguments are None'''
+    result = ''
+    for string in strings:
+        if string is None:
+            return None
+        result += string
+    return result
+
 
 def prefix_urls(item):
     try:

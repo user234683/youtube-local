@@ -1,4 +1,5 @@
 from youtube import proto, util, yt_data_extract, accounts
+from youtube.util import concat_or_none
 from youtube import yt_app
 import settings
 
@@ -88,22 +89,29 @@ def single_comment_ctoken(video_id, comment_id):
 
 def post_process_comments_info(comments_info):
     for comment in comments_info['comments']:
-        comment['author_url'] = util.URL_ORIGIN + comment['author_url']
-        comment['author_avatar'] = '/' + comment['author_avatar']
+        comment['author_url'] = concat_or_none(
+            util.URL_ORIGIN, comment['author_url'])
+        comment['author_avatar'] = concat_or_none(
+            '/', comment['author_avatar'])
 
-        comment['permalink'] = util.URL_ORIGIN + '/watch?v=' + comments_info['video_id'] + '&lc=' + comment['id']
+        comment['permalink'] = concat_or_none(util.URL_ORIGIN, '/watch?v=',
+            comments_info['video_id'], '&lc=', comment['id'])
 
         if comment['author_id'] in accounts.accounts:
-            comment['delete_url'] = (util.URL_ORIGIN + '/delete_comment?video_id='
-                + comments_info['video_id']
-                + '&channel_id='+ comment['author_id']
-                + '&comment_id=' + comment['id'])
+            comment['delete_url'] = concat_or_none(util.URL_ORIGIN,
+                '/delete_comment?video_id=', comments_info['video_id'],
+                '&channel_id=', comment['author_id'],
+                '&comment_id=', comment['id'])
 
         reply_count = comment['reply_count']
         if reply_count == 0:
-            comment['replies_url'] = util.URL_ORIGIN + '/post_comment?parent_id=' + comment['id'] + "&video_id=" + comments_info['video_id']
+            comment['replies_url'] = concat_or_none(util.URL_ORIGIN,
+                '/post_comment?parent_id=', comment['id'],
+                '&video_id=', comments_info['video_id'])
         else:
-            comment['replies_url'] = util.URL_ORIGIN + '/comments?parent_id=' + comment['id'] + "&video_id=" + comments_info['video_id']
+            comment['replies_url'] = concat_or_none(util.URL_ORIGIN,
+                '/comments?parent_id=', comment['id'],
+                '&video_id=', comments_info['video_id'])
 
         if reply_count == 0:
             comment['view_replies_text'] = 'Reply'
@@ -120,7 +128,8 @@ def post_process_comments_info(comments_info):
 
     comments_info['include_avatars'] = settings.enable_comment_avatars
     if comments_info['ctoken']:
-        comments_info['more_comments_url'] = util.URL_ORIGIN + '/comments?ctoken=' + comments_info['ctoken']
+        comments_info['more_comments_url'] = concat_or_none(util.URL_ORIGIN,
+            '/comments?ctoken=', comments_info['ctoken'])
 
     comments_info['page_number'] = page_number = str(int(comments_info['offset']/20) + 1)
 
@@ -128,8 +137,10 @@ def post_process_comments_info(comments_info):
         comments_info['sort_text'] = 'top' if comments_info['sort'] == 0 else 'newest'
 
 
-    comments_info['video_url'] = util.URL_ORIGIN + '/watch?v=' + comments_info['video_id']
-    comments_info['video_thumbnail'] = '/i.ytimg.com/vi/'+ comments_info['video_id'] + '/mqdefault.jpg'
+    comments_info['video_url'] = concat_or_none(util.URL_ORIGIN,
+        '/watch?v=', comments_info['video_id'])
+    comments_info['video_thumbnail'] = concat_or_none('/i.ytimg.com/vi/',
+        comments_info['video_id'], '/mqdefault.jpg')
 
 
 def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
