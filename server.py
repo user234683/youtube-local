@@ -74,6 +74,9 @@ def error_code(code, start_response):
 def site_dispatch(env, start_response):
     client_address = env['REMOTE_ADDR']
     try:
+        # correct malformed query string with ? separators instead of &
+        env['QUERY_STRING'] = env['QUERY_STRING'].replace('?', '&')
+
         method = env['REQUEST_METHOD']
         path = env['PATH_INFO']
 
