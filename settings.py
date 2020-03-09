@@ -286,6 +286,14 @@ if route_tor:
 else:
     print("Tor routing is OFF - your Youtube activity is NOT anonymous")
 
+hooks = {}
+def add_setting_changed_hook(setting, func):
+    '''Called right before new settings take effect'''
+    if setting in hooks:
+        hooks[setting].append(func)
+    else:
+        hooks[setting] = [func]
+
 
 def settings_page():
     if request.method == 'GET':
@@ -308,6 +316,13 @@ def settings_page():
         for setting_name in missing_inputs:
             assert settings_info[setting_name]['type'] is bool, missing_inputs
             settings[setting_name] = False
+
+        # call setting hooks
+        for setting_name, value in settings.items():
+            old_value = globals()[setting_name]
+            if value != old_value and setting_name in hooks:
+                for func in hooks[setting_name]:
+                    func(old_value, value)
 
         globals().update(settings)
         save_settings(settings)
