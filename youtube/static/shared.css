@@ -164,6 +164,9 @@ body{
 .item-box{
     display: inline-flex;
     flex-direction: row;
+    /* prevent overflow due to long titles with no spaces: 
+    https://stackoverflow.com/a/43312314 */
+    min-width: 0;
 }
 .vertical-item-box{
 }
@@ -182,6 +185,9 @@ body{
         align-content: start;
         grid-template-columns: auto 1fr;
         grid-template-rows: auto auto auto auto 1fr;
+        /* prevent overflow due to long titles with no spaces: 
+        https://stackoverflow.com/a/43312314 */
+        min-width: 0;
     }
     .vertical-item-box .item{
         width: 168px;
@@ -244,7 +250,8 @@ body{
             min-width: 0;
             line-height:1.25em;
             max-height:3.75em;
-            overflow:hidden;
+            overflow-y: hidden;
+            overflow-wrap: break-word;
 
             color: var(--text-color);
             font-size: 1rem;
