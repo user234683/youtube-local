@@ -210,6 +210,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     if tab == 'videos':
         info['number_of_videos'] = number_of_videos
         info['number_of_pages'] = math.ceil(number_of_videos/30)
+        info['header_playlist_names'] = local_playlist.get_playlist_names()
     if tab in ('videos', 'playlists'):
         info['current_sort'] = sort
     elif tab == 'search':
