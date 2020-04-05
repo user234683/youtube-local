@@ -73,6 +73,15 @@ def conservative_update(obj, key, value):
     if obj.get(key) is None:
         obj[key] = value
 
+def concat_or_none(*strings):
+    '''Concatenates strings. Returns None if any of the arguments are None'''
+    result = ''
+    for string in strings:
+        if string is None:
+            return None
+        result += string
+    return result
+
 def remove_redirect(url):
     if url is None:
         return None
@@ -268,6 +277,23 @@ def extract_item_info(item, additional_info={}):
                 info['approx_view_count'] = '0'
 
         info['duration'] = extract_str(item.get('lengthText'))
+
+        # if it's an item in a playlist, get its index
+        if 'index' in item: # url has wrong index on playlist page 
+            info['index'] = extract_int(item.get('index'))
+        elif 'indexText' in item:
+            # Current item in playlist has ▶ instead of the actual index, must
+            # dig into url
+            match = re.search(r'index=(\d+)', deep_get(item,
+                'navigationEndpoint', 'commandMetadata', 'webCommandMetadata',
+                'url', default=''))
+            if match is None:   # worth a try then
+                info['index'] = extract_int(item.get('indexText'))
+            else:
+                info['index'] = int(match.group(1))
+        else:
+            info['index'] = None
+
     elif primary_type in ('playlist', 'radio'):
         info['id'] = item.get('playlistId')
         info['video_count'] = extract_int(item.get('videoCount'))

@@ -14,14 +14,18 @@
     {%- endif -%}
 {% endmacro %}
 
-{% macro item(info, description=false, horizontal=true, include_author=true, include_badges=true) %}
+{% macro item(info, description=false, horizontal=true, include_author=true, include_badges=true, lazy_load=false) %}
     <div class="item-box {{ info['type'] + '-item-box' }} {{'horizontal-item-box' if horizontal else 'vertical-item-box'}} {{'has-description' if description else 'no-description'}}">
         {% if info['error'] %}
             {{ info['error'] }}
         {% else %}
             <div class="item {{ info['type'] + '-item' }}">
                 <a class="thumbnail-box" href="{{ info['url'] }}" title="{{ info['title'] }}">
-                    <img class="thumbnail-img" src="{{ info['thumbnail'] }}">
+                    {% if lazy_load %}
+                        <img class="thumbnail-img lazy" data-src="{{ info['thumbnail'] }}">
+                    {% else %}
+                        <img class="thumbnail-img" src="{{ info['thumbnail'] }}">
+                    {% endif %}
                     {% if info['type'] != 'channel' %}
                         <div class="thumbnail-info">
                             <span>{{ (info['video_count']|commatize + ' videos') if info['type'] == 'playlist' else info['duration'] }}</span>

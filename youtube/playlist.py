@@ -105,6 +105,10 @@ def get_playlist_page():
         if 'id' in item:
             item['thumbnail'] = '/https://i.ytimg.com/vi/' + item['id'] + '/default.jpg'
 
+        item['url'] += '&list=' + playlist_id
+        if item['index']:
+            item['url'] += '&index=' + str(item['index'])
+
     video_count = yt_data_extract.deep_get(info, 'metadata', 'video_count')
     if video_count is None:
         video_count = 40

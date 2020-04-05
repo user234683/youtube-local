@@ -207,10 +207,16 @@ headers = (
     ('X-YouTube-Client-Version', '2.20180830'),
 ) + util.mobile_ua
 
-def extract_info(video_id):
+def extract_info(video_id, playlist_id=None, index=None):
     # bpctr=9999999999 will bypass are-you-sure dialogs for controversial
     # videos
-    polymer_json = util.fetch_url('https://m.youtube.com/watch?v=' + video_id + '&pbj=1&bpctr=9999999999', headers=headers, debug_name='watch').decode('utf-8')
+    url = 'https://m.youtube.com/watch?v=' + video_id + '&pbj=1&bpctr=9999999999'
+    if playlist_id:
+        url += '&list=' + playlist_id
+    if index:
+        url += '&index=' + index
+    polymer_json = util.fetch_url(url, headers=headers, debug_name='watch')
+    polymer_json = polymer_json.decode('utf-8')
     # TODO: Decide whether this should be done in yt_data_extract.extract_watch_info
     try:
         polymer_json = json.loads(polymer_json)
@@ -337,9 +343,12 @@ def get_watch_page(video_id=None):
         return flask.render_template('error.html', error_message='Incomplete video id (too short): ' + video_id), 404
 
     lc = request.args.get('lc', '')
+    playlist_id = request.args.get('list')
+    index = request.args.get('index')
     tasks = (
         gevent.spawn(comments.video_comments, video_id, int(settings.default_comment_sorting), lc=lc ),
-        gevent.spawn(extract_info, video_id)
+        gevent.spawn(extract_info, video_id, playlist_id=playlist_id,
+            index=index)
     )
     gevent.joinall(tasks)
     util.check_gevent_exceptions(tasks[1])
@@ -358,6 +367,18 @@ def get_watch_page(video_id=None):
     for item in info['related_videos']:
         util.prefix_urls(item)
         util.add_extra_html_info(item)
+
+    if info['playlist']:
+        playlist_id = info['playlist']['id']
+        for item in info['playlist']['items']:
+            util.prefix_urls(item)
+            util.add_extra_html_info(item)
+            if playlist_id:
+                item['url'] += '&list=' + playlist_id
+            if item['index']:
+                item['url'] += '&index=' + str(item['index'])
+        info['playlist']['author_url'] = util.prefix_url(
+            info['playlist']['author_url'])
 
     if settings.gather_googlevideo_domains:
         with open(os.path.join(settings.data_dir, 'googlevideo-domains.txt'), 'a+', encoding='utf-8') as f:
@@ -400,6 +421,7 @@ def get_watch_page(video_id=None):
         video_sources           = video_sources,
         subtitle_sources        = get_subtitle_sources(info),
         related                 = info['related_videos'],
+        playlist                = info['playlist'],
         music_list              = info['music_list'],
         music_attributes        = get_ordered_music_list_attributes(info['music_list']),
         comments_info           = comments_info,

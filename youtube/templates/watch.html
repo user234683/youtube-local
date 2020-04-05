@@ -37,7 +37,7 @@
             margin-bottom: 10px;
             background-color: var(--video-background-color);
         }
-        .related-videos-outer{
+        .side-videos{
             grid-row: 2 /span 3;
             width: 400px;
         }
@@ -50,7 +50,7 @@
             width: 640px;
             grid-column: 2;
         }
-        .related-videos-outer{
+        .side-videos{
             grid-row: 1 /span 4;
         }
     {% endif %}
@@ -183,20 +183,54 @@
             .comment{
                 width:640px;
             }
-        .related-videos-outer{
+
+        .side-videos{
             grid-column: 4;
             max-width: 640px;
         }
-        .related-videos-inner{
-            padding-top: 10px;
-            display: grid;
-            grid-auto-rows: 90px;
-            grid-row-gap: 10px;
-        }
-            .thumbnail-box{     /* overides rule in shared.css */
-                height: 90px !important;
-                width: 120px !important;
+            .playlist{
+                border-style: solid;
+                border-width: 2px;
+                border-color: lightgray;
+                margin-bottom: 10px;
             }
+                .playlist-header{
+                    background-color: var(--interface-color);
+                    padding: 3px;
+                    border-bottom-style: solid;
+                    border-bottom-width: 2px;
+                    border-bottom-color: lightgray;
+                }
+                    .playlist-header h3{
+                        margin: 2px;
+                    }
+                    .playlist-metadata{
+                        list-style: none;
+                        padding: 0px;
+                        margin: 0px;
+                    }
+                        .playlist-metadata li{
+                            display: inline;
+                            margin: 2px;
+                        }
+                .playlist-videos{
+                    height: 300px;
+                    overflow-y: scroll;
+                    display: grid;
+                    grid-auto-rows: 90px;
+                    grid-row-gap: 10px;
+                    padding-top: 10px;
+                }
+            .related-videos-inner{
+                padding-top: 10px;
+                display: grid;
+                grid-auto-rows: 90px;
+                grid-row-gap: 10px;
+            }
+                .thumbnail-box{     /* overides rule in shared.css */
+                    height: 90px !important;
+                    width: 120px !important;
+                }
 
     /* Put related vids below videos when window is too small */
     /* 1100px instead of 1080 because W3C is full of idiots who include scrollbar width */
@@ -204,7 +238,7 @@
         main{
             grid-template-columns: 1fr 640px 40px 1fr;
         }
-        .related-videos-outer{
+        .side-videos{
             margin-top: 10px;
             grid-column: 2;
             grid-row: 3;
@@ -345,16 +379,165 @@
         </details>
     </div>
 
-    {% if related_videos_mode != 0 %}
-        <details class="related-videos-outer" {{'open' if related_videos_mode == 1 else ''}}>
-            <summary>Related Videos</summary>
-            <nav class="related-videos-inner">
-                {% for info in related %}
-                    {{ common_elements.item(info, include_badges=false) }}
-                {% endfor %}
-            </nav>
-        </details>
-    {% endif %}
+    <div class="side-videos">
+        {% if playlist %}
+            <div class="playlist">
+                <div class="playlist-header">
+                    <a href="{{ playlist['url'] }}" title="{{ playlist['title'] }}"><h3>{{ playlist['title'] }}</h3></a>
+                    <ul class="playlist-metadata">
+                        <li>Autoplay: <input type="checkbox" id="autoplay-toggle"></li>
+                        {% if playlist['current_index'] is none %}
+                            <li>[Error!]/{{ playlist['video_count'] }}</li>
+                        {% else %}
+                            <li>{{ playlist['current_index']+1 }}/{{ playlist['video_count'] }}</li>
+                        {% endif %}
+                        <li><a href="{{ playlist['author_url'] }}" title="{{ playlist['author'] }}">{{ playlist['author'] }}</a></li>
+                    </ul>
+                </div>
+                <nav class="playlist-videos">
+                    {% for info in playlist['items'] %}
+                        {# non-lazy load for 5 videos surrounding current video #}
+                        {# for non-js browsers or old such that IntersectionObserver doesn't work #}
+                        {# -10 is sentinel to not load anything if there's no current_index for some reason #}
+                        {% if (playlist.get('current_index', -10) - loop.index0)|abs is lt(5)  %}
+                            {{ common_elements.item(info, include_badges=false, lazy_load=false) }}
+                        {% else %}
+                            {{ common_elements.item(info, include_badges=false, lazy_load=true) }}
+                        {% endif %}
+                    {% endfor %}
+                </nav>
+                {% if playlist['current_index'] is not none %}
+                    <script>
+                        // from https://stackoverflow.com/a/6969486
+                        function escapeRegExp(string) {
+                          return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+                        }
+                        var playability_error = {{ 'true' if playability_error else 'false' }};
+                        var playlist_id = {{ playlist['id']|tojson }};
+                        playlist_id = escapeRegExp(playlist_id);
+
+                        // read cookies on whether to autoplay thru playlist
+                        // pain in the ass:
+                        // https://developer.mozilla.org/en-US/docs/Web/API/Document/cookie
+                        var cookieValue = document.cookie.replace(new RegExp(
+                            '(?:(?:^|.*;\\s*)autoplay_' + playlist_id + '\\s*\\=\\s*([^;]*).*$)|^.*$'), '$1');
+                        var autoplayEnabled = 0;
+                        if(cookieValue.length === 0){
+                            autoplayEnabled = 0;
+                        } else {
+                            autoplayEnabled = Number(cookieValue);
+                        }
+
+                        // check the checkbox if autoplay is on
+                        var checkbox = document.querySelector('#autoplay-toggle');
+                        if(autoplayEnabled){
+                            checkbox.checked = true;
+                        }
+
+                        // listen for checkbox to turn autoplay on and off
+                        checkbox.addEventListener( 'change', function() {
+                            if(this.checked) {
+                                autoplayEnabled = 1;
+                                document.cookie = 'autoplay_' + playlist_id + '=1';
+                            } else {
+                                autoplayEnabled = 0;
+                                document.cookie = 'autoplay_' + playlist_id + '=0';
+                            }
+                        });
+
+                        if(!playability_error){
+                            // play the video if autoplay is on
+                            var vid = document.querySelector('video');
+                            if(autoplayEnabled){
+                                vid.play();
+                            }
+                        }
+
+                        var currentIndex = {{ playlist['current_index']|tojson }};
+                        {% if playlist['current_index']+1 == playlist['items']|length %}
+                            var nextVideoUrl = null;
+                        {% else %}
+                            var nextVideoUrl = {{ (playlist['items'][playlist['current_index']+1]['url'])|tojson }};
+                        {% endif %}
+                        var nextVideoDelay = 1000;
+
+                        // scroll playlist to proper position
+                        var pl = document.querySelector('.playlist-videos');
+                        // item height + gap == 100
+                        pl.scrollTop = 100*currentIndex;
+
+                        // go to next video when video ends
+                        // https://stackoverflow.com/a/2880950
+                        if(nextVideoUrl){
+                            if(playability_error){
+                                videoEnded();
+                            } else {
+                                vid.addEventListener('ended', videoEnded, false);
+                            }
+                            function nextVideo(){
+                                if(autoplayEnabled){
+                                    window.location.href = nextVideoUrl;
+                                }
+                            }
+                            function videoEnded(e) {
+                                window.setTimeout(nextVideo, nextVideoDelay);
+                            }
+                        }
+                    </script>
+                {% endif %}
+                {% if playlist['id'] is not none %}
+                    <script>
+                        // lazy load playlist images
+                        // copied almost verbatim from
+                        // https://css-tricks.com/tips-for-rolling-your-own-lazy-loading/
+                        // IntersectionObserver isn't supported in pre-quantum
+                        // firefox versions, but the alternative of making it
+                        // manually is a performance drain, so oh well
+                        var observer = new IntersectionObserver(lazyLoad, {
+
+                          // where in relation to the edge of the viewport, we are observing
+                          rootMargin: "100px",
+
+                          // how much of the element needs to have intersected 
+                          // in order to fire our loading function
+                          threshold: 1.0
+
+                        });
+
+                        function lazyLoad(elements) {
+                          elements.forEach(item => {
+                            if (item.intersectionRatio > 0) {
+
+                              // set the src attribute to trigger a load
+                              item.target.src = item.target.dataset.src;
+
+                              // stop observing this element. Our work here is done!
+                              observer.unobserve(item.target);
+                            };
+                          });
+                        };
+
+                        // Tell our observer to observe all img elements with a "lazy" class
+                        var lazyImages = document.querySelectorAll('img.lazy');
+                        lazyImages.forEach(img => {
+                          observer.observe(img);
+                        });
+                    </script>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if related_videos_mode != 0 %}
+            <details class="related-videos-outer" {{'open' if related_videos_mode == 1 else ''}}>
+                <summary>Related Videos</summary>
+                <nav class="related-videos-inner">
+                    {% for info in related %}
+                        {{ common_elements.item(info, include_badges=false) }}
+                    {% endfor %}
+                </nav>
+            </details>
+        {% endif %}
+    </div>
 
     {% if comments_mode != 0 %}
         {% if comments_disabled %}

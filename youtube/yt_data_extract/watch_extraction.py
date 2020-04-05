@@ -2,7 +2,7 @@ from .common import (get, multi_get, deep_get, multi_deep_get,
     liberal_update, conservative_update, remove_redirect, normalize_url,
     extract_str, extract_formatted_text, extract_int, extract_approx_int,
     extract_date, check_missing_keys, extract_item_info, extract_items,
-    extract_response)
+    extract_response, concat_or_none)
 
 import json
 import urllib.parse
@@ -160,7 +160,37 @@ def _extract_watch_info_mobile(top_level):
 
     response = top_level.get('response', {})
 
-    # video info from metadata renderers
+    # this renderer has the stuff visible on the page
+    # check for playlist
+    items, _ = extract_items(response,
+        item_types={'singleColumnWatchNextResults'})
+    if items:
+        watch_next_results = items[0]['singleColumnWatchNextResults']
+        playlist = deep_get(watch_next_results, 'playlist', 'playlist')
+        if playlist is None:
+            info['playlist'] = None
+        else:
+            info['playlist'] = {}
+            info['playlist']['title'] = playlist.get('title')
+            info['playlist']['author'] = extract_str(multi_get(playlist, 
+                'ownerName', 'longBylineText', 'shortBylineText', 'ownerText'))
+            author_id = deep_get(playlist, 'longBylineText', 'runs', 0,
+                'navigationEndpoint', 'browseEndpoint', 'browseId')
+            info['playlist']['author_id'] = author_id
+            if author_id:
+                info['playlist']['author_url'] = concat_or_none(
+                    'https://www.youtube.com/channel/', author_id)
+            info['playlist']['id'] = playlist.get('playlistId')
+            info['playlist']['url'] = concat_or_none(
+                'https://www.youtube.com/playlist?list=',
+                info['playlist']['id'])
+            info['playlist']['video_count'] = playlist.get('totalVideos')
+            info['playlist']['current_index'] = playlist.get('currentIndex')
+            info['playlist']['items'] = [
+                extract_item_info(i) for i in playlist.get('contents', ())]
+
+    # Holds the visible video info. It is inside singleColumnWatchNextResults
+    # but use our convenience function instead
     items, _ = extract_items(response, item_types={'slimVideoMetadataRenderer'})
     if items:
         video_info = items[0]['slimVideoMetadataRenderer']
