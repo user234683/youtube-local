@@ -294,7 +294,7 @@ def _extract_watch_info_desktop(top_level):
     return info
 
 fmt_type_re = re.compile(
-    r'(audio|video)/([\w0-9]+); codecs="([\w0-9\.]+(?:, [\w0-9\.]+)*)"')
+    r'(text|audio|video)/([\w0-9]+); codecs="([\w0-9\.]+(?:, [\w0-9\.]+)*)"')
 def update_format_with_type_info(fmt, yt_fmt):
     # 'type' for invidious api format
     mime_type = multi_get(yt_fmt, 'mimeType', 'type')
