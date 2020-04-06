@@ -188,6 +188,8 @@ def _extract_watch_info_mobile(top_level):
             info['playlist']['current_index'] = playlist.get('currentIndex')
             info['playlist']['items'] = [
                 extract_item_info(i) for i in playlist.get('contents', ())]
+    else:
+        info['playlist'] = None
 
     # Holds the visible video info. It is inside singleColumnWatchNextResults
     # but use our convenience function instead
@@ -264,6 +266,7 @@ def _extract_watch_info_desktop(top_level):
         'comments_disabled': None,
         'allowed_countries': [],
         'limited_state': None,
+        'playlist': None,
     }
 
     video_info = {}
