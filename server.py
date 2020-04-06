@@ -24,7 +24,10 @@ import re
 def youtu_be(env, start_response):
     id = env['PATH_INFO'][1:]
     env['PATH_INFO'] = '/watch'
-    env['QUERY_STRING'] = 'v=' + id
+    if not env['QUERY_STRING']:
+        env['QUERY_STRING'] = 'v=' + id
+    else:
+        env['QUERY_STRING'] += '&v=' + id
     yield from yt_app(env, start_response)
 
 def proxy_site(env, start_response):
