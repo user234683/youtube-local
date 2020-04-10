@@ -223,10 +223,14 @@ def extract_item_info(item, additional_info={}):
         info['type'] = 'playlist'
     elif primary_type == 'channel':
         info['type'] = 'channel'
+    elif type == 'videoWithContextRenderer': # stupid exception
+        info['type'] = 'video'
+        primary_type = 'video'
     else:
         info['type'] = 'unsupported'
 
-    info['title'] = extract_str(item.get('title'))
+    # videoWithContextRenderer changes it to 'headline' just to be annoying
+    info['title'] = extract_str(multi_get(item, 'title', 'headline'))
     if primary_type != 'channel':
         info['author'] = extract_str(multi_get(item, 'longBylineText', 'shortBylineText', 'ownerText'))
         info['author_id'] = extract_str(multi_deep_get(item,
@@ -256,7 +260,10 @@ def extract_item_info(item, additional_info={}):
         info['view_count'] = extract_int(item.get('viewCountText'))
 
         # dig into accessibility data to get view_count for videos marked as recommended, and to get time_published
-        accessibility_label = deep_get(item, 'title', 'accessibility', 'accessibilityData', 'label', default='')
+        accessibility_label = multi_deep_get(item,
+            ['title', 'accessibility', 'accessibilityData', 'label'],
+            ['headline', 'accessibility', 'accessibilityData', 'label'],
+            default='')
         timestamp = re.search(r'(\d+ \w+ ago)', accessibility_label)
         if timestamp:
             conservative_update(info, 'time_published', timestamp.group(1))
@@ -333,6 +340,7 @@ _item_types = {
     'videoRenderer',
     'compactVideoRenderer',
     'compactAutoplayRenderer',
+    'videoWithContextRenderer',
     'gridVideoRenderer',
     'playlistVideoRenderer',
 
