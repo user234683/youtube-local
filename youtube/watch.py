@@ -409,6 +409,15 @@ def get_watch_page(video_id=None):
     # 1 second per pixel, or the actual video width
     theater_video_target_width = max(640, info['duration'] or 0, video_width)
 
+    # Check for false determination of disabled comments, which comes from
+    # the watch page. But if we got comments in the separate request for those,
+    # then the determination is wrong.
+    if info['comments_disabled'] and len(comments_info['comments']) != 0:
+        info['comments_disabled'] = False
+        print('Warning: False determination that comments are disabled')
+        print('Comment count:', info['comment_count'])
+        info['comment_count'] = None # hack to make it obvious there's a bug
+
     return flask.render_template('watch.html',
         header_playlist_names   = local_playlist.get_playlist_names(),
         uploader_channel_url    = ('/' + info['author_url']) if info['author_url'] else '',
