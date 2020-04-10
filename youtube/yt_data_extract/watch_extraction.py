@@ -234,10 +234,21 @@ def _extract_watch_info_mobile(top_level):
             info['dislike_count'] = count
 
     # comment section info
-    items, _ = extract_items(response, item_types={'commentSectionRenderer'})
+    items, _ = extract_items(response, item_types={
+        'commentSectionRenderer', 'commentsEntryPointHeaderRenderer'})
     if items:
-        comment_info = items[0]['commentSectionRenderer']
-        comment_count_text = extract_str(deep_get(comment_info, 'header', 'commentSectionHeaderRenderer', 'countText'))
+        header_type = list(items[0])[0]
+        comment_info = items[0][header_type]
+        # This seems to be some kind of A/B test being done on mobile, where
+        # this is present instead of the normal commentSectionRenderer. It can
+        # be seen here:
+        # https://www.androidpolice.com/2019/10/31/google-youtube-app-comment-section-below-videos/
+        # https://www.youtube.com/watch?v=bR5Q-wD-6qo
+        if header_type == 'commentsEntryPointHeaderRenderer':
+            comment_count_text = extract_str(comment_info.get('headerText'))
+        else:
+            comment_count_text = extract_str(deep_get(comment_info,
+                'header', 'commentSectionHeaderRenderer', 'countText'))
         if comment_count_text == 'Comments':    # just this with no number, means 0 comments
             info['comment_count'] = 0
         else:
