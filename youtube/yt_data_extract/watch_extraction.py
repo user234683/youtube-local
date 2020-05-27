@@ -364,7 +364,7 @@ def _extract_formats(info, player_response):
 
     # get ip address
     if info['formats']:
-        query_string = info['formats'][0].get('url', '?').split('?')[1]
+        query_string = (info['formats'][0].get('url') or '?').split('?')[1]
         info['ip_address'] = deep_get(
             urllib.parse.parse_qs(query_string), 'ip', 0)
     else:
