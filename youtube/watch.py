@@ -264,7 +264,7 @@ def extract_info(video_id, playlist_id=None, index=None):
                     + '?fields=adaptiveFormats,formatStreams',
                     report_text='Retrieved urls from Invidious',
                     debug_name='invidious_urls')
-            except (urllib3.exceptions.HTTPError) as e:
+            except (util.FetchError, urllib3.exceptions.HTTPError) as e:
                 traceback.print_exc()
                 playability_error = ('Access denied (403) for video urls.'
                         + ' Failed to use Invidious to get the urls: '
