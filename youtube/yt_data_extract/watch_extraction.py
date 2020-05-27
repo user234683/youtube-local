@@ -351,7 +351,8 @@ def _extract_formats(info, player_response):
         fmt['audio_sample_rate'] = yt_fmt.get('audioSampleRate')
         fmt['fps'] = yt_fmt.get('fps')
         update_format_with_type_info(fmt, yt_fmt)
-        cipher = dict(urllib.parse.parse_qsl(yt_fmt.get('cipher', '')))
+        cipher = dict(urllib.parse.parse_qsl(multi_get(yt_fmt,
+            'cipher', 'signatureCipher', default='')))
         if cipher:
             fmt['url'] = cipher.get('url')
         else:
