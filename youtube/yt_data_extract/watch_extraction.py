@@ -458,7 +458,8 @@ def extract_watch_info(polymer_json):
     info['base_js'] = deep_get(top_level, 'player', 'assets', 'js')
     if info['base_js']:
         info['base_js'] = normalize_url(info['base_js'])
-        info['player_name'] = get(info['base_js'].split('/'), -2)
+        # must uniquely identify url
+        info['player_name'] = urllib.parse.urlparse(info['base_js']).path
     else:
         info['player_name'] = None
 
