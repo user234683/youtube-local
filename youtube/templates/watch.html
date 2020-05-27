@@ -318,6 +318,9 @@
             {%- if limited_state -%}
                 <li>Limited state</li>
             {%- endif -%}
+            {%- if live -%}
+                <li>Live</li>
+            {%- endif -%}
         </ul>
         <address>Uploaded by <a href="{{ uploader_channel_url }}">{{ uploader }}</a></address>
         <span class="views">{{ view_count }} views</span>

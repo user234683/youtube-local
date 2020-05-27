@@ -450,6 +450,7 @@ def get_watch_page(video_id=None):
         unlisted    = info['unlisted'],
         limited_state = info['limited_state'],
         age_restricted    = info['age_restricted'],
+        live              = info['live'],
         playability_error = info['playability_error'],
 
         allowed_countries = info['allowed_countries'],
