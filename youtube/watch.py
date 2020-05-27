@@ -207,7 +207,7 @@ headers = (
     ('X-YouTube-Client-Version', '2.20180830'),
 ) + util.mobile_ua
 
-def extract_info(video_id, playlist_id=None, index=None):
+def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     # bpctr=9999999999 will bypass are-you-sure dialogs for controversial
     # videos
     url = 'https://m.youtube.com/watch?v=' + video_id + '&pbj=1&bpctr=9999999999'
@@ -244,6 +244,7 @@ def extract_info(video_id, playlist_id=None, index=None):
 
     # check for 403
     info['invidious_used'] = False
+    info['invidious_reload_button'] = False
     if settings.route_tor and info['formats'] and info['formats'][0]['url']:
         try:
             response = util.head(info['formats'][0]['url'],
@@ -254,43 +255,48 @@ def extract_info(video_id, playlist_id=None, index=None):
             return info
 
         if response.status == 403:
-            print(('Access denied (403) for video urls.'
-                ' Retrieving urls from Invidious...'))
-            info['invidious_used'] = True
-            try:
-                video_info = util.fetch_url(
-                    'https://invidio.us/api/v1/videos/'
-                    + video_id
-                    + '?fields=adaptiveFormats,formatStreams',
-                    report_text='Retrieved urls from Invidious',
-                    debug_name='invidious_urls')
-            except (util.FetchError, urllib3.exceptions.HTTPError) as e:
-                traceback.print_exc()
-                playability_error = ('Access denied (403) for video urls.'
-                        + ' Failed to use Invidious to get the urls: '
-                        + str(e))
-                if info['playability_error']:
-                    info['playability_error'] += '\n' + playability_error
-                else:
-                    info['playability_error'] = playability_error
-                
-                return info
+            print('Access denied (403) for video urls.')
+            if use_invidious:
+                print(' Retrieving urls from Invidious...')
+                info['invidious_used'] = True
+                try:
+                    video_info = util.fetch_url(
+                        'https://invidio.us/api/v1/videos/'
+                        + video_id
+                        + '?fields=adaptiveFormats,formatStreams',
+                        report_text='Retrieved urls from Invidious',
+                        debug_name='invidious_urls')
+                except (util.FetchError, urllib3.exceptions.HTTPError) as e:
+                    traceback.print_exc()
+                    playability_error = ('Access denied (403) for video urls.'
+                            + ' Failed to use Invidious to get the urls: '
+                            + str(e))
+                    if info['playability_error']:
+                        info['playability_error'] += '\n' + playability_error
+                    else:
+                        info['playability_error'] = playability_error
+                    # include button to reload without invidious
+                    info['invidious_reload_button'] = True 
+                    return info
 
-            video_info = json.loads(video_info.decode('utf-8'))
-            # collect invidious urls for each itag
-            itag_to_url = {}
-            for invidious_fmt in (video_info['adaptiveFormats']
-                        + video_info['formatStreams']):
-                itag_to_url[invidious_fmt['itag']] = invidious_fmt['url']
+                video_info = json.loads(video_info.decode('utf-8'))
+                # collect invidious urls for each itag
+                itag_to_url = {}
+                for invidious_fmt in (video_info['adaptiveFormats']
+                            + video_info['formatStreams']):
+                    itag_to_url[invidious_fmt['itag']] = invidious_fmt['url']
 
-            # replace urls with urls from invidious
-            for fmt in info['formats']:
-                itag = str(fmt['itag'])
-                if itag not in itag_to_url:
-                    print(('Warning: itag '
-                        + itag + ' not found in invidious urls'))
-                    continue
-                fmt['url'] = itag_to_url[itag]
+                # replace urls with urls from invidious
+                for fmt in info['formats']:
+                    itag = str(fmt['itag'])
+                    if itag not in itag_to_url:
+                        print(('Warning: itag '
+                            + itag + ' not found in invidious urls'))
+                        continue
+                    fmt['url'] = itag_to_url[itag]
+            else:
+                info['playability_error'] = ('Access denied (403) for video '
+                    'urls')
         elif 300 <= response.status < 400:
             print('Error: exceeded max redirects while checking video URL')
     return info
@@ -345,9 +351,10 @@ def get_watch_page(video_id=None):
     lc = request.args.get('lc', '')
     playlist_id = request.args.get('list')
     index = request.args.get('index')
+    use_invidious = bool(int(request.args.get('use_invidious', '1')))
     tasks = (
         gevent.spawn(comments.video_comments, video_id, int(settings.default_comment_sorting), lc=lc ),
-        gevent.spawn(extract_info, video_id, playlist_id=playlist_id,
+        gevent.spawn(extract_info, video_id, use_invidious, playlist_id=playlist_id,
             index=index)
     )
     gevent.joinall(tasks)
@@ -456,6 +463,8 @@ def get_watch_page(video_id=None):
         allowed_countries = info['allowed_countries'],
         ip_address   = info['ip_address'] if settings.route_tor else None,
         invidious_used    = info['invidious_used'],
+        invidious_reload_button = info['invidious_reload_button'],
+        video_url = util.URL_ORIGIN + '/watch?v=' + video_id,
     )
 
 

@@ -288,7 +288,14 @@
 
 {% block main %}
     {% if playability_error %}
-        <div class="playability-error"><span>{{ 'Error: ' + playability_error }}</span></div>
+        <div class="playability-error">
+            <span>{{ 'Error: ' + playability_error }}
+            {% if invidious_reload_button %}
+                <a href="{{ video_url }}&use_invidious=0"><br>
+Reload without invidious (for usage of new identity button).</a>
+            {% endif %}
+            </span>
+        </div>
     {% else %}
         <video controls autofocus class="video">
             {% for video_source in video_sources %}
