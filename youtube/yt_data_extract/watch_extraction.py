@@ -480,7 +480,7 @@ def extract_watch_info(polymer_json):
     liberal_update(info, 'id',          vd.get('videoId'))
     liberal_update(info, 'author',      vd.get('author'))
     liberal_update(info, 'author_id',   vd.get('channelId'))
-    liberal_update(info, 'live',        vd.get('isLiveContent'))
+    info['was_live'] =                  vd.get('isLiveContent')
     conservative_update(info, 'unlisted', not vd.get('isCrawlable', True))  #isCrawlable is false on limited state videos even if they aren't unlisted
     liberal_update(info, 'tags',        vd.get('keywords', []))
 
@@ -493,6 +493,8 @@ def extract_watch_info(polymer_json):
     conservative_update(info, 'description', extract_str(mf.get('description'), recover_urls=True))
     conservative_update(info, 'author', mf.get('ownerChannelName'))
     conservative_update(info, 'author_id', mf.get('externalChannelId'))
+    conservative_update(info, 'live', deep_get(mf, 'liveBroadcastDetails',
+        'isLiveNow'))
     liberal_update(info, 'unlisted', mf.get('isUnlisted'))
     liberal_update(info, 'category', mf.get('category'))
     liberal_update(info, 'time_published', mf.get('publishDate'))
