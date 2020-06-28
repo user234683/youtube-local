@@ -389,7 +389,7 @@ def _extract_playability_error(info, player_response, error_prefix=''):
 
     if playability_status not in (None, 'OK'):
         info['playability_error'] = error_prefix + playability_reason
-    else:
+    elif not info['playability_error']: # do not override
         info['playability_error'] = error_prefix + 'Unknown playability error'
 
 SUBTITLE_FORMATS = ('srv1', 'srv2', 'srv3', 'ttml', 'vtt')
