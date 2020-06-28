@@ -415,8 +415,14 @@ def extract_watch_info(polymer_json):
     if error:
         info['playability_error'] = error
 
+    player_response = top_level.get('playerResponse', {})
+
+    # usually, only the embedded one has the urls
     player_args = deep_get(top_level, 'player', 'args', default={})
-    player_response = json.loads(player_args['player_response']) if 'player_response' in player_args else {}
+    if 'player_response' in player_args:
+        embedded_player_response = json.loads(player_args['player_response'])
+    else:
+        embedded_player_response = {}
 
     # captions
     info['automatic_caption_languages'] = []
@@ -446,7 +452,9 @@ def extract_watch_info(polymer_json):
             print('WARNING: Found non-translatable caption language')
 
     # formats
-    _extract_formats(info, player_response)
+    _extract_formats(info, embedded_player_response)
+    if not info['formats']:
+        _extract_formats(info, player_response)
 
     # playability errors
     _extract_playability_error(info, player_response)
