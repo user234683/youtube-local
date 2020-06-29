@@ -242,9 +242,21 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
         decryption_error = 'Error decrypting url signatures: ' + decryption_error
         info['playability_error'] = decryption_error
 
+    # check if urls ready (non-live format) in former livestream
+    # urls not ready if all of them have no filesize
+    if info['was_live']:
+        info['urls_ready'] = False
+        for fmt in info['formats']:
+            if fmt['file_size'] is not None:
+                info['urls_ready'] = True
+    else:
+        info['urls_ready'] = True
+
     # livestream urls
     # sometimes only the livestream urls work soon after the livestream is over
-    if info['hls_manifest_url'] and (info['live'] or not info['formats']):
+    if (info['hls_manifest_url']
+        and (info['live'] or not info['formats'] or not info['urls_ready'])
+    ):
         manifest = util.fetch_url(info['hls_manifest_url'],
             debug_name='hls_manifest.m3u8',
             report_text='Fetched hls manifest'
