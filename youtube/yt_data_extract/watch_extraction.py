@@ -307,6 +307,18 @@ def _extract_watch_info_desktop(top_level):
 
     return info
 
+def update_format_with_codec_info(fmt, codec):
+    if (codec.startswith('av')
+            or codec in ('vp9', 'vp8', 'vp8.0', 'h263', 'h264', 'mp4v')):
+        if codec == 'vp8.0':
+            codec = 'vp8'
+        conservative_update(fmt, 'vcodec', codec)
+    elif (codec.startswith('mp4a')
+            or codec in ('opus', 'mp3', 'aac', 'dtse', 'ec-3', 'vorbis')):
+        conservative_update(fmt, 'acodec', codec)
+    else:
+        print('Warning: unrecognized codec: ' + codec)
+
 fmt_type_re = re.compile(
     r'(text|audio|video)/([\w0-9]+); codecs="([\w0-9\.]+(?:, [\w0-9\.]+)*)"')
 def update_format_with_type_info(fmt, yt_fmt):
@@ -319,16 +331,7 @@ def update_format_with_type_info(fmt, yt_fmt):
     type, fmt['ext'], codecs = match.groups()
     codecs = codecs.split(', ')
     for codec in codecs:
-        if (codec.startswith('av')
-                or codec in ('vp9', 'vp8', 'vp8.0', 'h263', 'h264', 'mp4v')):
-            if codec == 'vp8.0':
-                codec = 'vp8'
-            conservative_update(fmt, 'vcodec', codec)
-        elif (codec.startswith('mp4a')
-                or codec in ('opus', 'mp3', 'aac', 'dtse', 'ec-3', 'vorbis')):
-            conservative_update(fmt, 'acodec', codec)
-        else:
-            print('Warning: unrecognized codec: ' + codec)
+        update_format_with_codec_info(fmt, codec)
     if type == 'audio':
         assert len(codecs) == 1
 
@@ -337,6 +340,8 @@ def _extract_formats(info, player_response):
     yt_formats = streaming_data.get('formats', []) + streaming_data.get('adaptiveFormats', [])
 
     info['formats'] = []
+    info['hls_manifest_url'] = streaming_data.get('hlsManifestUrl')
+    info['dash_manifest_url'] = streaming_data.get('dashManifestUrl')
 
     for yt_fmt in yt_formats:
         fmt = {}
@@ -370,6 +375,43 @@ def _extract_formats(info, player_response):
             urllib.parse.parse_qs(query_string), 'ip', 0)
     else:
         info['ip_address'] = None
+
+hls_regex = re.compile(r'[\w_-]+=(?:"[^"]+"|[^",]+),')
+def extract_hls_formats(hls_manifest):
+    '''returns hls_formats, err'''
+    hls_formats = []
+    try:
+        lines = hls_manifest.splitlines()
+        i = 0
+        while i < len(lines):
+            if lines[i].startswith('#EXT-X-STREAM-INF'):
+                fmt = {'acodec': None, 'vcodec': None, 'height': None,
+                    'width': None, 'fps': None, 'audio_bitrate': None,
+                    'itag': None, 'file_size': None,
+                    'audio_sample_rate': None, 'url': None}
+                properties = lines[i].split(':')[1]
+                properties += ',' # make regex work for last key-value pair
+
+                for pair in hls_regex.findall(properties):
+                    key, value = pair.rstrip(',').split('=')
+                    if key == 'CODECS':
+                        for codec in value.strip('"').split(','):
+                            update_format_with_codec_info(fmt, codec)
+                    elif key == 'RESOLUTION':
+                        fmt['width'], fmt['height'] = map(int, value.split('x'))
+                        fmt['resolution'] = value
+                    elif key == 'FRAME-RATE':
+                        fmt['fps'] = int(value)
+                i += 1
+                fmt['url'] = lines[i]
+                assert fmt['url'].startswith('http')
+                fmt['ext'] = 'm3u8'
+                hls_formats.append(fmt)
+            i += 1
+    except Exception as e:
+        traceback.print_exc()
+        return [], str(e)
+    return hls_formats, None
 
 
 def _extract_playability_error(info, player_response, error_prefix=''):

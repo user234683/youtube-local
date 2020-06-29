@@ -27,6 +27,27 @@
             transform: translate(-50%, -50%);
         }
 
+    .live-url-choices{
+        height: 360px;
+        width: 640px;
+        grid-column: 2;
+        background-color: var(--video-background-color);
+        padding: 25px 0px 0px 25px;
+    }
+        .live-url-choices ol{
+            list-style: none;
+            padding:0px;
+            margin:0px;
+            margin-top: 15px;
+        }
+        .live-url-choices input{
+            width: 400px;
+        }
+        .url-choice-label{
+            display: inline-block;
+            width: 150px;
+        }
+
     {% if theater_mode %}
         video{
             grid-column: 1 / span 5;
@@ -295,6 +316,15 @@
 Reload without invidious (for usage of new identity button).</a>
             {% endif %}
             </span>
+        </div>
+    {% elif (video_sources.__len__() == 0 or live) and hls_formats.__len__() != 0 %}
+        <div class="live-url-choices">
+            <span>Copy a url into your video player:</span>
+            <ol>
+                {% for fmt in hls_formats %}
+                    <li class="url-choice"><div class="url-choice-label">{{ fmt['video_quality'] }}: </div><input class="url-choice-copy" value="{{ fmt['url'] }}" readonly onclick="this.select();"></li>
+                {% endfor %}
+            </ol>
         </div>
     {% else %}
         <video controls autofocus class="video">

@@ -242,6 +242,22 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
         decryption_error = 'Error decrypting url signatures: ' + decryption_error
         info['playability_error'] = decryption_error
 
+    # livestream urls
+    # sometimes only the livestream urls work soon after the livestream is over
+    if info['hls_manifest_url'] and (info['live'] or not info['formats']):
+        manifest = util.fetch_url(info['hls_manifest_url'],
+            debug_name='hls_manifest.m3u8',
+            report_text='Fetched hls manifest'
+        ).decode('utf-8')
+
+        info['hls_formats'], err = yt_data_extract.extract_hls_formats(manifest)
+        if not err:
+            info['playability_error'] = None
+        for fmt in info['hls_formats']:
+            fmt['video_quality'] = video_quality_string(fmt)
+    else:
+        info['hls_formats'] = []
+
     # check for 403
     info['invidious_used'] = False
     info['invidious_reload_button'] = False
@@ -396,7 +412,7 @@ def get_watch_page(video_id=None):
 
     download_formats = []
 
-    for format in info['formats']:
+    for format in (info['formats'] + info['hls_formats']):
         if format['acodec'] and format['vcodec']:
             codecs_string = format['acodec'] + ', ' + format['vcodec']
         else:
@@ -435,6 +451,7 @@ def get_watch_page(video_id=None):
         download_formats        = download_formats,
         video_info              = json.dumps(video_info),
         video_sources           = video_sources,
+        hls_formats             = info['hls_formats'],
         subtitle_sources        = get_subtitle_sources(info),
         related                 = info['related_videos'],
         playlist                = info['playlist'],
