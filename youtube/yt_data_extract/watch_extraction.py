@@ -340,8 +340,12 @@ def _extract_formats(info, player_response):
     yt_formats = streaming_data.get('formats', []) + streaming_data.get('adaptiveFormats', [])
 
     info['formats'] = []
-    info['hls_manifest_url'] = streaming_data.get('hlsManifestUrl')
-    info['dash_manifest_url'] = streaming_data.get('dashManifestUrl')
+    # because we may retry the extract_formats with a different player_response
+    # so keep what we have
+    conservative_update(info, 'hls_manifest_url',
+        streaming_data.get('hlsManifestUrl'))
+    conservative_update(info, 'dash_manifest_url',
+        streaming_data.get('dash_manifest_url'))
 
     for yt_fmt in yt_formats:
         fmt = {}
