@@ -31,7 +31,7 @@ def get_video_sources(info):
     for format in info['formats']:
         if not all(format[attr] for attr in ('height', 'width', 'ext', 'url')):
             continue
-        if format['acodec'] and format['vcodec'] and format['height'] <= max_resolution:
+        if format['acodec'] and format['vcodec'] and format['width'] <= max_resolution:
             video_sources.append({
                 'src': format['url'],
                 'type': 'video/' + format['ext'],
