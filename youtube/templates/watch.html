@@ -341,6 +341,11 @@ Reload without invidious (for usage of new identity button).</a>
             {% endfor %}
 
         </video>
+        {% if time_start != 0 %}
+            <script>
+                document.querySelector('video').currentTime = {{ time_start|tojson }};
+            </script>
+        {% endif %}
     {% endif %}
 
     <div class="video-info">

@@ -366,6 +366,7 @@ def format_bytes(bytes):
     return '%.2f%s' % (converted, suffix)
 
 
+time_table = {'h': 3600, 'm': 60, 's': 1}
 @yt_app.route('/watch')
 @yt_app.route('/embed')
 @yt_app.route('/embed/<video_id>')
@@ -375,6 +376,12 @@ def get_watch_page(video_id=None):
         return flask.render_template('error.html', error_message='Missing video id'), 404
     if len(video_id) < 11:
         return flask.render_template('error.html', error_message='Incomplete video id (too short): ' + video_id), 404
+
+    time_start_str = request.args.get('t', '0s')
+    time_start = 0
+    if re.fullmatch(r'(\d+(h|m|s))+', time_start_str):
+        for match in re.finditer(r'(\d+)(h|m|s)', time_start_str):
+            time_start += int(match.group(1))*time_table[match.group(2)]
 
     lc = request.args.get('lc', '')
     playlist_id = request.args.get('list')
@@ -511,6 +518,7 @@ def get_watch_page(video_id=None):
         invidious_used    = info['invidious_used'],
         invidious_reload_button = info['invidious_reload_button'],
         video_url = util.URL_ORIGIN + '/watch?v=' + video_id,
+        time_start = time_start,
     )
 
 
