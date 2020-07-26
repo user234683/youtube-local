@@ -1,4 +1,4 @@
-{% set page_title = title + ' - Page ' + parameters_dictionary.get('page', '1') %}
+{% set page_title = title|string + ' - Page ' + parameters_dictionary.get('page', '1') %}
 {% extends "base.html" %}
 {% import "common_elements.html" as common_elements %}
 {% block style %}
