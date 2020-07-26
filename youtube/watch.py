@@ -453,6 +453,22 @@ def get_watch_page(video_id=None):
         print('Comment count:', info['comment_count'])
         info['comment_count'] = None # hack to make it obvious there's a bug
 
+    # captions and transcript
+    subtitle_sources = get_subtitle_sources(info)
+    other_downloads = []
+    for source in subtitle_sources:
+        best_caption_parse = urllib.parse.urlparse(
+            source['url'].lstrip('/'))
+        transcript_url = (util.URL_ORIGIN
+            + '/watch/transcript'
+            + best_caption_parse.path
+            + '?' + best_caption_parse.query)
+        other_downloads.append({
+            'label': 'Video Transcript: ' + source['label'],
+            'ext': 'txt',
+            'url': transcript_url
+        })
+
     return flask.render_template('watch.html',
         header_playlist_names   = local_playlist.get_playlist_names(),
         uploader_channel_url    = ('/' + info['author_url']) if info['author_url'] else '',
@@ -461,10 +477,11 @@ def get_watch_page(video_id=None):
         like_count    = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("like_count", None)),
         dislike_count = (lambda x: '{:,}'.format(x) if x is not None else "")(info.get("dislike_count", None)),
         download_formats        = download_formats,
+        other_downloads         = other_downloads,
         video_info              = json.dumps(video_info),
         video_sources           = video_sources,
         hls_formats             = info['hls_formats'],
-        subtitle_sources        = get_subtitle_sources(info),
+        subtitle_sources        = subtitle_sources,
         related                 = info['related_videos'],
         playlist                = info['playlist'],
         music_list              = info['music_list'],
@@ -503,6 +520,68 @@ def get_captions(dummy):
     result = result.replace(b"align:start position:0%", b"")
     return result
 
+
+times_reg = re.compile(r'^\d\d:\d\d:\d\d\.\d\d\d --> \d\d:\d\d:\d\d\.\d\d\d.*$')
+inner_timestamp_removal_reg = re.compile(r'<[^>]+>')
+@yt_app.route('/watch/transcript/<path:caption_path>')
+def get_transcript(caption_path):
+    try:
+        captions = util.fetch_url('https://www.youtube.com/'
+            + caption_path
+            + '?' + request.environ['QUERY_STRING']).decode('utf-8')
+    except util.FetchError as e:
+        msg = ('Error retrieving captions: ' + str(e) + '\n\n'
+            + 'The caption url may have expired.')
+        print(msg)
+        return flask.Response(msg,
+            status = e.code,
+            mimetype='text/plain;charset=UTF-8')
+
+    lines = captions.splitlines()
+    segments = []
+
+    # skip captions file header
+    i = 0
+    while lines[i] != '':
+        i += 1
+
+    current_segment = None
+    while i < len(lines):
+        line = lines[i]
+        if line == '':
+            if ((current_segment is not None)
+                    and (current_segment['begin'] is not None)):
+                segments.append(current_segment)
+            current_segment = {
+                'begin': None,
+                'end': None,
+                'lines': [],
+            }
+        elif times_reg.fullmatch(line.rstrip()):
+            current_segment['begin'], current_segment['end'] = line.split(' --> ')
+        else:
+            current_segment['lines'].append(
+                inner_timestamp_removal_reg.sub('', line))
+        i += 1
+
+    # if automatic captions, but not translated
+    if request.args.get('kind') == 'asr' and not request.args.get('tlang'):
+        # Automatic captions repeat content. The new segment is displayed
+        # on the bottom row; the old one is displayed on the top row.
+        # So grab the bottom row only
+        for seg in segments:
+            seg['text'] = seg['lines'][1]
+    else:
+        for seg in segments:
+            seg['text'] = ' '.join(map(str.rstrip, seg['lines']))
+
+    result = ''
+    for seg in segments:
+        if seg['text'] != ' ':
+            result += seg['begin'] + ' ' + seg['text'] + '\r\n'
+
+    return flask.Response(result.encode('utf-8'),
+        mimetype='text/plain;charset=UTF-8')
 
 
 
