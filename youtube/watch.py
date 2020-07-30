@@ -382,6 +382,8 @@ def get_watch_page(video_id=None):
     if re.fullmatch(r'(\d+(h|m|s))+', time_start_str):
         for match in re.finditer(r'(\d+)(h|m|s)', time_start_str):
             time_start += int(match.group(1))*time_table[match.group(2)]
+    elif re.fullmatch(r'\d+', time_start_str):
+        time_start = int(time_start_str)
 
     lc = request.args.get('lc', '')
     playlist_id = request.args.get('list')
