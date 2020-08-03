@@ -554,6 +554,8 @@ def _get_upstream_videos(channel_id):
                    WHERE yt_channel_id=?
                    ORDER BY time_published DESC
                    LIMIT 30''', [channel_id]).fetchall())
+
+            # new videos the channel has uploaded since last time we checked
             number_of_new_videos = 0
             for video in videos:
                 if video['id'] in existing_vids:
@@ -563,9 +565,18 @@ def _get_upstream_videos(channel_id):
             is_first_check = cursor.execute('''SELECT time_last_checked FROM subscribed_channels WHERE yt_channel_id=?''', [channel_id]).fetchone()[0] in (None, 0)
             time_videos_retrieved = int(time.time())
             rows = []
-            for video_item in videos:
-                if is_first_check or number_of_new_videos > 6:
+            for i, video_item in enumerate(videos):
+                if (is_first_check
+                        or number_of_new_videos > 6
+                        or i >= number_of_new_videos):
                     # don't want a crazy ordering on first check or check in a long time, since we're ordering by time_noticed
+                    # Last condition is for when the channel deleting videos
+                    # causes new videos to appear at the end of the backlog.
+                    # For instance, if we have 30 vids in the DB, and 1 vid
+                    # that we previously saw has since been deleted,
+                    # then a video we haven't seen before will appear as the
+                    # 30th. Don't want this to be considered a newly noticed
+                    # vid which would appear at top of subscriptions feed
                     time_noticed = video_item['time_published']
                 else:
                     time_noticed = time_videos_retrieved
