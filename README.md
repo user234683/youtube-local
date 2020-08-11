@@ -24,7 +24,7 @@ The Youtube API is not used, so no keys or anything are needed. It uses the same
 * Subtitles
 * Easily download videos or their audio
 * No ads
-* View or post comments
+* View comments
 * Works without Javascript
 * Theater and non-theater mode
 * Subscriptions that are independent from Youtube
@@ -51,17 +51,16 @@ The Youtube API is not used, so no keys or anything are needed. It uses the same
 - [ ] Rearrange items of local playlist
 - [ ] Muxing of 1080p
 - [ ] Corrected .m4a downloads
-- [ ] Replying to comment replies
-- [ ] Editing comments
 - [x] Indicate if comments are disabled
 - [x] Indicate how many comments a video has
 - [ ] Featured channels page
 - [ ] Channel comments
-- [ ] Video transcript
+- [x] Video transcript
 - [ ] Tor RC
-- [ ] Support &t parameter
+- [x] Support &t parameter
 - [ ] Subscriptions: Option to mark what has been watched
 - [ ] Subscriptions: Option to filter videos based on keywords in title or description
+- [ ] Subscriptions: Delete old entries and thumbnails
 
 ## Installing
 
