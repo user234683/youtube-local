@@ -2,7 +2,11 @@ import settings
 from youtube import yt_data_extract
 import socks, sockshandler
 import gzip
-import brotli
+try:
+    import brotli
+    have_brotli = True
+except ImportError:
+    have_brotli = False
 import urllib.parse
 import re
 import time
@@ -125,7 +129,10 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookieja
      and response cookies will be merged into it.
     '''
     headers = dict(headers)     # Note: Calling dict() on a dict will make a copy
-    headers['Accept-Encoding'] = 'gzip, br'
+    if have_brotli:
+        headers['Accept-Encoding'] = 'gzip, br'
+    else:
+        headers['Accept-Encoding'] = 'gzip'
 
     # prevent python version being leaked by urllib if User-Agent isn't provided
     #  (urllib will use ex. Python-urllib/3.6 otherwise)
