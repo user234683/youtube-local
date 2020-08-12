@@ -227,7 +227,8 @@ def extract_comments_info(polymer_json):
     info['sort'] = metadata.get('sort')
     info['video_title'] = None
 
-    comments, ctoken = extract_items(response)
+    comments, ctoken = extract_items(response,
+        item_types={'commentThreadRenderer', 'commentRenderer'})
     info['comments'] = []
     info['ctoken'] = ctoken
     for comment in comments:

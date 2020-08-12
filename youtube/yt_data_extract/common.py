@@ -392,6 +392,13 @@ nested_renderer_list_dispatch = {
     'playlistVideoListRenderer': _traverse_standard_list,
     'singleColumnWatchNextResults': lambda r: (deep_get(r, 'results', 'results', 'contents', default=[]), None),
 }
+def get_nested_renderer_list_function(key):
+    if key in nested_renderer_list_dispatch:
+        return nested_renderer_list_dispatch[key]
+    elif key.endswith('Continuation'):
+        return _traverse_standard_list
+    return None
+
 def extract_items_from_renderer(renderer, item_types=_item_types):
     ctoken = None
     items = []
@@ -423,13 +430,13 @@ def extract_items_from_renderer(renderer, item_types=_item_types):
             items.append(renderer)
 
         # has a list in it, add it to the iter stack
-        elif key in nested_renderer_list_dispatch:
-            renderer_list, continuation = nested_renderer_list_dispatch[key](value)
+        elif get_nested_renderer_list_function(key):
+            renderer_list, cont = get_nested_renderer_list_function(key)(value)
             if renderer_list:
                 iter_stack.append(current_iter)
                 current_iter = iter(renderer_list)
-                if continuation:
-                    ctoken = continuation
+                if cont:
+                    ctoken = cont
 
         # new renderer nested inside this one
         elif key in nested_renderer_dispatch:
@@ -441,12 +448,16 @@ def extract_items_from_renderer(renderer, item_types=_item_types):
 def extract_items(response, item_types=_item_types):
     '''return items, ctoken'''
     if 'continuationContents' in response:
-        # always has just the one [something]Continuation key, but do this just in case they add some tracking key or something
-        for key, renderer_continuation in get(response, 'continuationContents', {}).items():
-            if key.endswith('Continuation'):    # e.g. commentSectionContinuation, playlistVideoListContinuation
-                items = multi_get(renderer_continuation, 'contents', 'items', default=[])
-                ctoken = deep_get(renderer_continuation, 'continuations', 0, 'nextContinuationData', 'continuation')
-                return items, ctoken
+        # sometimes there's another, empty, junk [something]Continuation key
+        # find real one
+        for key, renderer_cont in get(response,
+                'continuationContents', {}).items():
+            # e.g. commentSectionContinuation, playlistVideoListContinuation
+            if key.endswith('Continuation'):
+                items, cont = extract_items_from_renderer({key: renderer_cont},
+                    item_types=item_types)
+                if items:
+                    return items, cont
         return [], None
     elif 'contents' in response:
         renderer = get(response, 'contents', {})
