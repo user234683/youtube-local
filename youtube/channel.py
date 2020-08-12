@@ -16,18 +16,18 @@ import traceback
 import flask
 from flask import request
 
-headers_1 = (
+headers_desktop = (
     ('Accept', '*/*'),
     ('Accept-Language', 'en-US,en;q=0.5'),
     ('X-YouTube-Client-Name', '1'),
     ('X-YouTube-Client-Version', '2.20180830'),
-)
-headers_pbj = (
+) + util.desktop_ua
+headers_mobile = (
     ('Accept', '*/*'),
     ('Accept-Language', 'en-US,en;q=0.5'),
     ('X-YouTube-Client-Name', '2'),
     ('X-YouTube-Client-Version', '2.20180830'),
-)
+) + util.mobile_ua
 real_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=8XihrAcN1l4'),)
 generic_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=ST1Ti53r4fU'),)
 
@@ -96,15 +96,14 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1, print_st
         ctoken = ctoken.replace('=', '%3D')
         url = ('https://m.youtube.com/channel/' + channel_id + '/' + tab
             + '?ctoken=' + ctoken + '&pbj=1')
-        content = util.fetch_url(url,
-            util.mobile_ua + headers_pbj + real_cookie,
+        content = util.fetch_url(url, headers_mobile + real_cookie,
             debug_name='channel_tab', report_text=message)
     else:   # use desktop endpoint
         ctoken = channel_ctoken_desktop(channel_id, page, sort, tab, view)
         ctoken = ctoken.replace('=', '%3D')
         url = 'https://www.youtube.com/browse_ajax?ctoken=' + ctoken
         content = util.fetch_url(url,
-            util.desktop_ua + headers_1 + generic_cookie,
+            headers_desktop + generic_cookie,
             debug_name='channel_tab', report_text=message)
 
     return content
@@ -120,7 +119,7 @@ def get_number_of_videos_channel(channel_id):
     url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&pbj=1'
 
     try:
-        response = util.fetch_url(url, util.mobile_ua + headers_pbj, 
+        response = util.fetch_url(url, headers_mobile,
             debug_name='number_of_videos', report_text='Got number of videos')
     except urllib.error.HTTPError as e:
         traceback.print_exc()
@@ -141,7 +140,7 @@ def get_channel_id(base_url):
     # method that gives the smallest possible response at ~4 kb
     # needs to be as fast as possible
     base_url = base_url.replace('https://www', 'https://m') # avoid redirect
-    response = util.fetch_url(base_url + '/about?pbj=1', util.mobile_ua + headers_pbj,
+    response = util.fetch_url(base_url + '/about?pbj=1', headers_mobile,
         debug_name='get_channel_id', report_text='Got channel id').decode('utf-8')
     match = channel_id_re.search(response)
     if match:
@@ -157,7 +156,7 @@ def get_channel_search_json(channel_id, query, page):
     ctoken = proto.string(2, channel_id) + proto.string(3, params) + proto.string(11, query)
     ctoken = base64.urlsafe_b64encode(proto.nested(80226972, ctoken)).decode('ascii')
 
-    polymer_json = util.fetch_url("https://www.youtube.com/browse_ajax?ctoken=" + ctoken, util.desktop_ua + headers_1, debug_name='channel_search')
+    polymer_json = util.fetch_url("https://www.youtube.com/browse_ajax?ctoken=" + ctoken, headers_desktop, debug_name='channel_search')
 
     return polymer_json
 
@@ -197,20 +196,20 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     elif tab == 'videos':
         tasks = (
             gevent.spawn(get_number_of_videos_general, base_url), 
-            gevent.spawn(util.fetch_url, base_url + '/videos?pbj=1&view=0', util.desktop_ua + headers_1, debug_name='gen_channel_videos')
+            gevent.spawn(util.fetch_url, base_url + '/videos?pbj=1&view=0', headers_desktop, debug_name='gen_channel_videos')
         )
         gevent.joinall(tasks)
         util.check_gevent_exceptions(*tasks)
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
     elif tab == 'about':
-        polymer_json = util.fetch_url(base_url + '/about?pbj=1', util.desktop_ua + headers_1, debug_name='gen_channel_about')
+        polymer_json = util.fetch_url(base_url + '/about?pbj=1', headers_desktop, debug_name='gen_channel_about')
     elif tab == 'playlists':
-        polymer_json = util.fetch_url(base_url+ '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], util.desktop_ua + headers_1, debug_name='gen_channel_playlists')
+        polymer_json = util.fetch_url(base_url+ '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], headers_desktop, debug_name='gen_channel_playlists')
     elif tab == 'search' and channel_id:
         polymer_json = get_channel_search_json(channel_id, query, page_number)
     elif tab == 'search':
         url = base_url + '/search?pbj=1&query=' + urllib.parse.quote(query, safe='')
-        polymer_json = util.fetch_url(url, util.desktop_ua + headers_1, debug_name='gen_channel_search')
+        polymer_json = util.fetch_url(url, headers_desktop, debug_name='gen_channel_search')
     else:
         flask.abort(404, 'Unknown channel tab: ' + tab)
 
