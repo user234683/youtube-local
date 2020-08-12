@@ -175,7 +175,7 @@ def _get_videos(cursor, number_per_page, offset, tag = None):
             'time_published': exact_timestamp(db_video[3]) if db_video[4] else posix_to_dumbed_down(db_video[3]),
             'author':   db_video[5],
             'author_id': db_video[6],
-            'author_url': 'https://www.youtube.com/channel/' + db_video[6],
+            'author_url': '/https://www.youtube.com/channel/' + db_video[6],
         })
 
     return videos, pseudo_number_of_videos
