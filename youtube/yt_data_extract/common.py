@@ -253,7 +253,11 @@ def extract_item_info(item, additional_info={}):
             info['badges'].append(badge)
 
     if primary_type in ('video', 'playlist'):
-        info['time_published'] = extract_str(item.get('publishedTimeText'))
+        info['time_published'] = None
+        timestamp = re.search(r'(\d+ \w+ ago)',
+            extract_str(item.get('publishedTimeText'), default=''))
+        if timestamp:
+            info['time_published'] = timestamp.group(1)
 
     if primary_type == 'video':
         info['id'] = item.get('videoId')
