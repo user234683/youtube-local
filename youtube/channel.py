@@ -55,9 +55,8 @@ def channel_ctoken_desktop(channel_id, page, sort, tab, view=1):
     }[int(sort)]
     page_token = proto.string(61, proto.unpadded_b64encode(proto.string(1,
             proto.uint(1, schema_number) + proto.string(2,
-                proto.string(1, proto.unpadded_b64encode(proto.uint(1, offset))
+                proto.string(1, proto.unpadded_b64encode(proto.uint(1,offset)))
             )
-        )
     )))
 
     tab = proto.string(2, tab )
