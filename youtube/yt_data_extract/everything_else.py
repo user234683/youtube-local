@@ -21,10 +21,13 @@ def extract_channel_info(polymer_json, tab):
     # example terminated channel: https://www.youtube.com/channel/UCnKJeK_r90jDdIuzHXC0Org
     except KeyError:
         if response.get('alerts'):
-            return {'error': ' '.join(
-                deep_get(alert, 'alertRenderer', 'text', 'simpleText', default='')
+            error_string = ' '.join(
+                extract_str(deep_get(alert, 'alertRenderer', 'text'), default='')
                 for alert in response['alerts']
-            )}
+            )
+            if not error_string:
+                error_string = 'Failed to extract error'
+            return {'error': error_string}
         elif deep_get(response, 'responseContext', 'errors'):
             for error in response['responseContext']['errors'].get('error', []):
                 if error.get('code') == 'INVALID_VALUE' and error.get('location') == 'browse_id':

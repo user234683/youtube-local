@@ -203,7 +203,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
 
 
     info = yt_data_extract.extract_channel_info(json.loads(polymer_json), tab)
-    if info['error']:
+    if info['error'] is not None:
         return flask.render_template('error.html', error_message = info['error'])
 
     post_process_channel_info(info)
