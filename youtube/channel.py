@@ -28,7 +28,8 @@ headers_pbj = (
     ('X-YouTube-Client-Name', '2'),
     ('X-YouTube-Client-Version', '2.20180830'),
 )
-generic_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=8XihrAcN1l4'),)
+real_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=8XihrAcN1l4'),)
+generic_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=ST1Ti53r4fU'),)
 
 # SORT:
 # videos:
@@ -89,17 +90,23 @@ def channel_ctoken_mobile(channel_id, page, sort, tab, view=1):
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
 
 def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1, print_status=True):
-    ctoken = channel_ctoken_mobile(channel_id, page, sort, tab, view)
-    ctoken = ctoken.replace('=', '%3D')
-    url = ('https://m.youtube.com/channel/' + channel_id + '/' + tab
-        + '?ctoken=' + ctoken + '&pbj=1')
+    message = 'Got channel tab' if print_status else None
 
-    if print_status:
-        print("Sending channel tab ajax request")
-    content = util.fetch_url(url,
-        util.mobile_ua + headers_pbj + generic_cookie, debug_name='channel_tab')
-    if print_status:
-        print("Finished recieving channel tab response")
+    if int(sort) == 2 and int(page) > 1:   # use mobile endpoint
+        ctoken = channel_ctoken_mobile(channel_id, page, sort, tab, view)
+        ctoken = ctoken.replace('=', '%3D')
+        url = ('https://m.youtube.com/channel/' + channel_id + '/' + tab
+            + '?ctoken=' + ctoken + '&pbj=1')
+        content = util.fetch_url(url,
+            util.mobile_ua + headers_pbj + real_cookie,
+            debug_name='channel_tab', report_text=message)
+    else:   # use desktop endpoint
+        ctoken = channel_ctoken_desktop(channel_id, page, sort, tab, view)
+        ctoken = ctoken.replace('=', '%3D')
+        url = 'https://www.youtube.com/browse_ajax?ctoken=' + ctoken
+        content = util.fetch_url(url,
+            util.desktop_ua + headers_1 + generic_cookie,
+            debug_name='channel_tab', report_text=message)
 
     return content
 
