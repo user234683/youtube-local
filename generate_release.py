@@ -167,7 +167,7 @@ shutil.rmtree(r'./python/Lib/site-packages/gevent/testing')
 remove_files_with_extensions(r'./python/Lib/site-packages/gevent', ['.html']) # bloated html documentation
 
 log('Uninstalling pip and others')
-check(os.system(r'.\python\python.exe -I -m pip uninstall --yes pip setuptools wheel'))
+check(os.system(r'.\python\python.exe -I -m pip uninstall --yes pip wheel'))
 
 log('Removing pyc files')   # Have to do this because get-pip and some packages don't respect --no-compile
 remove_files_with_extensions(r'./python', ['.pyc'])
