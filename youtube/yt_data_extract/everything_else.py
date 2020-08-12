@@ -14,12 +14,16 @@ def extract_channel_info(polymer_json, tab):
     if err:
         return {'error': err}
 
-    try:
-        microformat = response['microformat']['microformatDataRenderer']
+
+    metadata = deep_get(response, 'metadata', 'channelMetadataRenderer',
+        default={})
+    if not metadata:
+        metadata = deep_get(response, 'microformat', 'microformatDataRenderer',
+            default={})
 
     # channel doesn't exist or was terminated
     # example terminated channel: https://www.youtube.com/channel/UCnKJeK_r90jDdIuzHXC0Org
-    except KeyError:
+    if not metadata:
         if response.get('alerts'):
             error_string = ' '.join(
                 extract_str(deep_get(alert, 'alertRenderer', 'text'), default='')
@@ -32,7 +36,7 @@ def extract_channel_info(polymer_json, tab):
             for error in response['responseContext']['errors'].get('error', []):
                 if error.get('code') == 'INVALID_VALUE' and error.get('location') == 'browse_id':
                     return {'error': 'This channel does not exist'}
-        return {'error': 'Failure getting microformat'}
+        return {'error': 'Failure getting metadata'}
 
     info = {'error': None}
     info['current_tab'] = tab
@@ -41,15 +45,20 @@ def extract_channel_info(polymer_json, tab):
         'header', 'c4TabbedHeaderRenderer', 'subscriberCountText'))
 
     # stuff from microformat (info given by youtube for every page on channel)
-    info['short_description'] = microformat.get('description')
-    info['channel_name'] = microformat.get('title')
-    info['avatar'] = deep_get(microformat, 'thumbnail', 'thumbnails', 0, 'url')
-    channel_url = microformat.get('urlCanonical')
+    info['short_description'] = metadata.get('description')
+    if info['short_description'] and len(info['short_description']) > 730:
+        info['short_description'] = info['short_description'][0:730] + '...'
+    info['channel_name'] = metadata.get('title')
+    info['avatar'] = multi_deep_get(metadata,
+        ['avatar', 'thumbnails', 0, 'url'],
+        ['thumbnail', 'thumbnails', 0, 'url'],
+    )
+    channel_url = multi_get(metadata, 'urlCanonical', 'channelUrl')
     if channel_url:
         channel_id = get(channel_url.rstrip('/').split('/'), -1)
         info['channel_id'] = channel_id
     else:
-        info['channel_id'] = deep_get(response, 'metadata', 'channelMetadataRenderer', 'externalId')
+        info['channel_id'] = metadata.get('externalId')
     if info['channel_id']:
         info['channel_url'] = 'https://www.youtube.com/channel/' + channel_id
     else:

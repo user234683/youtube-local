@@ -16,29 +16,6 @@ import traceback
 import flask
 from flask import request
 
-'''continuation = Proto(
-    Field('optional', 'continuation', 80226972, Proto(
-        Field('optional', 'browse_id', 2, String),
-        Field('optional', 'params', 3, Base64(Proto(
-            Field('optional', 'channel_tab', 2, String),
-            Field('optional', 'sort', 3, ENUM
-            Field('optional', 'page', 15, String),
-        )))
-    ))
-)'''    
-    
-
-'''channel_continuation = Proto(
-    Field('optional', 'pointless_nest', 80226972, Proto(
-        Field('optional', 'channel_id', 2, String),
-        Field('optional', 'continuation_info', 3, Base64(Proto(
-            Field('optional', 'channel_tab', 2, String),
-            Field('optional', 'sort', 3, ENUM
-            Field('optional', 'page', 15, String),
-        )))
-    ))
-)'''
-
 headers_1 = (
     ('Accept', '*/*'),
     ('Accept-Language', 'en-US,en;q=0.5'),
@@ -51,11 +28,8 @@ headers_pbj = (
     ('X-YouTube-Client-Name', '2'),
     ('X-YouTube-Client-Version', '2.20180830'),
 )
-# https://www.youtube.com/browse_ajax?action_continuation=1&direct_render=1&continuation=4qmFsgJAEhhVQzdVY3M0MkZaeTN1WXpqcnF6T0lIc3caJEVnWjJhV1JsYjNNZ0FEZ0JZQUZxQUhvQk1yZ0JBQSUzRCUzRA%3D%3D
-# https://www.youtube.com/browse_ajax?ctoken=4qmFsgJAEhhVQzdVY3M0MkZaeTN1WXpqcnF6T0lIc3caJEVnWjJhV1JsYjNNZ0FEZ0JZQUZxQUhvQk1yZ0JBQSUzRCUzRA%3D%3D&continuation=4qmFsgJAEhhVQzdVY3M0MkZaeTN1WXpqcnF6T0lIc3caJEVnWjJhV1JsYjNNZ0FEZ0JZQUZxQUhvQk1yZ0JBQSUzRCUzRA%3D%3D&itct=CDsQybcCIhMIhZi1krTc2wIVjMicCh2HXQnhKJsc
+generic_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=8XihrAcN1l4'),)
 
-# grid view: 4qmFsgJAEhhVQzdVY3M0MkZaeTN1WXpqcnF6T0lIc3caJEVnWjJhV1JsYjNNZ0FEZ0JZQUZxQUhvQk1yZ0JBQSUzRCUzRA
-# list view: 4qmFsgJCEhhVQzdVY3M0MkZaeTN1WXpqcnF6T0lIc3caJkVnWjJhV1JsYjNNWUF5QUFNQUk0QVdBQmFnQjZBVEs0QVFBJTNE
 # SORT:
 # videos:
 #    Popular - 1
@@ -69,8 +43,38 @@ headers_pbj = (
 # view:
 # grid: 0 or 1
 # list: 2
-def channel_ctoken(channel_id, page, sort, tab, view=1):  
-    
+def channel_ctoken_desktop(channel_id, page, sort, tab, view=1):
+    # see https://github.com/iv-org/invidious/issues/1319#issuecomment-671732646
+    # page > 1 doesn't work when sorting by oldest
+    offset = 30*(int(page) - 1)
+    schema_number = {
+        3: 6307666885028338688,
+        2: 17254859483345278706,
+        1: 16570086088270825023,
+    }[int(sort)]
+    page_token = proto.string(61, proto.unpadded_b64encode(proto.string(1,
+            proto.uint(1, schema_number) + proto.string(2,
+                proto.string(1, proto.unpadded_b64encode(proto.uint(1, offset))
+            )
+        )
+    )))
+
+    tab = proto.string(2, tab )
+    sort = proto.uint(3, int(sort))
+    #page = proto.string(15, str(page) )
+
+    shelf_view = proto.uint(4, 0)
+    view = proto.uint(6, int(view))
+    continuation_info = proto.string(3,
+        proto.percent_b64encode(tab + sort + shelf_view + view + page_token)
+    )
+
+    channel_id = proto.string(2, channel_id )
+    pointless_nest = proto.string(80226972, channel_id + continuation_info)
+
+    return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
+
+def channel_ctoken_mobile(channel_id, page, sort, tab, view=1):
     tab = proto.string(2, tab )
     sort = proto.uint(3, int(sort))
     page = proto.string(15, str(page) )
@@ -78,19 +82,22 @@ def channel_ctoken(channel_id, page, sort, tab, view=1):
     shelf_view = proto.uint(4, 0)
     view = proto.uint(6, int(view))
     continuation_info = proto.string( 3, proto.percent_b64encode(tab + view + sort + shelf_view + page) )
-    
+
     channel_id = proto.string(2, channel_id )
     pointless_nest = proto.string(80226972, channel_id + continuation_info)
 
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
 
 def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1, print_status=True):
-    ctoken = channel_ctoken(channel_id, page, sort, tab, view).replace('=', '%3D')
-    url = "https://www.youtube.com/browse_ajax?ctoken=" + ctoken
+    ctoken = channel_ctoken_mobile(channel_id, page, sort, tab, view)
+    ctoken = ctoken.replace('=', '%3D')
+    url = ('https://m.youtube.com/channel/' + channel_id + '/' + tab
+        + '?ctoken=' + ctoken + '&pbj=1')
 
     if print_status:
         print("Sending channel tab ajax request")
-    content = util.fetch_url(url, util.desktop_ua + headers_1, debug_name='channel_tab')
+    content = util.fetch_url(url,
+        util.mobile_ua + headers_pbj + generic_cookie, debug_name='channel_tab')
     if print_status:
         print("Finished recieving channel tab response")
 
