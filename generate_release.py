@@ -1,6 +1,7 @@
 # Generate a windows release and a generated embedded distribution of python
 # Latest python version is the argument of the script
-# Only works on windows at the moment
+# Requirements: 7z, git
+# wine 32-bit is required in order to build on Linux
 
 import sys
 import urllib
@@ -14,6 +15,9 @@ latest_version = sys.argv[1]
 
 def check(code):
     if code != 0:
+        raise Exception('Got nonzero exit code from command')
+def check_subp(x):
+    if x.returncode != 0:
         raise Exception('Got nonzero exit code from command')
 
 def log(line):
@@ -40,6 +44,20 @@ def download_if_not_exists(file_name, url, sha256=None):
                 sys.exit(1)
     else:
         log('Using existing ' + file_name)
+
+def wine_run_shell(command):
+    if os.name == 'posix':
+        check(os.system('wine ' + command.replace('\\', '/')))
+    elif os.name == 'nt':
+        check(os.system(command))
+    else:
+        raise Exception('Unsupported OS')
+
+def wine_run(command_parts):
+    if os.name == 'posix':
+        command_parts = ['wine',] + command_parts
+    if subprocess.run(command_parts).returncode != 0:
+        raise Exception('Got nonzero exit code from command')
 
 # ---------- Get current release version, for later ----------
 log('Getting current release version')
@@ -94,7 +112,7 @@ log('Extracting python distribution')
 check(os.system(r'7z -y x -opython python-dist-' + latest_version + '.zip'))
 
 log('Executing get-pip.py')
-os.system(r'.\python\python.exe -I get-pip.py')
+wine_run(['./python/python.exe', '-I', 'get-pip.py'])
 
 '''
 # Explanation of .pth, ._pth, and isolated mode
@@ -139,10 +157,10 @@ and replaced with a .pth. Isolated mode will have to be specified manually.
 
 log('Removing ._pth')
 major_release = latest_version.split('.')[1]
-os.remove(r'.\python\python3' + major_release + '._pth')
+os.remove(r'./python/python3' + major_release + '._pth')
 
 log('Adding path_fixes.pth')
-with open(r'.\python\path_fixes.pth', 'w', encoding='utf-8') as f:
+with open(r'./python/path_fixes.pth', 'w', encoding='utf-8') as f:
     f.write("import sys; sys.path.insert(0, '')\n")
 
 
@@ -155,19 +173,19 @@ with open('./python/python3' + major_release + '._pth', 'a', encoding='utf-8') a
     f.write('..\n')'''
 
 log('Inserting Microsoft C Runtime')
-check(os.system(r'7z -y e -opython vc15_(14.10.25017.0)_2017_x86.7z runtime_minimum\System'))
+check_subp(subprocess.run([r'7z', '-y', 'e', '-opython', 'vc15_(14.10.25017.0)_2017_x86.7z', 'runtime_minimum/System']))
 
 log('Installing dependencies')
-check(os.system(r'.\python\python.exe -I -m pip install --no-compile -r .\requirements.txt'))
+wine_run(['./python/python.exe', '-I', '-m', 'pip', 'install', '--no-compile', '-r', './requirements.txt'])
 
 log('Uninstalling unnecessary gevent stuff')
-check(os.system(r'.\python\python.exe -I -m pip uninstall --yes cffi pycparser'))
+wine_run(['./python/python.exe', '-I', '-m', 'pip', 'uninstall', '--yes', 'cffi', 'pycparser'])
 shutil.rmtree(r'./python/Lib/site-packages/gevent/tests')
 shutil.rmtree(r'./python/Lib/site-packages/gevent/testing')
 remove_files_with_extensions(r'./python/Lib/site-packages/gevent', ['.html']) # bloated html documentation
 
 log('Uninstalling pip and others')
-check(os.system(r'.\python\python.exe -I -m pip uninstall --yes pip wheel'))
+wine_run(['./python/python.exe', '-I', '-m', 'pip', 'uninstall', '--yes', 'pip', 'wheel'])
 
 log('Removing pyc files')   # Have to do this because get-pip and some packages don't respect --no-compile
 remove_files_with_extensions(r'./python', ['.pyc'])
@@ -188,15 +206,15 @@ log('Finished generating python distribution')
 
 # ----------- Copy generated distribution into release folder -----------
 log('Copying python distribution into release folder')
-shutil.copytree(r'.\python', r'.\youtube-local\python')
+shutil.copytree(r'./python', r'./youtube-local/python')
 
 # ----------- Create release zip -----------
 output_filename = 'youtube-local-' + release_tag + '-windows.zip'
 if os.path.exists('./' + output_filename):
     log('Removing previous zipped release')
-    os.remove('.\\' + output_filename)
+    os.remove('./' + output_filename)
 log('Zipping release')
-check(os.system(r'7z -mx=9 a ' + output_filename + ' .\youtube-local'))
+check(os.system(r'7z -mx=9 a ' + output_filename + ' ./youtube-local'))
 
 print('\n')
 log('Finished')
