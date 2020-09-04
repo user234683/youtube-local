@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from gevent import monkey
 monkey.patch_all()
 import gevent.socket
