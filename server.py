@@ -125,7 +125,7 @@ def site_dispatch(env, start_response):
 
 class FilteredRequestLog:
     '''Don't log noisy thumbnail and avatar requests'''
-    filter_re = re.compile(r'"GET /https://(i\.ytimg\.com/|www.youtube\.com/data/subscription_thumbnails/|yt3.ggpht.com/).*" 200')
+    filter_re = re.compile(r'"GET /https://(i\.ytimg\.com/|www\.youtube\.com/data/subscription_thumbnails/|yt3\.ggpht\.com/|www\.youtube\.com/api/timedtext).*" 200')
     def __init__(self):
         pass
     def write(self, s):
