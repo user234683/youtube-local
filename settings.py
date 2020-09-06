@@ -235,6 +235,7 @@ else:
         # parse settings in a safe way, without exec
         settings = {}
         attributes = {
+            ast.Constant: 'value',
             ast.NameConstant: 'value',
             ast.Num: 'n',
             ast.Str: 's',
@@ -258,7 +259,7 @@ else:
                 log_ignored_line(node.lineno,  target.id + " is not a valid setting")
                 continue
             
-            if type(node.value) not in (ast.NameConstant, ast.Num, ast.Str):
+            if type(node.value) not in attributes:
                 log_ignored_line(node.lineno, "only literals allowed for values")
                 continue
 
