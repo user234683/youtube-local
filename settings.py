@@ -108,6 +108,13 @@ For security reasons, enabling this is not recommended.''',
         ],
     }),
 
+    ('use_video_hotkeys', {
+        'label': 'Enable video hotkeys',
+        'type': bool,
+        'default': True,
+        'comment': '',
+    }),
+
     ('theme', {
         'type': int,
         'default': 0,

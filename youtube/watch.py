@@ -499,9 +499,7 @@ def get_watch_page(video_id=None):
         comment_count           = info['comment_count'],
         comments_disabled       = info['comments_disabled'],
 
-        theater_mode            = settings.theater_mode,
-        related_videos_mode     = settings.related_videos_mode,
-        comments_mode           = settings.comments_mode,
+        settings                = settings,
 
         video_height            = video_height,
         theater_video_target_width = theater_video_target_width,

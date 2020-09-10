@@ -48,7 +48,7 @@
             width: 150px;
         }
 
-    {% if theater_mode %}
+    {% if settings.theater_mode %}
         video{
             grid-column: 1 / span 5;
             justify-self: center;
@@ -582,8 +582,8 @@ Reload without invidious (for usage of new identity button).</a>
             </div>
         {% endif %}
 
-        {% if related_videos_mode != 0 %}
-            <details class="related-videos-outer" {{'open' if related_videos_mode == 1 else ''}}>
+        {% if settings.related_videos_mode != 0 %}
+            <details class="related-videos-outer" {{'open' if settings.related_videos_mode == 1 else ''}}>
                 <summary>Related Videos</summary>
                 <nav class="related-videos-inner">
                     {% for info in related %}
@@ -594,11 +594,11 @@ Reload without invidious (for usage of new identity button).</a>
         {% endif %}
     </div>
 
-    {% if comments_mode != 0 %}
+    {% if settings.comments_mode != 0 %}
         {% if comments_disabled %}
             <div class="comments-area-outer comments-disabled">Comments disabled</div>
         {% else %}
-            <details class="comments-area-outer" {{'open' if comments_mode == 1 else ''}}>
+            <details class="comments-area-outer" {{'open' if settings.comments_mode == 1 else ''}}>
                 <summary>{{ comment_count|commatize }} comment{{'s' if comment_count != 1 else ''}}</summary>
                 <section class="comments-area-inner comments-area">
                     {% if comments_info %}
@@ -608,6 +608,7 @@ Reload without invidious (for usage of new identity button).</a>
             </details>
         {% endif %}
     {% endif %}
-
-    <script src="/youtube.com/static/js/hotkeys.js"></script>
+    {% if settings.use_video_hotkeys %}
+        <script src="/youtube.com/static/js/hotkeys.js"></script>
+    {% endif %}
 {% endblock main %}
