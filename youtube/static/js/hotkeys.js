@@ -27,6 +27,6 @@ function onKeyDown(e) {
     }
 }
 
-window.addEventListener('load', function() {
+window.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keydown', onKeyDown);
 });
