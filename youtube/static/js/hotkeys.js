@@ -4,7 +4,8 @@ function onKeyDown(e) {
     // console.log(e);
     let v = Q("video");
     let c = e.key.toLowerCase();
-    if (c == "k") {
+    if (e.ctrlKey) return;
+    else if (c == "k") {
         v.paused ? v.play() : v.pause();
     }
     else if (c == "arrowleft") {
