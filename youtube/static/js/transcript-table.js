@@ -56,8 +56,12 @@ function renderCues() {
 function loadCues() {
   let tts = Q("video").textTracks;
   let tt = tts[select_tt.selectedIndex];
-  for (let ttI of tts) if (ttI !== tt) ttI.mode = "disabled";
-  if (tt.mode == "disabled") tt.mode = "hidden";
+  let dst_mode = "hidden";
+  for (let ttI of tts) {
+    if (ttI.mode === "showing") dst_mode = "showing";
+    if (ttI !== tt) ttI.mode = "disabled";
+  }
+  if (tt.mode == "disabled") tt.mode = dst_mode;
 
   var iC = setInterval(() => {
     if (tt.cues && tt.cues.length) {
