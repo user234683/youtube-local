@@ -3,39 +3,64 @@ var details_tt, select_tt, table_tt;
 function renderCues() {
   var tt = Q("video").textTracks[select_tt.selectedIndex];
   let cuesL = [...tt.cues];
-
-  clearNode(table_tt);
-  console.log("render cues..", tt.cues.length);
-
   var tt_type = cuesL[0].text.startsWith(" \n");
-  for (let i=0; i < cuesL.length; i++) {
-    let txt, startTime = tt.cues[i].startTime;
-    if (tt_type) {
-      if (i % 2) continue;
-      txt = tt.cues[i].text.split('\n')[1].replace(/<[\d:.]*?><c>(.*?)<\/c>/g, "$1");
-    } else {
-      txt = tt.cues[i].text;
+  let rows;
+
+  function forEachCue(cb) {
+    for (let i=0; i < cuesL.length; i++) {
+      let txt, startTime = tt.cues[i].startTime;
+      if (tt_type) {
+        if (i % 2) continue;
+        txt = tt.cues[i].text.split('\n')[1].replace(/<[\d:.]*?><c>(.*?)<\/c>/g, "$1");
+      } else {
+        txt = tt.cues[i].text;
+      }
+      cb(startTime, txt);
     }
+  }
 
-    let tr, td, a;
-    tr = document.createElement("tr");
-
-    td = document.createElement("td")
+  function createA(startTime, txt, title=null) {
     a = document.createElement("a");
-    a.appendChild(text(toMS(startTime)));
+    a.appendChild(text(txt));
     a.href = "javascript:;";  // TODO: replace this with ?t parameter
+    if (title) a.title = title;
     a.addEventListener("click", (e) => {
       Q("video").currentTime = startTime;
     })
-    td.appendChild(a);
-    tr.appendChild(td);
+    return a;
+  }
 
-    td = document.createElement("td")
-    td.appendChild(text(txt));
-    tr.appendChild(td);
+  clearNode(table_tt);
+  console.log("render cues..", tt.cues.length);
+  if (Q("input#transcript-use-table").checked) {
+    forEachCue((startTime, txt) => {
+      let tr, td, a;
+      tr = document.createElement("tr");
 
-    table_tt.appendChild(tr);;
-  };
+      td = document.createElement("td")
+      td.appendChild(createA(startTime, toMS(startTime)));
+      tr.appendChild(td);
+
+      td = document.createElement("td")
+      td.appendChild(text(txt));
+      tr.appendChild(td);
+
+      table_tt.appendChild(tr);
+    });
+    rows = table_tt.rows;
+  }
+  else {
+    forEachCue((startTime, txt) => {
+      span = document.createElement("span");
+      var idx = txt.indexOf(" ");
+      var [firstWord, rest] = [txt.slice(0, idx), txt.slice(idx)];
+
+      span.appendChild(createA(startTime, firstWord, toMS(startTime)));
+      if (rest) span.appendChild(text(rest + " "));
+      table_tt.appendChild(span);
+    });
+    rows = table_tt.childNodes;
+  }
 
   var lastActiveRow = null;
   function colorCurRow(e) {
@@ -45,7 +70,7 @@ function renderCues() {
 
     if (lastActiveRow) lastActiveRow.style.backgroundColor = "";
     if (idxT < 0) return;
-    var row = table_tt.rows[idxT];
+    var row = rows[idxT];
     row.style.backgroundColor = "#0cc12e42";
     lastActiveRow = row;
   }
@@ -98,6 +123,8 @@ window.addEventListener('DOMContentLoaded', function() {
       tts[idx].mode = "hidden";  // so we still receive 'oncuechange'
     }
   })
+
+  Q("input#transcript-use-table").addEventListener("change", renderCues);
 
   Q(".side-videos").prepend(details_tt);
 });
