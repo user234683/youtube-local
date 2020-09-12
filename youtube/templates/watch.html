@@ -590,6 +590,20 @@ Reload without invidious (for usage of new identity button).</a>
             </div>
         {% endif %}
 
+        {% if subtitle_sources %}
+            <details id="transcript-box">
+                <summary>Transcript</summary>
+                <div>
+                    <select id="select-tt">
+                        {% for source in subtitle_sources %}
+                            <option>{{ source['label'] }}</option>
+                        {% endfor %}
+                    </select>
+                    <table id="transcript-table"></table>
+                </div>
+            </details>
+        {% endif %}
+
         {% if settings.related_videos_mode != 0 %}
             <details class="related-videos-outer" {{'open' if settings.related_videos_mode == 1 else ''}}>
                 <summary>Related Videos</summary>

@@ -75,30 +75,17 @@ window.addEventListener('DOMContentLoaded', function() {
   let tts = Q("video").textTracks;
   if (!tts.length) return;
 
-  details_tt = document.createElement("details");
+  details_tt = Q("details#transcript-box");
   details_tt.addEventListener("toggle", () => {
     if (details_tt.open) loadCues();
   });
 
-  var s = document.createElement("summary");
-  s.appendChild(text("Transcript"));
-  details_tt.appendChild(s);
-
-  var divR = document.createElement("div");
-  select_tt = document.createElement("select");
-  for (let tt of tts) {
-    let option = document.createElement("option");
-    option.appendChild(text(tt.label));
-    select_tt.appendChild(option);
-  }
+  select_tt = Q("select#select-tt");
   select_tt.selectedIndex = getDefaultTranscriptTrackIdx();
   select_tt.addEventListener("change", loadCues);
-  divR.appendChild(select_tt);
 
-  table_tt = document.createElement("table");
-  table_tt.id = "transcript-table";
+  table_tt = Q("table#transcript-table");
   table_tt.appendChild(text("loading.."));
-  divR.appendChild(table_tt);
 
   tts.addEventListener("change", (e) => {
     // console.log(e);
@@ -112,6 +99,5 @@ window.addEventListener('DOMContentLoaded', function() {
     }
   })
 
-  details_tt.appendChild(divR);
   Q(".side-videos").prepend(details_tt);
 });
