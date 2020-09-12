@@ -21,3 +21,12 @@ function getActiveTranscriptTrackIdx() {
     return cur_tt_idx;
 }
 function getActiveTranscriptTrack() { return Q("video").textTracks[getActiveTranscriptTrackIdx()]; }
+
+function getDefaultTranscriptTrackIdx() {
+  let tts = Q("video").textTracks;
+  return tts.length - 1;
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+    cur_tt_idx = getDefaultTranscriptTrackIdx();
+});

@@ -87,6 +87,7 @@ window.addEventListener('DOMContentLoaded', function() {
     option.appendChild(text(tt.label));
     select_tt.appendChild(option);
   }
+  select_tt.selectedIndex = getDefaultTranscriptTrackIdx();
   select_tt.addEventListener("change", loadCues);
   divR.appendChild(select_tt);
 
@@ -96,7 +97,7 @@ window.addEventListener('DOMContentLoaded', function() {
   divR.appendChild(table_tt);
 
   tts.addEventListener("change", (e) => {
-    console.log(e);
+    // console.log(e);
     var idx = getActiveTranscriptTrackIdx();  // sadly not provided by 'e'
     if (tts[idx].mode == "showing") {
       select_tt.selectedIndex = idx;
