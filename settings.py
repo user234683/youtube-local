@@ -7,7 +7,7 @@ import collections
 import flask
 from flask import request
 
-settings_info = collections.OrderedDict([
+SETTINGS_INFO = collections.OrderedDict([
     ('route_tor', {
         'type': bool,
         'default': False,
@@ -155,7 +155,7 @@ For security reasons, enabling this is not recommended.''',
 ])
 
 program_directory = os.path.dirname(os.path.realpath(__file__))
-acceptable_targets = settings_info.keys() | {'enable_comments', 'enable_related_videos'}
+acceptable_targets = SETTINGS_INFO.keys() | {'enable_comments', 'enable_related_videos'}
 
 
 def comment_string(comment):
@@ -164,56 +164,35 @@ def comment_string(comment):
         result += '# ' + line + '\n'
     return result
 
-def save_settings(settings):
+def save_settings(settings_dict):
     with open(settings_file_path, 'w', encoding='utf-8') as file:
-        for setting_name, default_setting_dict in settings_info.items():
-            file.write(comment_string(default_setting_dict['comment']) + setting_name + ' = ' + repr(settings[setting_name]) + '\n\n')
+        for setting_name, setting_info in SETTINGS_INFO.items():
+            file.write(comment_string(setting_info['comment']) + setting_name + ' = ' + repr(settings_dict[setting_name]) + '\n\n')
 
-
-def create_missing_settings_string(current_settings):
-    result = ''
-    for setting_name, setting_dict in settings_info.items():
-        if setting_name not in current_settings:
-            result += comment_string(setting_dict['comment']) + setting_name + ' = ' + repr(setting_dict['default']) + '\n\n'
-    return result
-
-def create_default_settings_string():
-    return settings_to_string({})
-
-def add_missing_settings(settings):
+def add_missing_settings(settings_dict):
     result = default_settings()
-    result.update(settings)
+    result.update(settings_dict)
     return result
 
 def default_settings():
-    return {key: setting_info['default'] for key, setting_info in settings_info.items()}
+    return {key: setting_info['default'] for key, setting_info in SETTINGS_INFO.items()}
 
-def settings_to_string(settings):
-    '''Given a dictionary with the setting names/setting values for the keys/values, outputs a settings file string.
-       Fills in missing values from the defaults.'''
-    result = ''
-    for setting_name, default_setting_dict in settings_info.items():
-        if setting_name in settings:
-            value = settings[setting_name]
-        else:
-            value = default_setting_dict['default']
-        result += comment_string(default_setting_dict['comment']) + setting_name + ' = ' + repr(value) + '\n\n'
-    return result
-
-
-def upgrade_to_2(current_settings):
+def upgrade_to_2(settings_dict):
     '''Upgrade to settings version 2'''
-    new_settings = current_settings.copy()
-    if 'enable_comments' in current_settings:
-        new_settings['comments_mode'] = int(current_settings['enable_comments'])
+    new_settings = settings_dict.copy()
+    if 'enable_comments' in settings_dict:
+        new_settings['comments_mode'] = int(settings_dict['enable_comments'])
         del new_settings['enable_comments']
-    if 'enable_related_videos' in current_settings:
-        new_settings['related_videos_mode'] = int(current_settings['enable_related_videos'])
+    if 'enable_related_videos' in settings_dict:
+        new_settings['related_videos_mode'] = int(settings_dict['enable_related_videos'])
         del new_settings['enable_related_videos']
     return new_settings
 
 def log_ignored_line(line_number, message):
     print("WARNING: Ignoring settings.txt line " + str(node.lineno) + " (" + message + ")")
+
+
+
 
 if os.path.isfile("settings.txt"):
     print("Running in portable mode")
@@ -232,15 +211,15 @@ try:
     with open(settings_file_path, 'r', encoding='utf-8') as file:
         settings_text = file.read()
 except FileNotFoundError:
-    settings = default_settings()
-    save_settings(settings)
+    current_settings_dict = default_settings()
+    save_settings(current_settings_dict)
 else:
     if re.fullmatch(r'\s*', settings_text):     # blank file
-        settings = default_settings()
-        save_settings(settings)
+        current_settings_dict = default_settings()
+        save_settings(current_settings_dict)
     else:
         # parse settings in a safe way, without exec
-        settings = {}
+        current_settings_dict = {}
         attributes = {
             ast.Constant: 'value',
             ast.NameConstant: 'value',
@@ -270,21 +249,21 @@ else:
                 log_ignored_line(node.lineno, "only literals allowed for values")
                 continue
 
-            settings[target.id] = node.value.__getattribute__(attributes[type(node.value)])
+            current_settings_dict[target.id] = node.value.__getattribute__(attributes[type(node.value)])
 
 
-        if 'settings_version' not in settings:
+        if 'settings_version' not in current_settings_dict:
             print('Upgrading settings.txt')
-            settings = add_missing_settings(upgrade_to_2(settings))
-            save_settings(settings)
+            current_settings_dict = add_missing_settings(upgrade_to_2(current_settings_dict))
+            save_settings(current_settings_dict)
 
         # some settings not in the file, add those missing settings to the file
-        elif not settings.keys() >= settings_info.keys():
+        elif not current_settings_dict.keys() >= SETTINGS_INFO.keys():
             print('Adding missing settings to settings.txt')
-            settings = add_missing_settings(settings)
-            save_settings(settings)
+            current_settings_dict = add_missing_settings(current_settings_dict)
+            save_settings(current_settings_dict)
 
-locals().update(settings)
+globals().update(current_settings_dict)
 
 
 
@@ -293,6 +272,9 @@ if route_tor:
     print("Tor routing is ON")
 else:
     print("Tor routing is OFF - your Youtube activity is NOT anonymous")
+
+
+
 
 hooks = {}
 def add_setting_changed_hook(setting, func):
@@ -306,43 +288,34 @@ def add_setting_changed_hook(setting, func):
 def settings_page():
     if request.method == 'GET':
         return flask.render_template('settings.html',
-            settings = [(setting_name, setting_info, settings[setting_name]) for setting_name, setting_info in settings_info.items()]
+            settings = [(setting_name, setting_info, current_settings_dict[setting_name]) for setting_name, setting_info in SETTINGS_INFO.items()]
         )
     elif request.method == 'POST':
         for key, value in request.values.items():
-            if key in settings_info:
-                if settings_info[key]['type'] is bool and value == 'on':
-                    settings[key] = True
+            if key in SETTINGS_INFO:
+                if SETTINGS_INFO[key]['type'] is bool and value == 'on':
+                    current_settings_dict[key] = True
                 else:
-                    settings[key] = settings_info[key]['type'](value)
+                    current_settings_dict[key] = SETTINGS_INFO[key]['type'](value)
             else:
                 flask.abort(400)
 
         # need this bullshit because browsers don't send anything when an input is unchecked
-        expected_inputs = {setting_name for setting_name, setting_info in settings_info.items() if not settings_info[setting_name].get('hidden', False)}
+        expected_inputs = {setting_name for setting_name, setting_info in SETTINGS_INFO.items() if not SETTINGS_INFO[setting_name].get('hidden', False)}
         missing_inputs = expected_inputs - set(request.values.keys())
         for setting_name in missing_inputs:
-            assert settings_info[setting_name]['type'] is bool, missing_inputs
-            settings[setting_name] = False
+            assert SETTINGS_INFO[setting_name]['type'] is bool, missing_inputs
+            current_settings_dict[setting_name] = False
 
         # call setting hooks
-        for setting_name, value in settings.items():
+        for setting_name, value in current_settings_dict.items():
             old_value = globals()[setting_name]
             if value != old_value and setting_name in hooks:
                 for func in hooks[setting_name]:
                     func(old_value, value)
 
-        globals().update(settings)
-        save_settings(settings)
+        globals().update(current_settings_dict)
+        save_settings(current_settings_dict)
         return flask.redirect(util.URL_ORIGIN + '/settings', 303)
     else:
         flask.abort(400)
-
-
-
-
-
-
-
-
-
