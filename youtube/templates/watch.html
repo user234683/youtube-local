@@ -313,6 +313,10 @@
     table#transcript-table td, th {
         border: 1px solid #dddddd;
     }
+    div#transcript-div {
+        background-color: var(--interface-color);
+        padding: 5px;
+    }
 {% endblock style %}
 
 {% block main %}
@@ -591,9 +595,9 @@ Reload without invidious (for usage of new identity button).</a>
         {% endif %}
 
         {% if subtitle_sources %}
-            <details id="transcript-box">
+            <details id="transcript-details">
                 <summary>Transcript</summary>
-                <div>
+                <div id="transcript-div">
                     <select id="select-tt">
                         {% for source in subtitle_sources %}
                             <option>{{ source['label'] }}</option>

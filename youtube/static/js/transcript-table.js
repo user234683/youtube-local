@@ -103,7 +103,7 @@ window.addEventListener('DOMContentLoaded', function() {
   let tts = Q("video").textTracks;
   if (!tts.length) return;
 
-  details_tt = Q("details#transcript-box");
+  details_tt = Q("details#transcript-details");
   details_tt.addEventListener("toggle", () => {
     if (details_tt.open) loadCues();
   });
