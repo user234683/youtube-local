@@ -4,6 +4,8 @@ function renderCues() {
   var tt = Q("video").textTracks[select_tt.selectedIndex];
   let cuesL = [...tt.cues];
   var tt_type = cuesL[0].text.startsWith(" \n");
+  let ff_bug = false;
+  if (!cuesL[0].text.length) { ff_bug = true; tt_type = true };
   let rows;
 
   function forEachCue(cb) {
@@ -11,7 +13,8 @@ function renderCues() {
       let txt, startTime = tt.cues[i].startTime;
       if (tt_type) {
         if (i % 2) continue;
-        txt = tt.cues[i].text.split('\n')[1].replace(/<[\d:.]*?><c>(.*?)<\/c>/g, "$1");
+        if (ff_bug && !tt.cues[i].text.length) txt = tt.cues[i+1].text;
+        else txt = tt.cues[i].text.split('\n')[1].replace(/<[\d:.]*?><c>(.*?)<\/c>/g, "$1");
       } else {
         txt = tt.cues[i].text;
       }
@@ -52,7 +55,7 @@ function renderCues() {
   else {
     forEachCue((startTime, txt) => {
       span = document.createElement("span");
-      var idx = txt.indexOf(" ");
+      var idx = txt.indexOf(" ", 1);
       var [firstWord, rest] = [txt.slice(0, idx), txt.slice(idx)];
 
       span.appendChild(createA(startTime, firstWord, toMS(startTime)));
@@ -90,8 +93,8 @@ function loadCues() {
 
   var iC = setInterval(() => {
     if (tt.cues && tt.cues.length) {
-      renderCues();
       clearInterval(iC);
+      renderCues();
     }
   }, 100);
 }
