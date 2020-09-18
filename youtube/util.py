@@ -119,8 +119,11 @@ def decode_content(content, encoding_header):
             content = gzip.decompress(content)
     return content
 
-def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookiejar_send=None, cookiejar_receive=None, use_tor=True, return_response=False, debug_name=None):
+def fetch_url_response(url, headers=(), timeout=15, data=None,
+                       cookiejar_send=None, cookiejar_receive=None,
+                       use_tor=True):
     '''
+    returns response, cleanup_function
     When cookiejar_send is set to a CookieJar object,
      those cookies will be sent in the request (but cookies in response will not be merged into it)
     When cookiejar_receive is set to a CookieJar object,
@@ -147,8 +150,6 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookieja
         elif not isinstance(data, bytes):
             data = urllib.parse.urlencode(data).encode('ascii')
 
-    start_time = time.time()
-
     if cookiejar_send is not None or cookiejar_receive is not None:     # Use urllib
         req = urllib.request.Request(url, data=data, headers=headers)
 
@@ -160,19 +161,30 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookieja
             opener = urllib.request.build_opener(cookie_processor)
 
         response = opener.open(req, timeout=timeout)
-        response_time = time.time()
-
-
-        content = response.read()
+        cleanup_func = (lambda r: None)
 
     else:           # Use a urllib3 pool. Cookies can't be used since urllib3 doesn't have easy support for them.
         pool = get_pool(use_tor and settings.route_tor)
-
         response = pool.request(method, url, headers=headers, timeout=timeout, preload_content=False, decode_content=False)
-        response_time = time.time()
+        cleanup_func = (lambda r: r.release_conn())
 
-        content = response.read()
-        response.release_conn()
+    return response, cleanup_func
+
+def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
+              cookiejar_send=None, cookiejar_receive=None, use_tor=True,
+              debug_name=None):
+    start_time = time.time()
+
+    response, cleanup_func = fetch_url_response(
+        url, headers, timeout=timeout,
+        cookiejar_send=cookiejar_send, cookiejar_receive=cookiejar_receive,
+        use_tor=use_tor)
+    response_time = time.time()
+
+    content = response.read()
+    read_finish = time.time()
+
+    cleanup_func(response)  # release_connection for urllib3
 
     if (response.status == 429
             and content.startswith(b'<!DOCTYPE')
@@ -185,7 +197,6 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookieja
     elif response.status >= 400:
         raise FetchError(str(response.status), reason=response.reason, ip=None)
 
-    read_finish = time.time()
     if report_text:
         print(report_text, '    Latency:', round(response_time - start_time,3), '    Read time:', round(read_finish - response_time,3))
     content = decode_content(content, response.getheader('Content-Encoding', default='identity'))
@@ -198,8 +209,6 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None, cookieja
         with open(os.path.join(save_dir, debug_name), 'wb') as f:
             f.write(content)
 
-    if return_response:
-        return content, response
     return content
 
 def head(url, use_tor=False, report_text=None, max_redirects=10):

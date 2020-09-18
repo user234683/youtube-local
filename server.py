@@ -32,24 +32,48 @@ def youtu_be(env, start_response):
         env['QUERY_STRING'] += '&v=' + id
     yield from yt_app(env, start_response)
 
-def proxy_site(env, start_response):
+def proxy_site(env, start_response, video=False):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)',
         'Accept': '*/*',
     }
+    if 'HTTP_RANGE' in env:
+        headers['Range'] = env['HTTP_RANGE']
+
     url = "https://" + env['SERVER_NAME'] + env['PATH_INFO']
     if env['QUERY_STRING']:
         url += '?' + env['QUERY_STRING']
 
-
-    content, response = util.fetch_url(url, headers, return_response=True)
+    if video and settings.route_tor == 1:
+        response, cleanup_func = util.fetch_url_response(url, headers,
+                                                         use_tor=False)
+    else:
+        response, cleanup_func = util.fetch_url_response(url, headers)
 
     headers = response.getheaders()
     if isinstance(headers, urllib3._collections.HTTPHeaderDict):
         headers = headers.items()
 
-    start_response('200 OK', headers )
-    yield content
+    start_response(str(response.status) + ' ' + response.reason, headers)
+    while True:
+        # a bit over 3 seconds of 360p video
+        # we want each TCP packet to transmit in large multiples,
+        # such as 65,536, so we shouldn't read in small chunks
+        # such as 8192 lest that causes the socket library to limit the
+        # TCP window size
+        # Might need fine-tuning, since this gives us 4*65536
+        # The tradeoff is that larger values (such as 6 seconds) only 
+        # allows video to buffer in those increments, meaning user must wait
+        # until the entire chunk is downloaded before video starts playing
+        content_part = response.read(32*8192)
+        if not content_part:
+            break
+        yield content_part
+
+    cleanup_func(response)
+
+def proxy_video(env, start_response):
+    yield from proxy_site(env, start_response, video=True)
 
 site_handlers = {
     'youtube.com':yt_app,
@@ -57,7 +81,7 @@ site_handlers = {
     'ytimg.com': proxy_site,
     'yt3.ggpht.com': proxy_site,
     'lh3.googleusercontent.com': proxy_site,
-
+    'googlevideo.com': proxy_video,
 }
 
 def split_url(url):

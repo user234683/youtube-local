@@ -9,10 +9,17 @@ from flask import request
 
 SETTINGS_INFO = collections.OrderedDict([
     ('route_tor', {
-        'type': bool,
-        'default': False,
+        'type': int,
+        'default': 0,
         'label': 'Route Tor',
-        'comment': '',
+        'comment': '''0 - Off
+1 - On, except video
+2 - On, including video (see warnings)''',
+        'options': [
+            (0, 'Off'),
+            (1, 'On, except video'),
+            (2, 'On, including video (see warnings)'),
+        ],
     }),
 
     ('port_number', {
@@ -148,7 +155,7 @@ For security reasons, enabling this is not recommended.''',
 
     ('settings_version', {
         'type': int,
-        'default': 2,
+        'default': 3,
         'comment': '''Do not change, remove, or comment out this value, or else your settings may be lost or corrupted''',
         'hidden': True,
     }),
@@ -186,7 +193,20 @@ def upgrade_to_2(settings_dict):
     if 'enable_related_videos' in settings_dict:
         new_settings['related_videos_mode'] = int(settings_dict['enable_related_videos'])
         del new_settings['enable_related_videos']
+    new_settings['settings_version'] = 2
     return new_settings
+
+def upgrade_to_3(settings_dict):
+    new_settings = settings_dict.copy()
+    if 'route_tor' in settings_dict:
+        new_settings['route_tor'] = int(settings_dict['route_tor'])
+    new_settings['settings_version'] = 3
+    return new_settings
+
+upgrade_functions = {
+    1: upgrade_to_2,
+    2: upgrade_to_3,
+}
 
 def log_ignored_line(line_number, message):
     print("WARNING: Ignoring settings.txt line " + str(node.lineno) + " (" + message + ")")
@@ -251,14 +271,20 @@ else:
 
             current_settings_dict[target.id] = node.value.__getattribute__(attributes[type(node.value)])
 
-
-        if 'settings_version' not in current_settings_dict:
-            print('Upgrading settings.txt')
-            current_settings_dict = add_missing_settings(upgrade_to_2(current_settings_dict))
+        # upgrades
+        latest_version = SETTINGS_INFO['settings_version']['default']
+        while current_settings_dict.get('settings_version',1) < latest_version:
+            current_version = current_settings_dict.get('settings_version', 1)
+            print('Upgrading settings.txt to version', current_version+1)
+            upgrade_func = upgrade_functions[current_version]
+            # Must add missing settings here rather than below because
+            # save_settings needs all settings to be present
+            current_settings_dict = add_missing_settings(
+                upgrade_func(current_settings_dict))
             save_settings(current_settings_dict)
 
         # some settings not in the file, add those missing settings to the file
-        elif not current_settings_dict.keys() >= SETTINGS_INFO.keys():
+        if not current_settings_dict.keys() >= SETTINGS_INFO.keys():
             print('Adding missing settings to settings.txt')
             current_settings_dict = add_missing_settings(current_settings_dict)
             save_settings(current_settings_dict)

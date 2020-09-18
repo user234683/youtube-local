@@ -24,7 +24,7 @@ except FileNotFoundError:
 
 def get_video_sources(info):
     video_sources = []
-    if not settings.theater_mode:
+    if (not settings.theater_mode) or settings.route_tor == 2:
         max_resolution = 360
     else:
         max_resolution = settings.default_resolution
@@ -270,10 +270,11 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     else:
         info['hls_formats'] = []
 
-    # check for 403
+    # check for 403. Unnecessary for tor video routing b/c ip address is same
     info['invidious_used'] = False
     info['invidious_reload_button'] = False
-    if settings.route_tor and info['formats'] and info['formats'][0]['url']:
+    if (settings.route_tor == 1
+            and info['formats'] and info['formats'][0]['url']):
         try:
             response = util.head(info['formats'][0]['url'],
                 report_text='Checked for URL access')
@@ -408,10 +409,10 @@ def get_watch_page(video_id=None):
         "author":   info['author'],
     }
 
+    # prefix urls, and other post-processing not handled by yt_data_extract
     for item in info['related_videos']:
         util.prefix_urls(item)
         util.add_extra_html_info(item)
-
     if info['playlist']:
         playlist_id = info['playlist']['id']
         for item in info['playlist']['items']:
@@ -423,6 +424,11 @@ def get_watch_page(video_id=None):
                 item['url'] += '&index=' + str(item['index'])
         info['playlist']['author_url'] = util.prefix_url(
             info['playlist']['author_url'])
+    # Don't prefix hls_formats for now because the urls inside the manifest
+    # would need to be prefixed as well.
+    for fmt in info['formats']:
+        fmt['url'] = util.prefix_url(fmt['url'])
+
 
     if settings.gather_googlevideo_domains:
         with open(os.path.join(settings.data_dir, 'googlevideo-domains.txt'), 'a+', encoding='utf-8') as f:
