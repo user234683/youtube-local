@@ -44,7 +44,28 @@ generic_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=ST1Ti53r4fU'),)
 # view:
 # grid: 0 or 1
 # list: 2
-def channel_ctoken_desktop(channel_id, page, sort, tab, view=1):
+def channel_ctoken_v3(channel_id, page, sort, tab, view=1):
+    # page > 1 doesn't work when sorting by oldest
+    offset = 30*(int(page) - 1)
+    page_token = proto.string(61, proto.unpadded_b64encode(
+        proto.string(1, proto.unpadded_b64encode(proto.uint(1,offset)))
+    ))
+
+    tab = proto.string(2, tab )
+    sort = proto.uint(3, int(sort))
+
+    shelf_view = proto.uint(4, 0)
+    view = proto.uint(6, int(view))
+    continuation_info = proto.string(3,
+        proto.percent_b64encode(tab + sort + shelf_view + view + page_token)
+    )
+
+    channel_id = proto.string(2, channel_id )
+    pointless_nest = proto.string(80226972, channel_id + continuation_info)
+
+    return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
+
+def channel_ctoken_v2(channel_id, page, sort, tab, view=1):
     # see https://github.com/iv-org/invidious/issues/1319#issuecomment-671732646
     # page > 1 doesn't work when sorting by oldest
     offset = 30*(int(page) - 1)
@@ -74,14 +95,14 @@ def channel_ctoken_desktop(channel_id, page, sort, tab, view=1):
 
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
 
-def channel_ctoken_mobile(channel_id, page, sort, tab, view=1):
+def channel_ctoken_v1(channel_id, page, sort, tab, view=1):
     tab = proto.string(2, tab )
     sort = proto.uint(3, int(sort))
     page = proto.string(15, str(page) )
     # example with shelves in videos tab: https://www.youtube.com/channel/UCNL1ZadSjHpjm4q9j2sVtOA/videos
     shelf_view = proto.uint(4, 0)
     view = proto.uint(6, int(view))
-    continuation_info = proto.string( 3, proto.percent_b64encode(tab + view + sort + shelf_view + page) )
+    continuation_info = proto.string(3, proto.percent_b64encode(tab + view + sort + shelf_view + page + proto.uint(23, 0)) )
 
     channel_id = proto.string(2, channel_id )
     pointless_nest = proto.string(80226972, channel_id + continuation_info)
@@ -91,15 +112,16 @@ def channel_ctoken_mobile(channel_id, page, sort, tab, view=1):
 def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1, print_status=True):
     message = 'Got channel tab' if print_status else None
 
-    if int(sort) == 2 and int(page) > 1:   # use mobile endpoint
-        ctoken = channel_ctoken_mobile(channel_id, page, sort, tab, view)
+    if int(sort) == 2 and int(page) > 1:
+        ctoken = channel_ctoken_v1(channel_id, page, sort, tab, view)
         ctoken = ctoken.replace('=', '%3D')
-        url = ('https://m.youtube.com/channel/' + channel_id + '/' + tab
-            + '?ctoken=' + ctoken + '&pbj=1')
-        content = util.fetch_url(url, headers_mobile + real_cookie,
+        url = ('https://www.youtube.com/channel/' + channel_id + '/' + tab
+            + '?action_continuation=1&continuation=' + ctoken
+            + '&pbj=1')
+        content = util.fetch_url(url, headers_desktop + real_cookie,
             debug_name='channel_tab', report_text=message)
-    else:   # use desktop endpoint
-        ctoken = channel_ctoken_desktop(channel_id, page, sort, tab, view)
+    else:
+        ctoken = channel_ctoken_v3(channel_id, page, sort, tab, view)
         ctoken = ctoken.replace('=', '%3D')
         url = 'https://www.youtube.com/browse_ajax?ctoken=' + ctoken
         content = util.fetch_url(url,
