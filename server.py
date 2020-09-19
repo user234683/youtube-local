@@ -164,5 +164,5 @@ if settings.allow_foreign_addresses:
 else:
     server = WSGIServer(('127.0.0.1', settings.port_number), site_dispatch,
                         log=FilteredRequestLog())
-print('Started httpserver on port ' , settings.port_number)
+print('Started httpserver on port' , settings.port_number)
 server.serve_forever()
