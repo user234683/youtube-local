@@ -54,7 +54,7 @@ URL_ORIGIN = "/https://www.youtube.com"
 connection_pool = urllib3.PoolManager(cert_reqs = 'CERT_REQUIRED')
 
 old_tor_connection_pool = None
-tor_connection_pool = urllib3.contrib.socks.SOCKSProxyManager('socks5://127.0.0.1:9150/', cert_reqs = 'CERT_REQUIRED')
+tor_connection_pool = urllib3.contrib.socks.SOCKSProxyManager('socks5://127.0.0.1:' + str(settings.tor_port) + '/', cert_reqs = 'CERT_REQUIRED')
 
 tor_pool_refresh_time = time.monotonic()   # prevent problems due to clock changes
 
@@ -74,7 +74,7 @@ def get_pool(use_tor):
         # Keep a reference for 5 min to avoid it getting garbage collected while sockets still in use
         old_tor_connection_pool = tor_connection_pool
 
-        tor_connection_pool = urllib3.contrib.socks.SOCKSProxyManager('socks5://127.0.0.1:9150/', cert_reqs = 'CERT_REQUIRED')
+        tor_connection_pool = urllib3.contrib.socks.SOCKSProxyManager('socks5://127.0.0.1:' + str(settings.tor_port) + '/', cert_reqs = 'CERT_REQUIRED')
         tor_pool_refresh_time = current_time
 
     return tor_connection_pool
@@ -156,7 +156,7 @@ def fetch_url_response(url, headers=(), timeout=15, data=None,
         cookie_processor = HTTPAsymmetricCookieProcessor(cookiejar_send=cookiejar_send, cookiejar_receive=cookiejar_receive)
 
         if use_tor and settings.route_tor:
-            opener = urllib.request.build_opener(sockshandler.SocksiPyHandler(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", 9150), cookie_processor)
+            opener = urllib.request.build_opener(sockshandler.SocksiPyHandler(socks.PROXY_TYPE_SOCKS5, "127.0.0.1", settings.tor_port), cookie_processor)
         else:
             opener = urllib.request.build_opener(cookie_processor)
 

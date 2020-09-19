@@ -22,6 +22,12 @@ SETTINGS_INFO = collections.OrderedDict([
         ],
     }),
 
+    ('tor_port', {
+        'type': int,
+        'default': 9150,
+        'comment': '',
+    }),
+
     ('port_number', {
         'type': int,
         'default': 8080,
