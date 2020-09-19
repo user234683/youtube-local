@@ -2,6 +2,7 @@ from youtube import util
 import flask
 import settings
 import traceback
+import re
 from sys import exc_info
 yt_app = flask.Flask(__name__)
 yt_app.url_map.strict_slashes = False
@@ -33,6 +34,22 @@ def commatize(num):
     if isinstance(num, str):
         num = int(num)
     return '{:,}'.format(num)
+
+def timestamp_replacement(match):
+    time_seconds = 0
+    for part in match.group(0).split(':'):
+        time_seconds = 60*time_seconds + int(part)
+    return (
+        '<a href="#" onclick="document.querySelector(\'video\').currentTime='
+        + str(time_seconds)
+        + '">' + match.group(0)
+        + '</a>'
+    )
+
+TIMESTAMP_RE = re.compile(r'\b(\d?\d:)?\d?\d:\d\d\b')
+@yt_app.template_filter('timestamps')
+def timestamps(text):
+    return TIMESTAMP_RE.sub(timestamp_replacement, text)
 
 @yt_app.errorhandler(500)
 def error_page(e):

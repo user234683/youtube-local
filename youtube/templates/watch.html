@@ -401,7 +401,7 @@ Reload without invidious (for usage of new identity button).</a>
         <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
 
 
-        <span class="description">{{ common_elements.text_runs(description)|urlize }}</span>
+        <span class="description">{{ common_elements.text_runs(description)|escape|urlize|timestamps|safe }}</span>
         <div class="music-list">
             {% if music_list.__len__() != 0 %}
                 <hr>

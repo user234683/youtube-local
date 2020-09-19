@@ -1,6 +1,6 @@
 {% import "common_elements.html" as common_elements %}
 
-{% macro render_comment(comment, include_avatar) %}
+{% macro render_comment(comment, include_avatar, timestamp_links=False) %}
     <div class="comment-container">
         <div class="comment">
             <a class="author-avatar" href="{{ comment['author_url'] }}" title="{{ comment['author'] }}">
@@ -14,7 +14,11 @@
             <a class="permalink" href="{{ comment['permalink'] }}" title="permalink">
                 <time datetime="">{{ comment['time_published'] }}</time>
             </a>
-            <span class="text">{{ common_elements.text_runs(comment['text']) }}</span>
+            {% if timestamp_links %}
+                <span class="text">{{ common_elements.text_runs(comment['text'])|timestamps|safe }}</span>
+            {% else %}
+                <span class="text">{{ common_elements.text_runs(comment['text']) }}</span>
+            {% endif %}
 
             <span class="likes">{{ comment['likes_text'] if comment['like_count'] else ''}}</span>
             <div class="bottom-row">
@@ -36,7 +40,7 @@
     </div>
     <div class="comments">
         {% for comment in comments_info['comments'] %}
-            {{ render_comment(comment, comments_info['include_avatars']) }}
+            {{ render_comment(comment, comments_info['include_avatars'], True) }}
         {% endfor %}
     </div>
     {% if 'more_comments_url' is in comments_info %}
