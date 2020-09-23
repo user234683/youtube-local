@@ -46,7 +46,11 @@ def proxy_site(env, start_response, video=False):
 
     if video and settings.route_tor == 1:
         response, cleanup_func = util.fetch_url_response(url, headers,
-                                                         use_tor=False)
+                                                         use_tor=False,
+                                                         max_redirects=10)
+    elif video:
+        response, cleanup_func = util.fetch_url_response(url, headers,
+                                                         max_redirects=10)
     else:
         response, cleanup_func = util.fetch_url_response(url, headers)
 

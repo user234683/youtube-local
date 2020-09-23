@@ -121,7 +121,7 @@ def decode_content(content, encoding_header):
 
 def fetch_url_response(url, headers=(), timeout=15, data=None,
                        cookiejar_send=None, cookiejar_receive=None,
-                       use_tor=True):
+                       use_tor=True, max_redirects=None):
     '''
     returns response, cleanup_function
     When cookiejar_send is set to a CookieJar object,
@@ -164,8 +164,18 @@ def fetch_url_response(url, headers=(), timeout=15, data=None,
         cleanup_func = (lambda r: None)
 
     else:           # Use a urllib3 pool. Cookies can't be used since urllib3 doesn't have easy support for them.
+        # default: Retry.DEFAULT = Retry(3)
+        # (in connectionpool.py in urllib3)
+        # According to the documentation for urlopen, a redirect counts as a
+        # retry. So there are 3 redirects max by default.
+        if max_redirects:
+            retries = urllib3.Retry(3+max_redirects, redirect=max_redirects)
+        else:
+            retries = urllib3.Retry(3)
         pool = get_pool(use_tor and settings.route_tor)
-        response = pool.request(method, url, headers=headers, timeout=timeout, preload_content=False, decode_content=False)
+        response = pool.request(method, url, headers=headers,
+                                timeout=timeout, preload_content=False,
+                                decode_content=False, retries=retries)
         cleanup_func = (lambda r: r.release_conn())
 
     return response, cleanup_func
@@ -218,7 +228,7 @@ def head(url, use_tor=False, report_text=None, max_redirects=10):
     # default: Retry.DEFAULT = Retry(3)
     # (in connectionpool.py in urllib3)
     # According to the documentation for urlopen, a redirect counts as a retry
-    # by default. So there are 3 redirects max by default. Let's change that
+    # So there are 3 redirects max by default. Let's change that
     # to 10 since googlevideo redirects a lot.
     retries = urllib3.Retry(3+max_redirects, redirect=max_redirects,
         raise_on_redirect=False)
