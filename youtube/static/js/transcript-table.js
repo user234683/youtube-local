@@ -1,28 +1,38 @@
 var details_tt, select_tt, table_tt;
 
 function renderCues() {
-  var tt = Q("video").textTracks[select_tt.selectedIndex];
-  let cuesL = [...tt.cues];
-  var tt_type = cuesL[0].text.startsWith(" \n");
+  var selectedTrack = Q("video").textTracks[select_tt.selectedIndex];
+  let cuesList = [...selectedTrack.cues];
+  var is_automatic = cuesList[0].text.startsWith(" \n");
+
+  // Firefox ignores cues starting with a blank line containing a space
+  // Automatic captions contain such a blank line in the first cue
   let ff_bug = false;
-  if (!cuesL[0].text.length) { ff_bug = true; tt_type = true };
+  if (!cuesList[0].text.length) { ff_bug = true; is_automatic = true };
   let rows;
 
-  function forEachCue(cb) {
-    for (let i=0; i < cuesL.length; i++) {
-      let txt, startTime = tt.cues[i].startTime;
-      if (tt_type) {
+  function forEachCue(callback) {
+    for (let i=0; i < cuesList.length; i++) {
+      let txt, startTime = selectedTrack.cues[i].startTime;
+      if (is_automatic) {
+        // Automatic captions repeat content. The new segment is displayed
+        // on the bottom row; the old one is displayed on the top row.
+        // So grab the bottom row only. Skip every other cue because the bottom
+        // row is empty.
         if (i % 2) continue;
-        if (ff_bug && !tt.cues[i].text.length) txt = tt.cues[i+1].text;
-        else txt = tt.cues[i].text.split('\n')[1].replace(/<[\d:.]*?><c>(.*?)<\/c>/g, "$1");
+        if (ff_bug && !selectedTrack.cues[i].text.length) {
+          txt = selectedTrack.cues[i+1].text;
+        } else {
+          txt = selectedTrack.cues[i].text.split('\n')[1].replace(/<[\d:.]*?><c>(.*?)<\/c>/g, "$1");
+        }
       } else {
-        txt = tt.cues[i].text;
+        txt = selectedTrack.cues[i].text;
       }
-      cb(startTime, txt);
+      callback(startTime, txt);
     }
   }
 
-  function createA(startTime, txt, title=null) {
+  function createTimestampLink(startTime, txt, title=null) {
     a = document.createElement("a");
     a.appendChild(text(txt));
     a.href = "javascript:;";  // TODO: replace this with ?t parameter
@@ -34,14 +44,14 @@ function renderCues() {
   }
 
   clearNode(table_tt);
-  console.log("render cues..", tt.cues.length);
+  console.log("render cues..", selectedTrack.cues.length);
   if (Q("input#transcript-use-table").checked) {
     forEachCue((startTime, txt) => {
       let tr, td, a;
       tr = document.createElement("tr");
 
       td = document.createElement("td")
-      td.appendChild(createA(startTime, toMS(startTime)));
+      td.appendChild(createTimestampLink(startTime, toTimestamp(startTime)));
       tr.appendChild(td);
 
       td = document.createElement("td")
@@ -58,7 +68,7 @@ function renderCues() {
       var idx = txt.indexOf(" ", 1);
       var [firstWord, rest] = [txt.slice(0, idx), txt.slice(idx)];
 
-      span.appendChild(createA(startTime, firstWord, toMS(startTime)));
+      span.appendChild(createTimestampLink(startTime, firstWord, toTimestamp(startTime)));
       if (rest) span.appendChild(text(rest + " "));
       table_tt.appendChild(span);
     });
@@ -68,40 +78,50 @@ function renderCues() {
   var lastActiveRow = null;
   function colorCurRow(e) {
     // console.log("cuechange:", e);
-    var idxC = cuesL.findIndex((c) => c == tt.activeCues[0]);
-    var idxT = tt_type ? Math.floor(idxC / 2) : idxC;
+    var activeCueIdx = cuesList.findIndex((c) => c == selectedTrack.activeCues[0]);
+    var activeRowIdx = is_automatic ? Math.floor(activeCueIdx / 2) : activeCueIdx;
 
     if (lastActiveRow) lastActiveRow.style.backgroundColor = "";
-    if (idxT < 0) return;
-    var row = rows[idxT];
+    if (activeRowIdx < 0) return;
+    var row = rows[activeRowIdx];
     row.style.backgroundColor = "#0cc12e42";
     lastActiveRow = row;
   }
   colorCurRow();
-  tt.addEventListener("cuechange", colorCurRow);
+  selectedTrack.addEventListener("cuechange", colorCurRow);
 }
 
 function loadCues() {
-  let tts = Q("video").textTracks;
-  let tt = tts[select_tt.selectedIndex];
-  let dst_mode = "hidden";
-  for (let ttI of tts) {
-    if (ttI.mode === "showing") dst_mode = "showing";
-    if (ttI !== tt) ttI.mode = "disabled";
-  }
-  if (tt.mode == "disabled") tt.mode = dst_mode;
+  let textTracks = Q("video").textTracks;
+  let selectedTrack = textTracks[select_tt.selectedIndex];
 
-  var iC = setInterval(() => {
-    if (tt.cues && tt.cues.length) {
-      clearInterval(iC);
+  // See https://developer.mozilla.org/en-US/docs/Web/API/TextTrack/mode
+  // This code will (I think) make sure that the selected track's cues
+  // are loaded even if the track subtitles aren't on (showing). Setting it
+  // to hidden will load them.
+  let selected_track_target_mode = "hidden";
+
+  for (let track of textTracks) {
+    // Want to avoid unshowing selected track if it's showing
+    if (track.mode === "showing") selected_track_target_mode = "showing";
+
+    if (track !== selectedTrack) track.mode = "disabled";
+  }
+  if (selectedTrack.mode == "disabled") {
+    selectedTrack.mode = selected_track_target_mode;
+  }
+
+  var intervalID = setInterval(() => {
+    if (selectedTrack.cues && selectedTrack.cues.length) {
+      clearInterval(intervalID);
       renderCues();
     }
   }, 100);
 }
 
 window.addEventListener('DOMContentLoaded', function() {
-  let tts = Q("video").textTracks;
-  if (!tts.length) return;
+  let textTracks = Q("video").textTracks;
+  if (!textTracks.length) return;
 
   details_tt = Q("details#transcript-details");
   details_tt.addEventListener("toggle", () => {
@@ -115,15 +135,15 @@ window.addEventListener('DOMContentLoaded', function() {
   table_tt = Q("table#transcript-table");
   table_tt.appendChild(text("loading.."));
 
-  tts.addEventListener("change", (e) => {
+  textTracks.addEventListener("change", (e) => {
     // console.log(e);
     var idx = getActiveTranscriptTrackIdx();  // sadly not provided by 'e'
-    if (tts[idx].mode == "showing") {
+    if (textTracks[idx].mode == "showing") {
       select_tt.selectedIndex = idx;
       loadCues();
     }
-    else if (details_tt.open && tts[idx].mode == "disabled") {
-      tts[idx].mode = "hidden";  // so we still receive 'oncuechange'
+    else if (details_tt.open && textTracks[idx].mode == "disabled") {
+      textTracks[idx].mode = "hidden";  // so we still receive 'oncuechange'
     }
   })
 
