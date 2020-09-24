@@ -161,12 +161,15 @@ class FilteredRequestLog:
         if not self.filter_re.search(s):
             sys.stderr.write(s)
 
+if __name__ == '__main__':
+    if settings.allow_foreign_addresses:
+        server = WSGIServer(('0.0.0.0', settings.port_number), site_dispatch,
+                            log=FilteredRequestLog())
+    else:
+        server = WSGIServer(('127.0.0.1', settings.port_number), site_dispatch,
+                            log=FilteredRequestLog())
+    print('Started httpserver on port' , settings.port_number)
+    server.serve_forever()
 
-if settings.allow_foreign_addresses:
-    server = WSGIServer(('0.0.0.0', settings.port_number), site_dispatch,
-                        log=FilteredRequestLog())
-else:
-    server = WSGIServer(('127.0.0.1', settings.port_number), site_dispatch,
-                        log=FilteredRequestLog())
-print('Started httpserver on port' , settings.port_number)
-server.serve_forever()
+# for uwsgi, gunicorn, etc.
+application = site_dispatch
