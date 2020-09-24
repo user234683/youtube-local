@@ -305,6 +305,18 @@
                 .format-codecs{
                     width: 120px;
                 }
+
+    table#transcript-table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    table#transcript-table td, th {
+        border: 1px solid #dddddd;
+    }
+    div#transcript-div {
+        background-color: var(--interface-color);
+        padding: 5px;
+    }
 {% endblock style %}
 
 {% block main %}
@@ -582,6 +594,21 @@ Reload without invidious (for usage of new identity button).</a>
             </div>
         {% endif %}
 
+        {% if subtitle_sources %}
+            <details id="transcript-details">
+                <summary>Transcript</summary>
+                <div id="transcript-div">
+                    <select id="select-tt">
+                        {% for source in subtitle_sources %}
+                            <option>{{ source['label'] }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="checkbox" id="transcript-use-table">
+                    <table id="transcript-table"></table>
+                </div>
+            </details>
+        {% endif %}
+
         {% if settings.related_videos_mode != 0 %}
             <details class="related-videos-outer" {{'open' if settings.related_videos_mode == 1 else ''}}>
                 <summary>Related Videos</summary>
@@ -608,7 +635,10 @@ Reload without invidious (for usage of new identity button).</a>
             </details>
         {% endif %}
     {% endif %}
+
+    <script src="/youtube.com/static/js/common.js"></script>
     {% if settings.use_video_hotkeys %}
         <script src="/youtube.com/static/js/hotkeys.js"></script>
     {% endif %}
+    <script src="/youtube.com/static/js/transcript-table.js"></script>
 {% endblock main %}
