@@ -1,10 +1,19 @@
 Q = document.querySelector.bind(document);
 function text(msg) { return document.createTextNode(msg); }
 function clearNode(node) { while (node.firstChild) node.removeChild(node.firstChild); }
-function toTimestamp(s) {
-  var s = Math.floor(s);
-  var m = Math.floor(s/60); var s = s % 60;
-  return `0${m}:`.slice(-3) + `0${s}`.slice(-2);
+function toTimestamp(seconds) {
+  var seconds = Math.floor(seconds);
+
+  var minutes = Math.floor(seconds/60);
+  var seconds = seconds % 60;
+
+  var hours = Math.floor(minutes/60);
+  var minutes = minutes % 60;
+
+  if (hours) {
+    return `0${hours}:`.slice(-3) + `0${minutes}:`.slice(-3) + `0${seconds}`.slice(-2);
+  }
+  return `0${minutes}:`.slice(-3) + `0${seconds}`.slice(-2);
 }
 
 
