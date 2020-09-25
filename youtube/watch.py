@@ -28,20 +28,21 @@ def get_video_sources(info):
         max_resolution = 360
     else:
         max_resolution = settings.default_resolution
-    for format in info['formats']:
-        if not all(format[attr] for attr in ('height', 'width', 'ext', 'url')):
+    for fmt in info['formats']:
+        if not all(fmt[attr] for attr in ('quality', 'width', 'ext', 'url')):
             continue
-        if format['acodec'] and format['vcodec'] and format['height'] <= max_resolution:
+        if fmt['acodec'] and fmt['vcodec'] and fmt['height'] <= max_resolution:
             video_sources.append({
-                'src': format['url'],
-                'type': 'video/' + format['ext'],
-                'height': format['height'],
-                'width': format['width'],
+                'src': fmt['url'],
+                'type': 'video/' + fmt['ext'],
+                'quality': fmt['quality'],
+                'height': fmt['height'],
+                'width': fmt['width'],
             })
 
     #### order the videos sources so the preferred resolution is first ###
 
-    video_sources.sort(key=lambda source: source['height'], reverse=True)
+    video_sources.sort(key=lambda source: source['quality'], reverse=True)
 
     return video_sources
 

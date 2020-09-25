@@ -54,7 +54,6 @@
             justify-self: center;
             max-width: 100%;
             width: {{ theater_video_target_width }}px;
-            max-height: {{ video_height }}px;
             margin-bottom: 10px;
             background-color: var(--video-background-color);
         }
@@ -339,7 +338,7 @@ Reload without invidious (for usage of new identity button).</a>
             </ol>
         </div>
     {% else %}
-        <video controls autofocus class="video">
+        <video controls autofocus class="video" height="{{ video_height }}px">
             {% for video_source in video_sources %}
                 <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
             {% endfor %}

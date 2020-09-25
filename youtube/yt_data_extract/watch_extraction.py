@@ -348,12 +348,14 @@ def _extract_formats(info, player_response):
         streaming_data.get('dash_manifest_url'))
 
     for yt_fmt in yt_formats:
+        itag = yt_fmt.get('itag')
+
         fmt = {}
+        fmt['itag'] = itag
         fmt['ext'] = None
         fmt['audio_bitrate'] = None
         fmt['acodec'] = None
         fmt['vcodec'] = None
-        fmt['itag'] = yt_fmt.get('itag')
         fmt['width'] = yt_fmt.get('width')
         fmt['height'] = yt_fmt.get('height')
         fmt['file_size'] = yt_fmt.get('contentLength')
@@ -368,7 +370,12 @@ def _extract_formats(info, player_response):
             fmt['url'] = yt_fmt.get('url')
         fmt['s'] = cipher.get('s')
         fmt['sp'] = cipher.get('sp')
-        fmt.update(_formats.get(str(yt_fmt.get('itag')), {}))
+
+        # update with information from big table
+        hardcoded_itag_info = _formats.get(str(itag), {})
+        for key, value in hardcoded_itag_info.items():
+            conservative_update(fmt, key, value) # prefer info from Youtube
+        fmt['quality'] = hardcoded_itag_info.get('height')
 
         info['formats'].append(fmt)
 
