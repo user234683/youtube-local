@@ -44,12 +44,12 @@ def proxy_site(env, start_response, video=False):
     if env['QUERY_STRING']:
         url += '?' + env['QUERY_STRING']
 
-    if video and settings.route_tor == 1:
+    if video:
+        params = urllib.parse.parse_qs(env['QUERY_STRING'])
+        params_use_tor = int(params.get('use_tor', '0')[0])
+        use_tor = (settings.route_tor == 2) or params_use_tor
         response, cleanup_func = util.fetch_url_response(url, headers,
-                                                         use_tor=False,
-                                                         max_redirects=10)
-    elif video:
-        response, cleanup_func = util.fetch_url_response(url, headers,
+                                                         use_tor=use_tor,
                                                          max_redirects=10)
     else:
         response, cleanup_func = util.fetch_url_response(url, headers)

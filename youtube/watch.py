@@ -22,9 +22,9 @@ except FileNotFoundError:
     decrypt_cache = {}
 
 
-def get_video_sources(info):
+def get_video_sources(info, tor_bypass=False):
     video_sources = []
-    if (not settings.theater_mode) or settings.route_tor == 2:
+    if (not settings.theater_mode) or (settings.route_tor == 2) or tor_bypass:
         max_resolution = 360
     else:
         max_resolution = settings.default_resolution
@@ -274,6 +274,7 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     # check for 403. Unnecessary for tor video routing b/c ip address is same
     info['invidious_used'] = False
     info['invidious_reload_button'] = False
+    info['tor_bypass_used'] = False
     if (settings.route_tor == 1
             and info['formats'] and info['formats'][0]['url']):
         try:
@@ -286,47 +287,10 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
 
         if response.status == 403:
             print('Access denied (403) for video urls.')
-            if use_invidious:
-                print(' Retrieving urls from Invidious...')
-                info['invidious_used'] = True
-                try:
-                    video_info = util.fetch_url(
-                        'https://invidio.us/api/v1/videos/'
-                        + video_id
-                        + '?fields=adaptiveFormats,formatStreams',
-                        report_text='Retrieved urls from Invidious',
-                        debug_name='invidious_urls')
-                except (util.FetchError, urllib3.exceptions.HTTPError) as e:
-                    traceback.print_exc()
-                    playability_error = ('Access denied (403) for video urls.'
-                            + ' Failed to use Invidious to get the urls: '
-                            + str(e))
-                    if info['playability_error']:
-                        info['playability_error'] += '\n' + playability_error
-                    else:
-                        info['playability_error'] = playability_error
-                    # include button to reload without invidious
-                    info['invidious_reload_button'] = True 
-                    return info
-
-                video_info = json.loads(video_info.decode('utf-8'))
-                # collect invidious urls for each itag
-                itag_to_url = {}
-                for invidious_fmt in (video_info['adaptiveFormats']
-                            + video_info['formatStreams']):
-                    itag_to_url[invidious_fmt['itag']] = invidious_fmt['url']
-
-                # replace urls with urls from invidious
-                for fmt in info['formats']:
-                    itag = str(fmt['itag'])
-                    if itag not in itag_to_url:
-                        print(('Warning: itag '
-                            + itag + ' not found in invidious urls'))
-                        continue
-                    fmt['url'] = itag_to_url[itag]
-            else:
-                info['playability_error'] = ('Access denied (403) for video '
-                    'urls')
+            print('Routing video through Tor')
+            info['tor_bypass_used'] = True
+            for fmt in info['formats']:
+                fmt['url'] += '&use_tor=1'
         elif 300 <= response.status < 400:
             print('Error: exceeded max redirects while checking video URL')
     return info
@@ -454,7 +418,7 @@ def get_watch_page(video_id=None):
             'codecs': codecs_string,
         })
 
-    video_sources = get_video_sources(info)
+    video_sources = get_video_sources(info, tor_bypass=info['tor_bypass_used'])
     video_height = yt_data_extract.deep_get(video_sources, 0, 'height', default=360)
     video_width = yt_data_extract.deep_get(video_sources, 0, 'width', default=640)
     # 1 second per pixel, or the actual video width
