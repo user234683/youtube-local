@@ -1,7 +1,7 @@
 # youtube-local
 
 ![screenshot](https://user-images.githubusercontent.com/28744867/64483429-8a890780-d1b6-11e9-8423-6956ff7c588d.png)
-youtube-local is a browser-based client written in Python for watching Youtube anonymously and without the lag of the slow page used by Youtube. One of the primary features is that all requests are routed through Tor, except for the video file at googlevideo.com. This is analogous to what HookTube (defunct) and Invidious do, except that you do not have to trust a third-party to respect your privacy. The assumption here is that Google won't put the effort in to incorporate the video file requests into their tracking, as it's not worth pursuing the incredibly small number of users who care about privacy. Tor has high latency, so this will not be as fast as regular Youtube. However, using Tor is optional; when not routing through Tor, video pages may load faster than they do with Youtube's page depending on your browser.
+youtube-local is a browser-based client written in Python for watching Youtube anonymously and without the lag of the slow page used by Youtube. One of the primary features is that all requests are routed through Tor, except for the video file at googlevideo.com. This is analogous to what HookTube (defunct) and Invidious do, except that you do not have to trust a third-party to respect your privacy. The assumption here is that Google won't put the effort in to incorporate the video file requests into their tracking, as it's not worth pursuing the incredibly small number of users who care about privacy (Tor video routing is also provided as an option). Tor has high latency, so this will not be as fast as regular Youtube. However, using Tor is optional; when not routing through Tor, video pages may load faster than they do with Youtube's page depending on your browser.
 
 The Youtube API is not used, so no keys or anything are needed. It uses the same requests as the Youtube webpage.
 
@@ -91,21 +91,27 @@ youtube-local can be added as a search engine in firefox to make searching more 
 
 ### Using Tor
 
-In the settings page, enable "Route Tor". Be sure to save the settings.
+In the settings page, set "Route Tor" to "On, except video" (the second option). Be sure to save the settings.
 
 Ensure Tor is listening for Socks5 connections on port 9150 (a simple way to accomplish this is by opening the Tor Browser Bundle and leaving it open). Your connections should now be routed through Tor.
 
 Pull requests and issues are welcome
 
+### Tor video routing
+
+If you wish to route the video through Tor, set "Route Tor" to "On, including video". Because this is bandwidth-intensive, you are strongly encouraged to donate to the [consortium of Tor node operators](https://torservers.net/donate.html). For instance, donations to [NoiseTor](https://noisetor.net/) go straight towards funding nodes. Using their numbers for bandwidth costs, together with an average of 485 kbit/sec for a diverse sample of videos, and assuming n hours of video watched per day, gives $0.03n/month. A $1/month donation will be a very generous amount to not only offset losses, but help keep the network healthy.
+
+In general, Tor video routing will be slower (for instance, moving around in the video is quite slow). I've never seen any signs that watch history in youtube-local affects on-site Youtube recommendations. It's likely that requests to googlevideo are logged for some period of time, but are not integrated into Youtube's larger advertisement/recommendation systems, since those presumably depend more heavily on in-page tracking through Javascript rather than CDN requests to googlevideo.
+
 ## License
 
 This project is licensed under the GNU Affero General Public License v3 (GNU AGPLv3) or any later version.
 
-Permission is hereby granted to the youtube-dl project at [https://github.com/rg3/youtube-dl](https://github.com/rg3/youtube-dl) to relicense any portion of this software under the Unlicense, public domain, or whichever license is in use by youtube-dl at the time of relicensing, for the purpose of inclusion of said portion into youtube-dl. Relicensing permission is not granted for any purpose outside of direct inclusion into the [official repository](https://github.com/rg3/youtube-dl) of youtube-dl. If inclusion happens during the process of a pull-request, relicensing happens at the moment the pull request is merged into youtube-dl; until that moment, any cloned repositories of youtube-dl which make use of this software are subject to the terms of the GNU AGPLv3.
+Permission is hereby granted to the youtube-dl project at [https://github.com/ytdl-org/youtube-dl](https://github.com/ytdl-org/youtube-dl) to relicense any portion of this software under the Unlicense, public domain, or whichever license is in use by youtube-dl at the time of relicensing, for the purpose of inclusion of said portion into youtube-dl. Relicensing permission is not granted for any purpose outside of direct inclusion into the [official repository](https://github.com/ytdl-org/youtube-dl) of youtube-dl. If inclusion happens during the process of a pull-request, relicensing happens at the moment the pull request is merged into youtube-dl; until that moment, any cloned repositories of youtube-dl which make use of this software are subject to the terms of the GNU AGPLv3.
 
 ## Similar projects
 - [youtube-dl](https://rg3.github.io/youtube-dl/), which this project was based off
-- [invidious](https://github.com/omarroth/invidious) Nearly identical to this project. More polished and with more features.
+- [invidious](https://github.com/omarroth/invidious) Nearly identical to this project.
 - [NewPipe](https://newpipe.schabi.org/) (app for android)
 - [mps-youtube](https://github.com/mps-youtube/mps-youtube) (terminal-only program)
 - [youtube-viewer](https://github.com/trizen/youtube-viewer)
@@ -113,3 +119,4 @@ Permission is hereby granted to the youtube-dl project at [https://github.com/rg
 - [smtube](https://www.smtube.org/)
 - [Minitube](https://flavio.tordini.org/minitube), [github here](https://github.com/flaviotordini/minitube)
 - [toogles](https://github.com/mikecrittenden/toogles) (only embeds videos, doesn't use mp4)
+- [Yotter](https://github.com/pluja/Yotter)
