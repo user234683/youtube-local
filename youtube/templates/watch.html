@@ -208,6 +208,20 @@
             grid-column: 4;
             max-width: 640px;
         }
+            #transcript-details{
+                margin-bottom: 10px;
+            }
+                table#transcript-table {
+                    border-collapse: collapse;
+                    width: 100%;
+                }
+                table#transcript-table td, th {
+                    border: 1px solid #dddddd;
+                }
+                div#transcript-div {
+                    background-color: var(--interface-color);
+                    padding: 5px;
+                }
             .playlist{
                 border-style: solid;
                 border-width: 2px;
@@ -304,18 +318,6 @@
                 .format-codecs{
                     width: 120px;
                 }
-
-    table#transcript-table {
-        border-collapse: collapse;
-        width: 100%;
-    }
-    table#transcript-table td, th {
-        border: 1px solid #dddddd;
-    }
-    div#transcript-div {
-        background-color: var(--interface-color);
-        padding: 5px;
-    }
 {% endblock style %}
 
 {% block main %}
