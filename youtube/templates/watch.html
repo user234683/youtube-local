@@ -49,14 +49,47 @@
         }
 
     {% if settings.theater_mode %}
-        video{
+        /*  This is the constant aspect ratio trick
+            Percentages in padding-top declarations are based on the width of the
+            parent element. We can use this trick to achieve a constant aspect ratio
+            for video-container-inner by setting height to 0.
+
+            So the video height will decrease if the browser window is narrow,
+            but it will keep same aspect ratio. Must use absolute positioning on
+            video to keep it inside its container since the container's height is 0.
+
+            However, because we widen the video player longer than the video's
+            intrinsic width for long video to make scrubbing easier, we can't use
+            the aspect ratio to set the height. The height needs to be the
+            intrinsic height in these cases. So we use a media query so aspect
+            ratio trick is only used if page width is less than or equal to
+            intrinsic video width.
+        */
+        #video-container{
             grid-column: 1 / span 5;
             justify-self: center;
             max-width: 100%;
             width: {{ theater_video_target_width }}px;
             margin-bottom: 10px;
-            background-color: var(--video-background-color);
         }
+            #video-container-inner{
+                height: {{ video_height}}px;
+                position: relative;
+            }
+            @media(max-width:{{ video_width }}px){
+                #video-container-inner{
+                    padding-top: calc(100%*{{video_height}}/{{video_width}});
+                    height: 0px;
+                }
+            }
+                video{
+                    background-color: var(--video-background-color);
+                    position: absolute;
+                    top: 0px;
+                    left: 0px;
+                    width: 100%;
+                    height: 100%;
+                }
         .side-videos{
             grid-row: 2 /span 3;
             width: 400px;
@@ -65,10 +98,12 @@
             width: 640px;
         }
     {% else %}
-        video{
+        #video-container{
+            grid-column: 2;
+        }
+        #video-container, #video-container-inner, video{
             height: 360px;
             width: 640px;
-            grid-column: 2;
         }
         .side-videos{
             grid-row: 1 /span 4;
@@ -340,20 +375,24 @@ Reload without invidious (for usage of new identity button).</a>
             </ol>
         </div>
     {% else %}
-        <video controls autofocus class="video" height="{{ video_height }}px">
-            {% for video_source in video_sources %}
-                <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
-            {% endfor %}
+        <div id="video-container">
+            <div id="video-container-inner">
+                <video controls autofocus class="video" height="{{ video_height }}px">
+                    {% for video_source in video_sources %}
+                        <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
+                    {% endfor %}
 
-            {% for source in subtitle_sources %}
-                {% if source['on'] %}
-                    <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
-                {% else %}
-                    <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
-                {% endif %}
-            {% endfor %}
+                    {% for source in subtitle_sources %}
+                        {% if source['on'] %}
+                            <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
+                        {% else %}
+                            <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
+                        {% endif %}
+                    {% endfor %}
 
-        </video>
+                </video>
+            </div>
+        </div>
         {% if time_start != 0 %}
             <script>
                 document.querySelector('video').currentTime = {{ time_start|tojson }};
