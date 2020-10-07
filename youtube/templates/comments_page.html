@@ -1,13 +1,16 @@
 {% set page_title = ('Replies' if comments_info['is_replies'] else 'Comments page ' + comments_info['page_number']) %}
-{% extends "base.html" %}
-{% import "comments.html" as comments %}
+{% import "comments.html" as comments with context %}
 
-{% block style %}
-    .comments-area{
-        margin: auto;
-        width:640px;
-    }
-{% endblock style %}
+{% if not slim %}
+    {% extends "base.html" %}
+
+    {% block style %}
+        .comments-area{
+            margin: auto;
+            width:640px;
+        }
+    {% endblock style %}
+{% endif %}
 
 
 {% block main %}
@@ -24,7 +27,9 @@
             </section>
         {% endif %}
 
-        {{ comments.comment_posting_box(comment_posting_box_info) }}
+        {% if not slim %}
+            {{ comments.comment_posting_box(comment_posting_box_info) }}
+        {% endif %}
 
         {% if not comments_info['is_replies'] %}
             <div class="comment-links">
@@ -36,7 +41,7 @@
 
         <div class="comments">
             {% for comment in comments_info['comments'] %}
-                {{ comments.render_comment(comment, comments_info['include_avatars']) }}
+                {{ comments.render_comment(comment, comments_info['include_avatars'], slim) }}
             {% endfor %}
         </div>
         {% if 'more_comments_url' is in comments_info %}

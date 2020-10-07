@@ -25,6 +25,7 @@ theme_names = {
 def inject_theme_preference():
     return {
         'theme_path': '/youtube.com/static/' + theme_names[settings.theme] + '.css',
+        'settings': settings,
     }
 
 @yt_app.template_filter('commatize')

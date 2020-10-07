@@ -1,4 +1,5 @@
 Q = document.querySelector.bind(document);
+QA = document.querySelectorAll.bind(document);
 function text(msg) { return document.createTextNode(msg); }
 function clearNode(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 function toTimestamp(seconds) {
@@ -35,6 +36,15 @@ function getDefaultTranscriptTrackIdx() {
   let textTracks = Q("video").textTracks;
   return textTracks.length - 1;
 }
+
+function doXhr(url, callback=null) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", url);
+    xhr.onload = (e) => {callback(e.currentTarget.response)};
+    xhr.send();
+    return xhr;
+}
+
 
 window.addEventListener('DOMContentLoaded', function() {
     cur_track_idx = getDefaultTranscriptTrackIdx();

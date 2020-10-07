@@ -128,6 +128,13 @@ For security reasons, enabling this is not recommended.''',
         'comment': '',
     }),
 
+    ('use_comments_js', {
+        'label': 'Enable comments.js',
+        'type': bool,
+        'default': True,
+        'comment': '',
+    }),
+
     ('theme', {
         'type': int,
         'default': 0,
