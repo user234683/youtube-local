@@ -128,6 +128,13 @@ For security reasons, enabling this is not recommended.''',
         'comment': '',
     }),
 
+    ('proxy_images', {
+        'label': 'proxy images',
+        'type': bool,
+        'default': True,
+        'comment': '',
+    }),
+
     ('theme', {
         'type': int,
         'default': 0,
@@ -257,7 +264,7 @@ else:
             if type(node) != ast.Assign:
                 log_ignored_line(node.lineno, "only assignments are allowed")
                 continue
-            
+
             if len(node.targets) > 1:
                 log_ignored_line(node.lineno, "only simple single-variable assignments allowed")
                 continue
@@ -266,11 +273,11 @@ else:
             if type(target) != ast.Name:
                 log_ignored_line(node.lineno, "only simple single-variable assignments allowed")
                 continue
-            
+
             if target.id not in acceptable_targets:
                 log_ignored_line(node.lineno,  target.id + " is not a valid setting")
                 continue
-            
+
             if type(node.value) not in attributes:
                 log_ignored_line(node.lineno, "only literals allowed for values")
                 continue
@@ -297,6 +304,11 @@ else:
 
 globals().update(current_settings_dict)
 
+
+if proxy_images:
+    img_prefix = "/"
+else:
+    img_prefix = ""
 
 
 
