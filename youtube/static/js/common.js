@@ -40,7 +40,11 @@ function getDefaultTranscriptTrackIdx() {
 function doXhr(url, callback=null) {
     var xhr = new XMLHttpRequest();
     xhr.open("GET", url);
-    xhr.onload = (e) => {callback(e.currentTarget.response)};
+    xhr.onload = (e) => {
+      let ok = xhr.status >= 200 && xhr.status < 300;
+      if (ok) callback(e.currentTarget.response);
+      else alert(`${xhr.responseURL} status code: ${xhr.status}`);
+    }
     xhr.send();
     return xhr;
 }
