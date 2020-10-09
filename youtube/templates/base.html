@@ -19,7 +19,8 @@
         <header>
                 <a href="/youtube.com" id="home-link">Home</a>
                 <form id="site-search" action="/youtube.com/search">
-                    <input type="search" name="query" class="search-box" value="{{ search_box_value }}">
+                    <input type="search" name="query" class="search-box" value="{{ search_box_value }}"
+                        {{ "autofocus" if request.path == "/" else "" }}>
                     <button type="submit" value="Search" class="search-button">Search</button>
                     <div class="dropdown">
                         <button class="dropdown-label">Options</button>
