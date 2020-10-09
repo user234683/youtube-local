@@ -342,7 +342,7 @@ def video_id(url):
 
 # default, sddefault, mqdefault, hqdefault, hq720
 def get_thumbnail_url(video_id):
-    return f"{settings.img_prefix}https://i.ytimg.com/vi/" + video_id + "/mqdefault.jpg"
+    return settings.img_prefix + "https://i.ytimg.com/vi/" + video_id + "/mqdefault.jpg"
 
 def seconds_to_timestamp(seconds):
     seconds = int(seconds)
