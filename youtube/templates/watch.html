@@ -690,9 +690,11 @@ Reload without invidious (for usage of new identity button).</a>
     {% endif %}
 
     <script src="/youtube.com/static/js/common.js"></script>
+    <script src="/youtube.com/static/js/transcript-table.js"></script>
     {% if settings.use_video_hotkeys %}
         <script src="/youtube.com/static/js/hotkeys.js"></script>
     {% endif %}
-    <script src="/youtube.com/static/js/transcript-table.js"></script>
-    <script src="/youtube.com/static/js/comments.js"></script>
+    {% if settings.use_comments_js %}
+        <script src="/youtube.com/static/js/comments.js"></script>
+    {% endif %}
 {% endblock main %}
