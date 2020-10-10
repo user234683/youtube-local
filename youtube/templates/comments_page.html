@@ -48,6 +48,11 @@
             <a class="page-button more-comments" href="{{ comments_info['more_comments_url'] }}">More comments</a>
         {% endif %}
     </section>
+
+    {% if settings.use_comments_js %}
+        <script src="/youtube.com/static/js/common.js"></script>
+        <script src="/youtube.com/static/js/comments.js"></script>
+    {% endif %}
 {% endblock main %}
 
 
