@@ -820,8 +820,6 @@ def get_subscriptions_page():
             videos, number_of_videos_in_db = _get_videos(cursor, 60, (page - 1)*60, tag)
             for video in videos:
                 video['thumbnail'] = util.URL_ORIGIN + '/data/subscription_thumbnails/' + video['id'] + '.jpg'
-                if not settings.proxy_images:
-                    video['thumbnail'] = video['thumbnail'][1:]
                 video['type'] = 'video'
                 video['item_size'] = 'small'
                 util.add_extra_html_info(video)
