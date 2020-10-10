@@ -1,4 +1,4 @@
-from youtube import util, yt_data_extract, proto
+from youtube import util, yt_data_extract, proto, local_playlist
 from youtube import yt_app
 
 import base64
@@ -114,6 +114,7 @@ def get_playlist_page():
         video_count = 40
 
     return flask.render_template('playlist.html',
+        header_playlist_names = local_playlist.get_playlist_names(),
         video_list = info.get('items', []),
         num_pages = math.ceil(video_count/20),
         parameters_dictionary = request.args,
