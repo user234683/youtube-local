@@ -121,18 +121,10 @@ def post_process_comments_info(comments_info):
             comment['view_replies_text'] = str(reply_count) + ' replies'
 
 
-        def fmt_num(num):
-            for unit in ['','k']:
-                if num < 1000:
-                    return "%3.1f%s" % (num, unit) if unit else num
-                num /= 1000.0
-            return "%.1f%s" % (num, 'm')
-
-        # if comment['like_count'] = '👍 ' + str(fmt_num(comment['like_count']))
         if comment['like_count'] == 1:
             comment['likes_text'] = '1 like'
         else:
-            comment['likes_text'] = str(fmt_num(comment['like_count'])) + ' likes'
+            comment['likes_text'] = str(comment['like_count']) + ' likes'
 
     comments_info['include_avatars'] = settings.enable_comment_avatars
     if comments_info['ctoken']:
