@@ -342,8 +342,8 @@ def video_id(url):
 
 # default, sddefault, mqdefault, hqdefault, hq720
 def get_thumbnail_url(video_id):
-    return "/i.ytimg.com/vi/" + video_id + "/mqdefault.jpg"
-    
+    return settings.img_prefix + "https://i.ytimg.com/vi/" + video_id + "/mqdefault.jpg"
+
 def seconds_to_timestamp(seconds):
     seconds = int(seconds)
     hours, seconds = divmod(seconds,3600)
@@ -394,10 +394,11 @@ def concat_or_none(*strings):
 
 
 def prefix_urls(item):
-    try:
-        item['thumbnail'] = prefix_url(item['thumbnail'])
-    except KeyError:
-        pass
+    if settings.proxy_images:
+        try:
+            item['thumbnail'] = prefix_url(item['thumbnail'])
+        except KeyError:
+            pass
 
     try:
         item['author_url'] = prefix_url(item['author_url'])

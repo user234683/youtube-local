@@ -92,7 +92,7 @@ def post_process_comments_info(comments_info):
         comment['author_url'] = concat_or_none(
             util.URL_ORIGIN, comment['author_url'])
         comment['author_avatar'] = concat_or_none(
-            '/', comment['author_avatar'])
+            settings.img_prefix, comment['author_avatar'])
 
         comment['permalink'] = concat_or_none(util.URL_ORIGIN, '/watch?v=',
             comments_info['video_id'], '&lc=', comment['id'])
@@ -139,7 +139,7 @@ def post_process_comments_info(comments_info):
 
     comments_info['video_url'] = concat_or_none(util.URL_ORIGIN,
         '/watch?v=', comments_info['video_id'])
-    comments_info['video_thumbnail'] = concat_or_none('/i.ytimg.com/vi/',
+    comments_info['video_thumbnail'] = concat_or_none(settings.img_prefix, 'https://i.ytimg.com/vi/',
         comments_info['video_id'], '/mqdefault.jpg')
 
 

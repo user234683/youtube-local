@@ -3,7 +3,8 @@
     <head>
         <meta charset="utf-8">
         <title>{{ page_title }}</title>
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; media-src 'self' https://*.googlevideo.com">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; media-src 'self' https://*.googlevideo.com;
+            {{ "img-src https://*.googleusercontent.com https://*.ggpht.com https://*.ytimg.com;" if not settings.proxy_images else "" }}">
         <link href="{{ theme_path }}" type="text/css" rel="stylesheet">
         <link href="/youtube.com/static/shared.css" type="text/css" rel="stylesheet">
         <link href="/youtube.com/static/comments.css" type="text/css" rel="stylesheet">

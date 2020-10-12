@@ -35,7 +35,7 @@ def add_to_playlist(name, video_info_list):
                 file.write(info + "\n")
                 missing_thumbnails.append(id)
     gevent.spawn(util.download_thumbnails, os.path.join(thumbnails_directory, name), missing_thumbnails)
-        
+
 
 def get_local_playlist_videos(name, offset=0, amount=50):
     try:
@@ -52,7 +52,7 @@ def get_local_playlist_videos(name, offset=0, amount=50):
         try:
             info = json.loads(video_json)
             if info['id'] + ".jpg" in thumbnails:
-                info['thumbnail'] = "/youtube.com/data/playlist_thumbnails/" + name + "/" + info['id'] + ".jpg"
+                info['thumbnail'] = "/https://youtube.com/data/playlist_thumbnails/" + name + "/" + info['id'] + ".jpg"
             else:
                 info['thumbnail'] = util.get_thumbnail_url(info['id'])
                 missing_thumbnails.append(info['id'])
