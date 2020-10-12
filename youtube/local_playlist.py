@@ -52,7 +52,7 @@ def get_local_playlist_videos(name, offset=0, amount=50):
         try:
             info = json.loads(video_json)
             if info['id'] + ".jpg" in thumbnails:
-                info['thumbnail'] = "https://youtube.com/data/playlist_thumbnails/" + name + "/" + info['id'] + ".jpg"
+                info['thumbnail'] = "/https://youtube.com/data/playlist_thumbnails/" + name + "/" + info['id'] + ".jpg"
             else:
                 info['thumbnail'] = util.get_thumbnail_url(info['id'])
                 missing_thumbnails.append(info['id'])
