@@ -36,6 +36,11 @@ function onKeyDown(e) {
         if (tt.mode == "showing") tt.mode = "disabled";
         else tt.mode = "showing";
     }
+    else if (c == "t") {
+        let video_id = JSON.parse(Q(".video-info input[name=video_info_list]").value).id
+        let ts = Math.floor(Q("video").currentTime);
+        copyTextToClipboard(`https://youtu.be/${video_id}?t=${ts}`);
+    }
 }
 
 window.addEventListener('DOMContentLoaded', function() {
