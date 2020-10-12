@@ -5,6 +5,7 @@ import traceback
 import re
 from sys import exc_info
 yt_app = flask.Flask(__name__)
+yt_app.config['TEMPLATES_AUTO_RELOAD'] = True
 yt_app.url_map.strict_slashes = False
 
 
@@ -25,6 +26,7 @@ theme_names = {
 def inject_theme_preference():
     return {
         'theme_path': '/youtube.com/static/' + theme_names[settings.theme] + '.css',
+        'settings': settings,
     }
 
 @yt_app.template_filter('commatize')

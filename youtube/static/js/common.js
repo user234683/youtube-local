@@ -1,4 +1,5 @@
 Q = document.querySelector.bind(document);
+QA = document.querySelectorAll.bind(document);
 function text(msg) { return document.createTextNode(msg); }
 function clearNode(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 function toTimestamp(seconds) {
@@ -35,6 +36,19 @@ function getDefaultTranscriptTrackIdx() {
   let textTracks = Q("video").textTracks;
   return textTracks.length - 1;
 }
+
+function doXhr(url, callback=null) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", url);
+    xhr.onload = (e) => {
+      let ok = xhr.status >= 200 && xhr.status < 300;
+      if (ok) callback(e.currentTarget.response);
+      else alert(`${xhr.responseURL} status code: ${xhr.status}`);
+    }
+    xhr.send();
+    return xhr;
+}
+
 
 window.addEventListener('DOMContentLoaded', function() {
     cur_track_idx = getDefaultTranscriptTrackIdx();

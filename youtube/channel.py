@@ -150,7 +150,8 @@ def get_number_of_videos_channel(channel_id):
 
     response = response.decode('utf-8')
 
-    match = re.search(r'"numVideosText":\s*{\s*"runs":\s*\[{"text":\s*"([\d,]*) videos"', response)
+    # match = re.search(r'"numVideosText":\s*{\s*"runs":\s*\[{"text":\s*"([\d,]*) videos"', response)
+    match = re.search(r'"numVideosText".*?([,\d]+)', response)
     if match:
         return int(match.group(1).replace(',',''))
     else:
@@ -209,7 +210,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
 
     if tab == 'videos' and channel_id:
         tasks = (
-            gevent.spawn(get_number_of_videos_channel, channel_id), 
+            gevent.spawn(get_number_of_videos_channel, channel_id),
             gevent.spawn(get_channel_tab, channel_id, page_number, sort, 'videos', view)
         )
         gevent.joinall(tasks)
@@ -217,7 +218,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
     elif tab == 'videos':
         tasks = (
-            gevent.spawn(get_number_of_videos_general, base_url), 
+            gevent.spawn(get_number_of_videos_general, base_url),
             gevent.spawn(util.fetch_url, base_url + '/videos?pbj=1&view=0', headers_desktop, debug_name='gen_channel_videos')
         )
         gevent.joinall(tasks)

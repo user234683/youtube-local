@@ -27,7 +27,7 @@ from flask import request
 def make_comment_ctoken(video_id, sort=0, offset=0, lc='', secret_key=''):
     video_id = proto.as_bytes(video_id)
     secret_key = proto.as_bytes(secret_key)
-    
+
 
     page_info = proto.string(4,video_id) + proto.uint(6, sort)
     offset_information = proto.nested(4, page_info) + proto.uint(5, offset)
@@ -41,11 +41,11 @@ def make_comment_ctoken(video_id, sort=0, offset=0, lc='', secret_key=''):
     result = proto.nested(2, page_params) + proto.uint(3,6) + proto.nested(6, offset_information)
     return base64.urlsafe_b64encode(result).decode('ascii')
 
-def comment_replies_ctoken(video_id, comment_id, max_results=500):  
+def comment_replies_ctoken(video_id, comment_id, max_results=500):
 
     params = proto.string(2, comment_id) + proto.uint(9, max_results)
     params = proto.nested(3, params)
-    
+
     result = proto.nested(2, proto.string(2, video_id)) + proto.uint(3,6) + proto.nested(6, params)
     return base64.urlsafe_b64encode(result).decode('ascii')
 
@@ -187,8 +187,10 @@ def get_comments_page():
         'replying': replies,
     }
 
+
     return flask.render_template('comments_page.html',
         comments_info = comments_info,
         comment_posting_box_info = comment_posting_box_info,
+        slim = request.args.get('slim', False)
     )
 
