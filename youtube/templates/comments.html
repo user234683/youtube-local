@@ -22,7 +22,14 @@
 
             <span class="likes">{{ comment['likes_text'] if comment['like_count'] else ''}}</span>
             <div class="bottom-row">
-                <a href="{{ comment['replies_url'] }}" class="replies">{{ comment['view_replies_text'] }}</a>
+                {% if settings.use_comments_js and comment['reply_count'] %}
+                    <details class="replies" src="{{ comment['replies_url'] }}">
+                        <summary>{{ comment['view_replies_text'] }}</summary>
+                        <div class="comment_page">loading..</div>
+                    </details>
+                {% else %}
+                    <a href="{{ comment['replies_url'] }}" class="replies">{{ comment['view_replies_text'] }}</a>
+                {% endif %}
                 {% if 'delete_url' is in comment %}
                     <a href="{{ comment['delete_url'] }}" target="_blank">Delete</a>
                 {% endif %}

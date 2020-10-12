@@ -1,7 +1,7 @@
 {% set page_title = title %}
 {% extends "base.html" %}
 {% import "common_elements.html" as common_elements %}
-{% import "comments.html" as comments %}
+{% import "comments.html" as comments with context %}
 {% block style %}
     details > summary{
         background-color: var(--interface-color);
@@ -12,6 +12,18 @@
     }
     details > summary:hover{
         text-decoration: underline;
+    }
+
+    details.replies > summary{
+        background-color: var(--interface-color);
+        border-style: outset;
+        border-width: 1px;
+        font-weight: bold;
+        padding-bottom: 0px;
+    }
+
+    details.replies .comment{
+        width: 600px;
     }
 
     .playability-error{
@@ -678,8 +690,11 @@ Reload without invidious (for usage of new identity button).</a>
     {% endif %}
 
     <script src="/youtube.com/static/js/common.js"></script>
+    <script src="/youtube.com/static/js/transcript-table.js"></script>
     {% if settings.use_video_hotkeys %}
         <script src="/youtube.com/static/js/hotkeys.js"></script>
     {% endif %}
-    <script src="/youtube.com/static/js/transcript-table.js"></script>
+    {% if settings.use_comments_js %}
+        <script src="/youtube.com/static/js/comments.js"></script>
+    {% endif %}
 {% endblock main %}
