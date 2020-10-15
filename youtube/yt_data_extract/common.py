@@ -245,6 +245,8 @@ def extract_item_info(item, additional_info={}):
         ['thumbnails', 0, 'thumbnails', 0, 'url'],  # playlists
         ['thumbnailRenderer', 'showCustomThumbnailRenderer', 'thumbnail', 'thumbnails', 0, 'url'], # shows
     )
+    if info['thumbnail'].startswith('//'):
+        info['thumbnail'] = "https:" + info['thumbnail']
 
     info['badges'] = []
     for badge_node in multi_get(item, 'badges', 'ownerBadges', default=()):
@@ -290,7 +292,7 @@ def extract_item_info(item, additional_info={}):
         info['duration'] = extract_str(item.get('lengthText'))
 
         # if it's an item in a playlist, get its index
-        if 'index' in item: # url has wrong index on playlist page 
+        if 'index' in item: # url has wrong index on playlist page
             info['index'] = extract_int(item.get('index'))
         elif 'indexText' in item:
             # Current item in playlist has ▶ instead of the actual index, must
