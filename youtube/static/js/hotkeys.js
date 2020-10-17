@@ -37,7 +37,7 @@ function onKeyDown(e) {
         else tt.mode = "showing";
     }
     else if (c == "t") {
-        let video_id = JSON.parse(Q(".video-info input[name=video_info_list]").value).id
+        let video_id = getVideoID();
         let ts = Math.floor(Q("video").currentTime);
         copyTextToClipboard(`https://youtu.be/${video_id}?t=${ts}`);
     }

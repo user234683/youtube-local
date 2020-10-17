@@ -108,6 +108,10 @@ function copyTextToClipboard(text) {
   document.body.removeChild(textArea);
 }
 
+function getVideoID() {
+  return JSON.parse(Q(".video-info input[name=video_info_list]").value).id
+}
+
 
 window.addEventListener('DOMContentLoaded', function() {
     cur_track_idx = getDefaultTranscriptTrackIdx();

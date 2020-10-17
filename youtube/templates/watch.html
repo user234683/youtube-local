@@ -494,6 +494,12 @@ Reload without invidious (for usage of new identity button).</a>
                     <p>Used Invidious as fallback.</p>
                 {% endif %}
                 <p class="allowed-countries">Allowed countries: {{ allowed_countries|join(', ') }}</p>
+
+                {% if settings.use_sponsorblock_js %}
+                <ul class="more-actions">
+                <li><label><input type=checkbox id=skip_sponsors checked>skip sponsors</label> <span id=skip_n></span>
+                </ul>
+                {% endif %}
             </div>
         </details>
     </div>
@@ -691,10 +697,7 @@ Reload without invidious (for usage of new identity button).</a>
 
     <script src="/youtube.com/static/js/common.js"></script>
     <script src="/youtube.com/static/js/transcript-table.js"></script>
-    {% if settings.use_video_hotkeys %}
-        <script src="/youtube.com/static/js/hotkeys.js"></script>
-    {% endif %}
-    {% if settings.use_comments_js %}
-        <script src="/youtube.com/static/js/comments.js"></script>
-    {% endif %}
+    {% if settings.use_video_hotkeys %} <script src="/youtube.com/static/js/hotkeys.js"></script> {% endif %}
+    {% if settings.use_comments_js %} <script src="/youtube.com/static/js/comments.js"></script> {% endif %}
+    {% if settings.use_sponsorblock_js %} <script src="/youtube.com/static/js/sponsorblock.js"></script> {% endif %}
 {% endblock main %}
