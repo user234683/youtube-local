@@ -41,6 +41,7 @@ The Youtube API is not used, so no keys or anything are needed. It uses the same
   1. Shown by default, with click to hide
   2. Hidden by default, with click to show
   3. Never shown
+* Optionally skip sponsored segments using [SponsorBlock](https://github.com/ajayyy/SponsorBlock)'s API
 
 ## Planned features
 - [ ] Putting videos from subscriptions or local playlists into the related videos
