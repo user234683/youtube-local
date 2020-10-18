@@ -12,14 +12,14 @@ document.addEventListener('DOMContentLoaded', ()=>{
 function load_sponsorblock(){
   const info_elem = Q('#skip_n');
   if (info_elem.innerText.length) return;  // already fetched
-  const video_id = getVideoID();
-  const hash = sha256(video_id).substr(0,4);
+  const hash = sha256(data.video_id).substr(0,4);
   const video_obj = Q("video");
-  fetch(`https://sponsor.ajay.app/api/skipSegments/${hash}`)
+  let url = `/https://sponsor.ajay.app/api/skipSegments/${hash}`;
+  fetch(url)
       .then(response => response.json())
       .then(data => {
     for (const video of data) {
-      if (video.videoID != video_id) continue;
+      if (video.videoID != data.video_id) continue;
       info_elem.innerText = `(${video.segments.length} segments)`;
       const cat_n = video.segments.map(e=>e.category).sort()
           .reduce((acc,e) => (acc[e]=(acc[e]||0)+1, acc), {});

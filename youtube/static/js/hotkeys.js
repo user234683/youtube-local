@@ -37,9 +37,8 @@ function onKeyDown(e) {
         else tt.mode = "showing";
     }
     else if (c == "t") {
-        let video_id = getVideoID();
         let ts = Math.floor(Q("video").currentTime);
-        copyTextToClipboard(`https://youtu.be/${video_id}?t=${ts}`);
+        copyTextToClipboard(`https://youtu.be/${data.video_id}?t=${ts}`);
     }
 }
 

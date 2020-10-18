@@ -4,8 +4,9 @@
         <meta charset="utf-8">
         <title>{{ page_title }}</title>
         <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; media-src 'self' https://*.googlevideo.com;
-            {{ "img-src https://*.googleusercontent.com https://*.ggpht.com https://*.ytimg.com;" if not settings.proxy_images else "" }}
-            {{ "" if not settings.use_sponsorblock_js else "connect-src 'self' https://sponsor.ajay.app;"|safe }}">
+            {% if not settings.proxy_images %}
+                img-src https://*.googleusercontent.com https://*.ggpht.com https://*.ytimg.com;
+            {% endif %}
 
         <link href="{{ theme_path }}" type="text/css" rel="stylesheet">
         <link href="/youtube.com/static/shared.css" type="text/css" rel="stylesheet">
