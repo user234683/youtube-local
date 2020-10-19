@@ -90,7 +90,7 @@ def single_comment_ctoken(video_id, comment_id):
 def post_process_comments_info(comments_info):
     for comment in comments_info['comments']:
         comment['author_url'] = concat_or_none(
-            util.URL_ORIGIN, comment['author_url'])
+            '/', comment['author_url'])
         comment['author_avatar'] = concat_or_none(
             settings.img_prefix, comment['author_avatar'])
 
