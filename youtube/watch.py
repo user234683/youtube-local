@@ -226,15 +226,19 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
         return {'error': 'Failed to parse json response'}
     info = yt_data_extract.extract_watch_info(polymer_json)
 
-    # age restriction bypass
-    if info['age_restricted']:
-        print('Fetching age restriction bypass page')
+    # request player if it's missing
+    # see https://github.com/user234683/youtube-local/issues/22#issuecomment-706395160
+    if info['age_restricted'] or info['player_response_missing']:
+        if info['age_restricted']:
+            print('Age restricted video. Fetching get_video_info page')
+        else:
+            print('Missing player. Fetching get_video_info page')
         data = {
             'video_id': video_id,
             'eurl': 'https://youtube.googleapis.com/v/' + video_id,
         }
         url = 'https://www.youtube.com/get_video_info?' + urllib.parse.urlencode(data)
-        video_info_page = util.fetch_url(url, debug_name='get_video_info', report_text='Fetched age restriction bypass page').decode('utf-8')
+        video_info_page = util.fetch_url(url, debug_name='get_video_info', report_text='Fetched get_video_info page').decode('utf-8')
         yt_data_extract.update_with_age_restricted_info(info, video_info_page)
 
     # signature decryption
