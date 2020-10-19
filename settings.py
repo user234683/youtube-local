@@ -312,12 +312,6 @@ else:
 globals().update(current_settings_dict)
 
 
-if proxy_images:
-    img_prefix = "/"
-else:
-    img_prefix = ""
-
-
 
 if route_tor:
     print("Tor routing is ON")
@@ -334,6 +328,19 @@ def add_setting_changed_hook(setting, func):
         hooks[setting].append(func)
     else:
         hooks[setting] = [func]
+
+
+def set_img_prefix(old_value=None, value=None):
+    global img_prefix
+    if value is None:
+        value = proxy_images
+    if value:
+        img_prefix = '/'
+    else:
+        img_prefix = ''
+set_img_prefix()
+add_setting_changed_hook('proxy_images', set_img_prefix)
+
 
 
 def settings_page():
