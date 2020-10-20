@@ -12,7 +12,7 @@ address{
 }
 
 html{
-    font-family: "liberation serif", "times new roman", calibri, carlito, serif;
+    font-family: {{ font_family }};
 }
 
 body{

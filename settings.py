@@ -153,6 +153,19 @@ For security reasons, enabling this is not recommended.''',
         ],
     }),
 
+    ('font', {
+        'type': int,
+        'default': 1,
+        'comment': '',
+        'options': [
+            (0, 'Browser default'),
+            (1, 'Arial'),
+            (2, 'Liberation Serif'),
+            (3, 'Verdana'),
+            (4, 'Tahoma'),
+        ],
+    }),
+
     ('autocheck_subscriptions', {
         'type': bool,
         'default': 0,
