@@ -25,6 +25,7 @@
                 {% if settings.use_comments_js and comment['reply_count'] %}
                     <details class="replies" src="{{ comment['replies_url'] }}">
                         <summary>{{ comment['view_replies_text'] }}</summary>
+                        <a href="{{ comment['replies_url'] }}" class="replies-open-new-tab" target="_blank">Open in new tab</a>
                         <div class="comment_page">loading..</div>
                     </details>
                 {% else %}

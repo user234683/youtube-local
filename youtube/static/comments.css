@@ -132,6 +132,11 @@ details.replies > summary{
     padding-bottom: 0px;
 }
 
+.replies-open-new-tab{
+    display: inline-block;
+    margin-top: 5px;
+}
+
 details.replies .comment{
     width: 600px;
 }
