@@ -134,7 +134,7 @@ For security reasons, enabling this is not recommended.''',
         'default': True,
         'comment': '',
     }),
-  
+
     ('use_comments_js', {
         'label': 'Enable comments.js',
         'type': bool,

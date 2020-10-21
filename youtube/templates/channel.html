@@ -34,11 +34,11 @@
         main .channel-tabs{
             grid-row:2;
             grid-column: 1 / span 2;
-            
+
             display:grid;
             grid-auto-flow: column;
             justify-content:start;
-            
+
             background-color: var(--interface-color);
             padding: 3px;
             padding-left: 6px;
@@ -103,7 +103,7 @@
         }
 {% endblock style %}
 
-{% block main %}     
+{% block main %}
     <img class="avatar" src="{{ avatar }}">
     <div class="summary">
         <h2 class="title">{{ channel_name }}</h2>

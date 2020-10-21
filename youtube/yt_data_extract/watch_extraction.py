@@ -172,7 +172,7 @@ def _extract_watch_info_mobile(top_level):
         else:
             info['playlist'] = {}
             info['playlist']['title'] = playlist.get('title')
-            info['playlist']['author'] = extract_str(multi_get(playlist, 
+            info['playlist']['author'] = extract_str(multi_get(playlist,
                 'ownerName', 'longBylineText', 'shortBylineText', 'ownerText'))
             author_id = deep_get(playlist, 'longBylineText', 'runs', 0,
                 'navigationEndpoint', 'browseEndpoint', 'browseId')

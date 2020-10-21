@@ -66,7 +66,7 @@ def proxy_site(env, start_response, video=False):
         # such as 8192 lest that causes the socket library to limit the
         # TCP window size
         # Might need fine-tuning, since this gives us 4*65536
-        # The tradeoff is that larger values (such as 6 seconds) only 
+        # The tradeoff is that larger values (such as 6 seconds) only
         # allows video to buffer in those increments, meaning user must wait
         # until the entire chunk is downloaded before video starts playing
         content_part = response.read(32*8192)
@@ -95,9 +95,9 @@ def split_url(url):
     match = re.match(r'(?:https?://)?([\w-]+(?:\.[\w-]+)+?)(/.*|$)', url)
     if match is None:
         raise ValueError('Invalid or unsupported url: ' + url)
-    
+
     return match.group(1), match.group(2)
-    
+
 
 
 def error_code(code, start_response):

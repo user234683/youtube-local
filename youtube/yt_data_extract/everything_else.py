@@ -164,7 +164,7 @@ def extract_playlist_metadata(polymer_json):
     metadata['video_count'] = extract_int(header.get('numVideosText'))
     metadata['description'] = extract_str(header.get('descriptionText'), default='')
     metadata['author'] = extract_str(header.get('ownerText'))
-    metadata['author_id'] = multi_deep_get(header, 
+    metadata['author_id'] = multi_deep_get(header,
         ['ownerText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId'],
         ['ownerEndpoint', 'browseEndpoint', 'browseId'])
     if metadata['author_id']:

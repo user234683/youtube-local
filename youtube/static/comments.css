@@ -1,4 +1,4 @@
-.video-metadata{    
+.video-metadata{
     display: grid;
     grid-template-columns: auto 1fr;
     grid-template-rows: auto auto 1fr auto;

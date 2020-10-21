@@ -6,7 +6,7 @@
         width: 800px;
         margin:auto;
     }
-        
+
     .playlist-metadata{
         display:grid;
         grid-template-columns: 0fr 1fr;
@@ -44,7 +44,7 @@
         display: grid;
         grid-auto-rows: 0fr;
         grid-row-gap: 10px;
-        
+
     }
 {% endblock style %}
 
@@ -61,7 +61,7 @@
         <div class="playlist-description">{{ common_elements.text_runs(description) }}</div>
     </div>
 
-    <div id="results">          
+    <div id="results">
         {% for info in video_list %}
             {{ common_elements.item(info) }}
         {% endfor %}
