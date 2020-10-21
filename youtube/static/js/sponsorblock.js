@@ -17,8 +17,8 @@ function load_sponsorblock(){
   let url = `/https://sponsor.ajay.app/api/skipSegments/${hash}`;
   fetch(url)
       .then(response => response.json())
-      .then(data => {
-    for (const video of data) {
+      .then(r => {
+    for (const video of r) {
       if (video.videoID != data.video_id) continue;
       info_elem.innerText = `(${video.segments.length} segments)`;
       const cat_n = video.segments.map(e=>e.category).sort()
