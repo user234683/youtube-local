@@ -124,6 +124,18 @@
     grid-column-gap: 10px;
 }
 
+details.replies > summary{
+    background-color: var(--interface-color);
+    border-style: outset;
+    border-width: 1px;
+    font-weight: bold;
+    padding-bottom: 0px;
+}
+
+details.replies .comment{
+    width: 600px;
+}
+
 .more-comments{
     justify-self:center;
     margin-top:10px;
