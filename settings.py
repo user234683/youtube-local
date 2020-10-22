@@ -141,7 +141,7 @@ For security reasons, enabling this is not recommended.''',
     }),
 
     ('proxy_images', {
-        'label': 'proxy images',
+        'label': 'Route images',
         'type': bool,
         'default': True,
         'comment': '',
@@ -157,7 +157,7 @@ For security reasons, enabling this is not recommended.''',
     }),
 
     ('use_sponsorblock_js', {
-        'label': 'Enable sponsorblock.js',
+        'label': 'Enable SponsorBlock',
         'type': bool,
         'default': False,
         'comment': '',
