@@ -20,18 +20,21 @@ SETTINGS_INFO = collections.OrderedDict([
             (1, 'On, except video'),
             (2, 'On, including video (see warnings)'),
         ],
+        'category': 'network',
     }),
 
     ('tor_port', {
         'type': int,
         'default': 9150,
         'comment': '',
+        'category': 'network',
     }),
 
     ('port_number', {
         'type': int,
         'default': 8080,
         'comment': '',
+        'category': 'network',
     }),
 
     ('allow_foreign_addresses', {
@@ -40,6 +43,7 @@ SETTINGS_INFO = collections.OrderedDict([
         'comment': '''This will allow others to connect to your Youtube Local instance as a website.
 For security reasons, enabling this is not recommended.''',
         'hidden': True,
+        'category': 'network',
     }),
 
     ('subtitles_mode', {
@@ -54,12 +58,14 @@ For security reasons, enabling this is not recommended.''',
             (1, 'Manually created only'),
             (2, 'Automatic if manual unavailable'),
         ],
+        'category': 'playback',
     }),
 
     ('subtitles_language', {
         'type': str,
         'default': 'en',
         'comment': '''ISO 639 language code: https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes''',
+        'category': 'playback',
     }),
 
     ('related_videos_mode', {
@@ -73,6 +79,7 @@ For security reasons, enabling this is not recommended.''',
             (1, 'Always shown'),
             (2, 'Shown by clicking button'),
         ],
+        'category': 'interface',
     }),
 
     ('comments_mode', {
@@ -86,12 +93,14 @@ For security reasons, enabling this is not recommended.''',
             (1, 'Always shown'),
             (2, 'Shown by clicking button'),
         ],
+        'category': 'interface',
     }),
 
     ('enable_comment_avatars', {
         'type': bool,
         'default': True,
         'comment': '',
+        'category': 'interface',
     }),
 
     ('default_comment_sorting', {
@@ -109,6 +118,7 @@ For security reasons, enabling this is not recommended.''',
         'type': bool,
         'default': True,
         'comment': '',
+        'category': 'interface',
     }),
 
     ('default_resolution', {
@@ -119,6 +129,7 @@ For security reasons, enabling this is not recommended.''',
             (360, '360p'),
             (720, '720p'),
         ],
+        'category': 'playback',
     }),
 
     ('use_video_hotkeys', {
@@ -126,6 +137,7 @@ For security reasons, enabling this is not recommended.''',
         'type': bool,
         'default': True,
         'comment': '',
+        'category': 'interface',
     }),
 
     ('proxy_images', {
@@ -133,6 +145,7 @@ For security reasons, enabling this is not recommended.''',
         'type': bool,
         'default': True,
         'comment': '',
+        'category': 'network',
     }),
 
     ('use_comments_js', {
@@ -140,6 +153,7 @@ For security reasons, enabling this is not recommended.''',
         'type': bool,
         'default': True,
         'comment': '',
+        'category': 'interface',
     }),
 
     ('use_sponsorblock_js', {
@@ -147,6 +161,7 @@ For security reasons, enabling this is not recommended.''',
         'type': bool,
         'default': False,
         'comment': '',
+        'category': 'playback',
     }),
 
     ('theme', {
@@ -158,6 +173,7 @@ For security reasons, enabling this is not recommended.''',
             (1, 'Gray'),
             (2, 'Dark'),
         ],
+        'category': 'interface',
     }),
 
     ('font', {
@@ -171,6 +187,7 @@ For security reasons, enabling this is not recommended.''',
             (3, 'Verdana'),
             (4, 'Tahoma'),
         ],
+        'category': 'interface',
     }),
 
     ('autocheck_subscriptions', {
@@ -362,11 +379,18 @@ set_img_prefix()
 add_setting_changed_hook('proxy_images', set_img_prefix)
 
 
-
+categories = ['network', 'interface', 'playback', 'other']
 def settings_page():
     if request.method == 'GET':
+        settings_by_category = {categ: [] for categ in categories}
+        for setting_name, setting_info in SETTINGS_INFO.items():
+            categ = setting_info.get('category', 'other')
+            settings_by_category[categ].append(
+                (setting_name, setting_info, current_settings_dict[setting_name])
+            )
         return flask.render_template('settings.html',
-            settings = [(setting_name, setting_info, current_settings_dict[setting_name]) for setting_name, setting_info in SETTINGS_INFO.items()]
+            categories = categories,
+            settings_by_category = settings_by_category,
         )
     elif request.method == 'POST':
         for key, value in request.values.items():

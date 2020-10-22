@@ -27,8 +27,10 @@
 
 {% block main %}
     <form method="POST" class="settings-form">
-        <ul class="settings-list">
-            {% for setting_name, setting_info, value in settings %}
+        {% for categ in categories %}
+            <h2>{{ categ|capitalize }}</h2>
+            <ul class="settings-list">
+            {% for setting_name, setting_info, value in settings_by_category[categ] %}
                 {% if not setting_info.get('hidden', false) %}
                     <li class="setting-item">
                         {% if 'label' is in(setting_info) %}
@@ -59,7 +61,8 @@
                     </li>
                 {% endif %}
             {% endfor %}
-        </ul>
+            </ul>
+        {% endfor %}
         <input type="submit" value="Save settings">
     </form>
 {% endblock main %}
