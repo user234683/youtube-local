@@ -155,7 +155,7 @@ def get_delete_comment_page():
 def get_post_comment_page():
     video_id = request.args['video_id']
     parent_id = request.args.get('parent_id', '')
-    
+
     if parent_id:   # comment reply
         form_action = util.URL_ORIGIN + '/comments?parent_id=' + parent_id + "&video_id=" + video_id
         replying = True

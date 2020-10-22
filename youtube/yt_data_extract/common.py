@@ -90,15 +90,20 @@ def remove_redirect(url):
         return urllib.parse.parse_qs(query_string)['q'][0]
     return url
 
-youtube_url_re = re.compile(r'^(?:(?:(?:https?:)?//)?(?:www\.)?youtube\.com)?(/.*)$')
+norm_url_re = re.compile(r'^(?:(?:https?:)?//)?((?:[\w-]+\.)+[\w-]+)?(/.*)$')
 def normalize_url(url):
+    '''Insert https, resolve relative paths for youtube.com, and put www. infront of youtube.com'''
     if url is None:
         return None
-    match = youtube_url_re.fullmatch(url)
+    match = norm_url_re.fullmatch(url)
     if match is None:
-        raise Exception()
+        raise Exception(url)
 
-    return 'https://www.youtube.com' + match.group(1)
+    domain = match.group(1) or 'www.youtube.com'
+    if domain == 'youtube.com':
+        domain = 'www.youtube.com'
+
+    return 'https://' + domain + match.group(2)
 
 def _recover_urls(runs):
     for run in runs:
@@ -240,11 +245,11 @@ def extract_item_info(item, additional_info={}):
         ))
         info['author_url'] = ('https://www.youtube.com/channel/' + info['author_id']) if info['author_id'] else None
     info['description'] = extract_formatted_text(multi_get(item, 'descriptionSnippet', 'descriptionText'))
-    info['thumbnail'] = multi_deep_get(item,
+    info['thumbnail'] = normalize_url(multi_deep_get(item,
         ['thumbnail', 'thumbnails', 0, 'url'],      # videos
         ['thumbnails', 0, 'thumbnails', 0, 'url'],  # playlists
         ['thumbnailRenderer', 'showCustomThumbnailRenderer', 'thumbnail', 'thumbnails', 0, 'url'], # shows
-    )
+    ))
 
     info['badges'] = []
     for badge_node in multi_get(item, 'badges', 'ownerBadges', default=()):
@@ -290,7 +295,7 @@ def extract_item_info(item, additional_info={}):
         info['duration'] = extract_str(item.get('lengthText'))
 
         # if it's an item in a playlist, get its index
-        if 'index' in item: # url has wrong index on playlist page 
+        if 'index' in item: # url has wrong index on playlist page
             info['index'] = extract_int(item.get('index'))
         elif 'indexText' in item:
             # Current item in playlist has ▶ instead of the actual index, must

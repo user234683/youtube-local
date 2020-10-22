@@ -1,4 +1,4 @@
-.video-metadata{    
+.video-metadata{
     display: grid;
     grid-template-columns: auto 1fr;
     grid-template-rows: auto auto 1fr auto;
@@ -122,6 +122,23 @@
     display: grid;
     grid-auto-flow: column;
     grid-column-gap: 10px;
+}
+
+details.replies > summary{
+    background-color: var(--interface-color);
+    border-style: outset;
+    border-width: 1px;
+    font-weight: bold;
+    padding-bottom: 0px;
+}
+
+.replies-open-new-tab{
+    display: inline-block;
+    margin-top: 5px;
+}
+
+details.replies .comment{
+    width: 600px;
 }
 
 .more-comments{

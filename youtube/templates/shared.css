@@ -12,17 +12,17 @@ address{
 }
 
 html{
-    font-family: "liberation serif", "times new roman", calibri, carlito, serif;
+    font-family: {{ font_family }};
 }
 
 body{
     margin:0;
     padding: 0;
     color:var(--text-color);
-    
-    
+
+
     background-color:var(--background-color);
-    
+
     min-height:100vh;
     display: flex;
     flex-direction: column;
@@ -141,7 +141,7 @@ body{
 .item-list{
     display: grid;
     grid-row-gap: 10px;
-    
+
 }
 
 
@@ -164,7 +164,7 @@ body{
 .item-box{
     display: inline-flex;
     flex-direction: row;
-    /* prevent overflow due to long titles with no spaces: 
+    /* prevent overflow due to long titles with no spaces:
     https://stackoverflow.com/a/43312314 */
     min-width: 0;
 }
@@ -185,7 +185,7 @@ body{
         align-content: start;
         grid-template-columns: auto 1fr;
         grid-template-rows: auto auto auto auto 1fr;
-        /* prevent overflow due to long titles with no spaces: 
+        /* prevent overflow due to long titles with no spaces:
         https://stackoverflow.com/a/43312314 */
         min-width: 0;
     }
@@ -308,7 +308,7 @@ body{
     justify-content: center;
     display: grid;
     grid-auto-columns: 40px;
-    grid-auto-flow: column; 
+    grid-auto-flow: column;
     height: 40px;
 }
 .next-previous-button-row{
@@ -333,4 +333,27 @@ body{
     background-color: var(--interface-color);
     padding: 2px;
     justify-self: start;
+}
+
+/* error page stuff */
+h1{
+    font-size: 2rem;
+    font-weight: normal;
+}
+#error-box, #error-message{
+    background-color: var(--interface-color);
+    width: 80%;
+    margin: auto;
+    margin-top: 20px;
+    padding: 5px;
+}
+#error-box > div, #error-box > p, #error-box > h1{
+    white-space: pre-wrap;
+    margin-bottom: 10px;
+}
+.code-box{
+    padding: 5px;
+    border-style:solid;
+    border-width:1px;
+    border-radius:5px;
 }

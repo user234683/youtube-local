@@ -172,7 +172,7 @@ def _extract_watch_info_mobile(top_level):
         else:
             info['playlist'] = {}
             info['playlist']['title'] = playlist.get('title')
-            info['playlist']['author'] = extract_str(multi_get(playlist, 
+            info['playlist']['author'] = extract_str(multi_get(playlist,
                 'ownerName', 'longBylineText', 'shortBylineText', 'ownerText'))
             author_id = deep_get(playlist, 'longBylineText', 'runs', 0,
                 'navigationEndpoint', 'browseEndpoint', 'browseId')
@@ -447,7 +447,8 @@ def _extract_playability_error(info, player_response, error_prefix=''):
 
 SUBTITLE_FORMATS = ('srv1', 'srv2', 'srv3', 'ttml', 'vtt')
 def extract_watch_info(polymer_json):
-    info = {'playability_error': None, 'error': None}
+    info = {'playability_error': None, 'error': None,
+        'player_response_missing': None}
 
     if isinstance(polymer_json, dict):
         top_level = polymer_json
@@ -476,6 +477,10 @@ def extract_watch_info(polymer_json):
         embedded_player_response = json.loads(player_args['player_response'])
     else:
         embedded_player_response = {}
+
+    # see https://github.com/user234683/youtube-local/issues/22#issuecomment-706395160
+    info['player_response_missing'] = not (
+        player_response or embedded_player_response)
 
     # captions
     info['automatic_caption_languages'] = []
@@ -580,7 +585,8 @@ def get_caption_url(info, language, format, automatic=False, translation_languag
     return url
 
 def update_with_age_restricted_info(info, video_info_page):
-    ERROR_PREFIX = 'Error bypassing age-restriction: '
+    '''Inserts urls from 'player_response' in get_video_info page'''
+    ERROR_PREFIX = 'Error getting missing player or bypassing age-restriction: '
 
     video_info = urllib.parse.parse_qs(video_info_page)
     player_response = deep_get(video_info, 'player_response', 0)

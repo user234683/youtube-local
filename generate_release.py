@@ -119,7 +119,7 @@ wine_run(['./python/python.exe', '-I', 'get-pip.py'])
 
 ## Isolated mode
     We want to run in what is called isolated mode, given by the switch -I.
-This mode prevents the embedded python distribution from searching in 
+This mode prevents the embedded python distribution from searching in
 global directories for imports
 
     For example, if a user has `C:\Python37` and the embedded distribution is

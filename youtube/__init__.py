@@ -1,5 +1,6 @@
 from youtube import util
 import flask
+from flask import request
 import settings
 import traceback
 import re
@@ -59,6 +60,7 @@ def timestamps(text):
 
 @yt_app.errorhandler(500)
 def error_page(e):
+    slim = request.args.get('slim', False) # whether it was an ajax request
     if (exc_info()[0] == util.FetchError
         and exc_info()[1].code == '429'
         and settings.route_tor
@@ -68,5 +70,22 @@ def error_page(e):
             ' using the New Identity button in the Tor Browser.')
         if exc_info()[1].ip:
             error_message += ' Exit node IP address: ' + exc_info()[1].ip
-        return flask.render_template('error.html', error_message=error_message), 502
-    return flask.render_template('error.html', traceback=traceback.format_exc()), 500
+        return flask.render_template('error.html', error_message=error_message, slim=slim), 502
+    return flask.render_template('error.html', traceback=traceback.format_exc(), slim=slim), 500
+
+font_choices = {
+    0: 'initial',
+    1: 'arial, "liberation sans", sans-serif',
+    2: '"liberation serif", "times new roman", calibri, carlito, serif',
+    3: 'verdana, sans-serif',
+    4: 'tahoma, sans-serif',
+}
+
+@yt_app.route('/shared.css')
+def get_css():
+    return flask.Response(
+        flask.render_template('shared.css',
+            font_family = font_choices[settings.font]
+        ),
+        mimetype='text/css',
+    )

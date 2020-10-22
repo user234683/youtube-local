@@ -49,10 +49,10 @@ def extract_channel_info(polymer_json, tab):
     if info['short_description'] and len(info['short_description']) > 730:
         info['short_description'] = info['short_description'][0:730] + '...'
     info['channel_name'] = metadata.get('title')
-    info['avatar'] = multi_deep_get(metadata,
+    info['avatar'] = normalize_url(multi_deep_get(metadata,
         ['avatar', 'thumbnails', 0, 'url'],
         ['thumbnail', 'thumbnails', 0, 'url'],
-    )
+    ))
     channel_url = multi_get(metadata, 'urlCanonical', 'channelUrl')
     if channel_url:
         channel_id = get(channel_url.rstrip('/').split('/'), -1)
@@ -164,7 +164,7 @@ def extract_playlist_metadata(polymer_json):
     metadata['video_count'] = extract_int(header.get('numVideosText'))
     metadata['description'] = extract_str(header.get('descriptionText'), default='')
     metadata['author'] = extract_str(header.get('ownerText'))
-    metadata['author_id'] = multi_deep_get(header, 
+    metadata['author_id'] = multi_deep_get(header,
         ['ownerText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId'],
         ['ownerEndpoint', 'browseEndpoint', 'browseId'])
     if metadata['author_id']:
@@ -263,13 +263,13 @@ def extract_comments_info(polymer_json):
 
         # These 3 are sometimes absent, likely because the channel was deleted
         comment_info['author'] = extract_str(comment_renderer.get('authorText'))
-        comment_info['author_url'] = deep_get(comment_renderer,
-            'authorEndpoint', 'commandMetadata', 'webCommandMetadata', 'url')
+        comment_info['author_url'] = normalize_url(deep_get(comment_renderer,
+            'authorEndpoint', 'commandMetadata', 'webCommandMetadata', 'url'))
         comment_info['author_id'] = deep_get(comment_renderer,
             'authorEndpoint', 'browseEndpoint', 'browseId')
 
-        comment_info['author_avatar'] = deep_get(comment_renderer,
-            'authorThumbnail', 'thumbnails', 0, 'url')
+        comment_info['author_avatar'] = normalize_url(deep_get(
+            comment_renderer, 'authorThumbnail', 'thumbnails', 0, 'url'))
         comment_info['id'] = comment_renderer.get('commentId')
         comment_info['text'] = extract_formatted_text(comment_renderer.get('contentText'))
         comment_info['time_published'] = extract_str(comment_renderer.get('publishedTimeText'))

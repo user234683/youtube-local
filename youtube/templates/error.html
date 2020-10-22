@@ -1,29 +1,8 @@
 {% set page_title = 'Error' %}
-{% extends "base.html" %}
 
-{% block style %}
-    h1{
-        font-size: 2rem;
-        font-weight: normal;
-    }
-    #error-box, #error-message{
-        background-color: var(--interface-color);
-        width: 80%;
-        margin: auto;
-        margin-top: 20px;
-        padding: 5px;
-    }
-    #error-box > div, #error-box > p, #error-box > h1{
-        white-space: pre-wrap;
-        margin-bottom: 10px;
-    }
-    .code-box{
-        padding: 5px;
-        border-style:solid;
-        border-width:1px;
-        border-radius:5px;
-    }
-{% endblock style %}
+{% if not slim %}
+    {% extends "base.html" %}
+{% endif %}
 
 {% block main %}
     {% if traceback %}
