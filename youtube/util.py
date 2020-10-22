@@ -15,6 +15,7 @@ import json
 import gevent
 import gevent.queue
 import gevent.lock
+import collections
 
 # The trouble with the requests library: It ships its own certificate bundle via certifi
 #  instead of using the system certificate store, meaning self-signed certificates
@@ -435,3 +436,56 @@ def check_gevent_exceptions(*tasks):
         if task.exception:
             raise task.exception
 
+
+# https://stackoverflow.com/a/62888
+replacement_map = collections.OrderedDict([
+    ('<', '_'),
+    ('>', '_'),
+    (': ', ' - '),
+    (':', '-'),
+    ('"', "'"),
+    ('/', '_'),
+    ('\\', '_'),
+    ('|', '-'),
+    ('?', ''),
+    ('*', '_'),
+    ('\t', ' '),
+])
+DOS_names = {'con', 'prn', 'aux', 'nul', 'com0', 'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9', 'lpt0', 'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9'}
+def to_valid_filename(name):
+    '''Changes the name so it's valid on Windows, Linux, and Mac'''
+    # See https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+    # for Windows specs
+
+    # Additional recommendations for Linux:
+    # https://dwheeler.com/essays/fixing-unix-linux-filenames.html#standards
+
+    # remove control characters
+    name = re.sub(r'[\x00-\x1f]', '_', name)
+
+    # reserved characters
+    for reserved_char, replacement in replacement_map.items():
+        name = name.replace(reserved_char, replacement)
+
+    # check for all periods/spaces
+    if all(c == '.' or c == ' ' for c in name):
+        name = '_'*len(name)
+
+    # remove trailing periods and spaces
+    name = name.rstrip('. ')
+
+    # check for reserved DOS names, such as nul or nul.txt
+    base_ext_parts = name.rsplit('.', maxsplit=1)
+    if base_ext_parts[0].lower() in DOS_names:
+        base_ext_parts[0] += '_'
+    name = '.'.join(base_ext_parts)
+
+    # check for blank name
+    if name == '':
+        name = '_'
+
+    # check if name begins with a hyphen, period, or space
+    if name[0] in ('-', '.', ' '):
+        name = '_' + name
+
+    return name

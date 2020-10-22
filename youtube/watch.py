@@ -398,6 +398,17 @@ def get_watch_page(video_id=None):
     for fmt in info['formats']:
         fmt['url'] = util.prefix_url(fmt['url'])
 
+    # Add video title to end of url path so it has a filename other than just
+    # "videoplayback" when downloaded
+    title = urllib.parse.quote(util.to_valid_filename(info['title']))
+    for fmt in info['formats']:
+        filename = title
+        ext = fmt.get('ext')
+        if ext:
+            filename += '.' + ext
+        fmt['url'] = fmt['url'].replace(
+            '/videoplayback',
+            '/videoplayback/name/' + filename)
 
     if settings.gather_googlevideo_domains:
         with open(os.path.join(settings.data_dir, 'googlevideo-domains.txt'), 'a+', encoding='utf-8') as f:

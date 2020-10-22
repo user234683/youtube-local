@@ -41,6 +41,9 @@ def proxy_site(env, start_response, video=False):
         headers['Range'] = env['HTTP_RANGE']
 
     url = "https://" + env['SERVER_NAME'] + env['PATH_INFO']
+    # remove /name portion
+    if video and '/videoplayback/name/' in url:
+        url = url[0:url.rfind('/name/')]
     if env['QUERY_STRING']:
         url += '?' + env['QUERY_STRING']
 
