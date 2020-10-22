@@ -1,4 +1,4 @@
-from youtube import proto, util, yt_data_extract, accounts
+from youtube import proto, util, yt_data_extract
 from youtube.util import concat_or_none
 from youtube import yt_app
 import settings
@@ -97,17 +97,10 @@ def post_process_comments_info(comments_info):
         comment['permalink'] = concat_or_none(util.URL_ORIGIN, '/watch?v=',
             comments_info['video_id'], '&lc=', comment['id'])
 
-        if comment['author_id'] in accounts.accounts:
-            comment['delete_url'] = concat_or_none(util.URL_ORIGIN,
-                '/delete_comment?video_id=', comments_info['video_id'],
-                '&channel_id=', comment['author_id'],
-                '&comment_id=', comment['id'])
 
         reply_count = comment['reply_count']
         if reply_count == 0:
-            comment['replies_url'] = concat_or_none(util.URL_ORIGIN,
-                '/post_comment?parent_id=', comment['id'],
-                '&video_id=', comments_info['video_id'])
+            comment['replies_url'] = None
         else:
             comment['replies_url'] = concat_or_none(util.URL_ORIGIN,
                 '/comments?parent_id=', comment['id'],
@@ -148,10 +141,9 @@ def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
         comments_info = yt_data_extract.extract_comments_info(request_comments(make_comment_ctoken(video_id, sort, offset, lc, secret_key)))
         post_process_comments_info(comments_info)
 
-        post_comment_url = util.URL_ORIGIN + "/post_comment?video_id=" + video_id
         other_sort_url = util.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(video_id, sort=1 - sort, lc=lc)
         other_sort_text = 'Sort by ' + ('newest' if sort == 0 else 'top')
-        comments_info['comment_links'] = [('Post comment', post_comment_url), (other_sort_text, other_sort_url)]
+        comments_info['comment_links'] = [(other_sort_text, other_sort_url)]
 
         return comments_info
 
@@ -178,19 +170,8 @@ def get_comments_page():
         other_sort_text = 'Sort by ' + ('newest' if comments_info['sort'] == 0 else 'top')
         comments_info['comment_links'] = [(other_sort_text, other_sort_url)]
 
-
-    comment_posting_box_info = {
-        'form_action': '' if replies else util.URL_ORIGIN + '/post_comment',
-        'video_id': comments_info['video_id'],
-        'accounts': accounts.account_list_data(),
-        'include_video_id_input': not replies,
-        'replying': replies,
-    }
-
-
     return flask.render_template('comments_page.html',
         comments_info = comments_info,
-        comment_posting_box_info = comment_posting_box_info,
         slim = request.args.get('slim', False)
     )
 

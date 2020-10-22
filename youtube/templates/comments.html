@@ -28,11 +28,8 @@
                         <a href="{{ comment['replies_url'] }}" class="replies-open-new-tab" target="_blank">Open in new tab</a>
                         <div class="comment_page">loading..</div>
                     </details>
-                {% else %}
+                {% elif comment['reply_count'] %}
                     <a href="{{ comment['replies_url'] }}" class="replies">{{ comment['view_replies_text'] }}</a>
-                {% endif %}
-                {% if 'delete_url' is in comment %}
-                    <a href="{{ comment['delete_url'] }}" target="_blank">Delete</a>
                 {% endif %}
             </div>
         </div>
@@ -54,25 +51,6 @@
     {% if 'more_comments_url' is in comments_info %}
         <a class="page-button more-comments" href="{{ comments_info['more_comments_url'] }}">More comments</a>
     {% endif %}
-{% endmacro %}
-
-{% macro comment_posting_box(info) %}
-    <form action="{{ info['form_action'] }}" method="post" class="comment-form">
-        <div id="comment-account-options">
-            <label for="account-selection">Account:</label>
-            <select id="account-selection" name="channel_id">
-                {% for account in info['accounts'] %}
-                    <option value="{{ account[0] }}">{{ account[1] }}</option>
-                {% endfor %}
-            </select>
-            <a href="/https://youtube.com/login" target="_blank">Add account</a>
-        </div>
-        <textarea name="comment_text"></textarea>
-        {% if info['include_video_id_input'] %}
-            <input type="hidden" name="video_id" value="{{ info['video_id'] }}">
-        {% endif %}
-        <button type="submit" class="post-comment-button">{{ 'Post reply' if info['replying'] else 'Post comment' }}</button>
-    </form>
 {% endmacro %}
 
 
