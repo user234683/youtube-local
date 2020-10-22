@@ -142,6 +142,13 @@ For security reasons, enabling this is not recommended.''',
         'comment': '',
     }),
 
+    ('use_sponsorblock_js', {
+        'label': 'Enable sponsorblock.js',
+        'type': bool,
+        'default': False,
+        'comment': '',
+    }),
+
     ('theme', {
         'type': int,
         'default': 0,

@@ -8,6 +8,10 @@ from sys import exc_info
 yt_app = flask.Flask(__name__)
 yt_app.config['TEMPLATES_AUTO_RELOAD'] = True
 yt_app.url_map.strict_slashes = False
+# yt_app.jinja_env.trim_blocks = True
+# yt_app.jinja_env.lstrip_blocks = True
+
+
 
 
 yt_app.add_url_rule('/settings', 'settings_page', settings.settings_page, methods=['POST', 'GET'])

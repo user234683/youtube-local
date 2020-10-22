@@ -85,6 +85,7 @@ site_handlers = {
     'ytimg.com': proxy_site,
     'yt3.ggpht.com': proxy_site,
     'lh3.googleusercontent.com': proxy_site,
+    'sponsor.ajay.app': proxy_site,
     'googlevideo.com': proxy_video,
 }
 

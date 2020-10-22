@@ -493,6 +493,10 @@ def get_watch_page(video_id=None):
         invidious_reload_button = info['invidious_reload_button'],
         video_url = util.URL_ORIGIN + '/watch?v=' + video_id,
         time_start = time_start,
+
+        js_data = {
+            'video_id': video_info['id'],
+        }
     )
 
 
