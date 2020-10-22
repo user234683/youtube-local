@@ -226,9 +226,9 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
         return {'error': 'Failed to parse json response'}
     info = yt_data_extract.extract_watch_info(polymer_json)
 
-    # request player if it's missing
+    # request player urls if it's missing
     # see https://github.com/user234683/youtube-local/issues/22#issuecomment-706395160
-    if info['age_restricted'] or info['player_response_missing']:
+    if info['age_restricted'] or info['player_urls_missing']:
         if info['age_restricted']:
             print('Age restricted video. Fetching get_video_info page')
         else:

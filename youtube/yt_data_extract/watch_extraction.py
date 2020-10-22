@@ -478,10 +478,6 @@ def extract_watch_info(polymer_json):
     else:
         embedded_player_response = {}
 
-    # see https://github.com/user234683/youtube-local/issues/22#issuecomment-706395160
-    info['player_response_missing'] = not (
-        player_response or embedded_player_response)
-
     # captions
     info['automatic_caption_languages'] = []
     info['manual_caption_languages'] = []
@@ -513,6 +509,10 @@ def extract_watch_info(polymer_json):
     _extract_formats(info, embedded_player_response)
     if not info['formats']:
         _extract_formats(info, player_response)
+
+    # see https://github.com/user234683/youtube-local/issues/22#issuecomment-706395160
+    info['player_urls_missing'] = (
+        not info['formats'] and not embedded_player_response)
 
     # playability errors
     _extract_playability_error(info, player_response)
