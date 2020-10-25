@@ -196,6 +196,9 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
     read_finish = time.time()
 
     cleanup_func(response)  # release_connection for urllib3
+    content = decode_content(
+        content,
+        response.getheader('Content-Encoding', default='identity'))
 
     if (response.status == 429
             and content.startswith(b'<!DOCTYPE')
@@ -210,7 +213,6 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
 
     if report_text:
         print(report_text, '    Latency:', round(response_time - start_time,3), '    Read time:', round(read_finish - response_time,3))
-    content = decode_content(content, response.getheader('Content-Encoding', default='identity'))
 
     if settings.debugging_save_responses and debug_name is not None:
         save_dir = os.path.join(settings.data_dir, 'debug')
