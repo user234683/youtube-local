@@ -30,6 +30,13 @@ SETTINGS_INFO = collections.OrderedDict([
         'category': 'network',
     }),
 
+    ('tor_control_port', {
+        'type': int,
+        'default': 9151,
+        'comment': '',
+        'category': 'network',
+    }),
+
     ('port_number', {
         'type': int,
         'default': 8080,

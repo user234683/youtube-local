@@ -341,6 +341,7 @@ h1{
     font-weight: normal;
 }
 #error-box, #error-message{
+    white-space: pre-wrap;
     background-color: var(--interface-color);
     width: 80%;
     margin: auto;
