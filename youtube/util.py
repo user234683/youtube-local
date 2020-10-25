@@ -112,7 +112,7 @@ class TorManager:
             try:
                 port = settings.tor_control_port
                 with stem.control.Controller.from_port(port=port) as controller:
-                    controller.authenticate()
+                    controller.authenticate('')
                     print('new_identity: Getting new identity')
                     controller.signal(stem.Signal.NEWNYM)
                     print('new_identity: NEWNYM signal sent')
