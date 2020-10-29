@@ -341,12 +341,14 @@ h1{
     font-weight: normal;
 }
 #error-box, #error-message{
-    white-space: pre-wrap;
     background-color: var(--interface-color);
     width: 80%;
     margin: auto;
     margin-top: 20px;
     padding: 5px;
+}
+#error-message{
+    white-space: pre-wrap;
 }
 #error-box > div, #error-box > p, #error-box > h1{
     white-space: pre-wrap;
