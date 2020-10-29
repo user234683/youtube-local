@@ -400,7 +400,7 @@ def get_watch_page(video_id=None):
 
     # Add video title to end of url path so it has a filename other than just
     # "videoplayback" when downloaded
-    title = urllib.parse.quote(util.to_valid_filename(info['title']))
+    title = urllib.parse.quote(util.to_valid_filename(info['title'] or ''))
     for fmt in info['formats']:
         filename = title
         ext = fmt.get('ext')
