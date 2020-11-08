@@ -177,9 +177,8 @@ def _extract_watch_info_mobile(top_level):
             author_id = deep_get(playlist, 'longBylineText', 'runs', 0,
                 'navigationEndpoint', 'browseEndpoint', 'browseId')
             info['playlist']['author_id'] = author_id
-            if author_id:
-                info['playlist']['author_url'] = concat_or_none(
-                    'https://www.youtube.com/channel/', author_id)
+            info['playlist']['author_url'] = concat_or_none(
+                'https://www.youtube.com/channel/', author_id)
             info['playlist']['id'] = playlist.get('playlistId')
             info['playlist']['url'] = concat_or_none(
                 'https://www.youtube.com/playlist?list=',
