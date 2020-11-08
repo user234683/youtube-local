@@ -391,8 +391,11 @@ def get_watch_page(video_id=None):
                 item['url'] += '&list=' + playlist_id
             if item['index']:
                 item['url'] += '&index=' + str(item['index'])
-        info['playlist']['author_url'] = util.prefix_url(
-            info['playlist']['author_url'])
+
+        if 'author_url' in info['playlist']:
+            info['playlist']['author_url'] = util.prefix_url(
+                info['playlist']['author_url'])
+
     # Don't prefix hls_formats for now because the urls inside the manifest
     # would need to be prefixed as well.
     for fmt in info['formats']:
