@@ -61,7 +61,7 @@ class TorManager:
     def __init__(self):
         self.old_tor_connection_pool = None
         self.tor_connection_pool = urllib3.contrib.socks.SOCKSProxyManager(
-            'socks5://127.0.0.1:' + str(settings.tor_port) + '/',
+            'socks5h://127.0.0.1:' + str(settings.tor_port) + '/',
             cert_reqs = 'CERT_REQUIRED')
         self.tor_pool_refresh_time = time.monotonic()
 
@@ -76,7 +76,7 @@ class TorManager:
         self.old_tor_connection_pool = self.tor_connection_pool
 
         self.tor_connection_pool = urllib3.contrib.socks.SOCKSProxyManager(
-            'socks5://127.0.0.1:' + str(settings.tor_port) + '/',
+            'socks5h://127.0.0.1:' + str(settings.tor_port) + '/',
             cert_reqs = 'CERT_REQUIRED')
         self.tor_pool_refresh_time = time.monotonic()
 
