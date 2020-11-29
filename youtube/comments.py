@@ -143,7 +143,13 @@ def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
 
         other_sort_url = util.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(video_id, sort=1 - sort, lc=lc)
         other_sort_text = 'Sort by ' + ('newest' if sort == 0 else 'top')
-        comments_info['comment_links'] = [(other_sort_text, other_sort_url)]
+
+        this_sort_url = (util.URL_ORIGIN
+                         + '/comments?ctoken='
+                         + make_comment_ctoken(video_id, sort=sort, lc=lc))
+
+        comments_info['comment_links'] = [(other_sort_text, other_sort_url),
+                                          ('Direct link', this_sort_url)]
 
         return comments_info
 
