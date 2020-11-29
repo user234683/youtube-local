@@ -238,17 +238,17 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
               cookiejar_send=None, cookiejar_receive=None, use_tor=True,
               debug_name=None):
     while True:
-        start_time = time.time()
+        start_time = time.monotonic()
 
         response, cleanup_func = fetch_url_response(
             url, headers, timeout=timeout,
             cookiejar_send=cookiejar_send, cookiejar_receive=cookiejar_receive,
             use_tor=use_tor)
-        response_time = time.time()
+        response_time = time.monotonic()
 
         content = response.read()
 
-        read_finish = time.time()
+        read_finish = time.monotonic()
 
         cleanup_func(response)  # release_connection for urllib3
         content = decode_content(
@@ -298,7 +298,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
 
 def head(url, use_tor=False, report_text=None, max_redirects=10):
     pool = get_pool(use_tor and settings.route_tor)
-    start_time = time.time()
+    start_time = time.monotonic()
 
     # default: Retry.DEFAULT = Retry(3)
     # (in connectionpool.py in urllib3)
@@ -310,7 +310,10 @@ def head(url, use_tor=False, report_text=None, max_redirects=10):
     headers = {'User-Agent': 'Python-urllib'}
     response = pool.request('HEAD', url, headers=headers, retries=retries)
     if report_text:
-        print(report_text, '    Latency:', round(time.time() - start_time,3))
+        print(
+            report_text,
+            '    Latency:',
+            round(time.monotonic() - start_time,3))
     return response
 
 mobile_user_agent = 'Mozilla/5.0 (Linux; Android 7.0; Redmi Note 4 Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Mobile Safari/537.36'
