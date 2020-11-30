@@ -7,6 +7,7 @@ import json
 import base64
 import urllib
 import re
+import traceback
 
 import flask
 from flask import request
@@ -137,23 +138,49 @@ def post_process_comments_info(comments_info):
 
 
 def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
-    if settings.comments_mode:
-        comments_info = yt_data_extract.extract_comments_info(request_comments(make_comment_ctoken(video_id, sort, offset, lc, secret_key)))
-        post_process_comments_info(comments_info)
+    try:
+        if settings.comments_mode:
+            comments_info = {'error': None}
+            other_sort_url = (
+                util.URL_ORIGIN + '/comments?ctoken='
+                + make_comment_ctoken(video_id, sort=1 - sort, lc=lc)
+            )
+            other_sort_text = 'Sort by ' + ('newest' if sort == 0 else 'top')
 
-        other_sort_url = util.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(video_id, sort=1 - sort, lc=lc)
-        other_sort_text = 'Sort by ' + ('newest' if sort == 0 else 'top')
+            this_sort_url = (util.URL_ORIGIN
+                             + '/comments?ctoken='
+                             + make_comment_ctoken(video_id, sort=sort, lc=lc))
 
-        this_sort_url = (util.URL_ORIGIN
-                         + '/comments?ctoken='
-                         + make_comment_ctoken(video_id, sort=sort, lc=lc))
+            comments_info['comment_links'] = [
+                (other_sort_text, other_sort_url),
+                ('Direct link', this_sort_url)
+            ]
 
-        comments_info['comment_links'] = [(other_sort_text, other_sort_url),
-                                          ('Direct link', this_sort_url)]
+            comments_info.update(yt_data_extract.extract_comments_info(
+                request_comments(
+                    make_comment_ctoken(video_id, sort, offset, lc, secret_key)
+                )
+            ))
+            post_process_comments_info(comments_info)
 
-        return comments_info
+            return comments_info
+        else:
+            return {}
+    except util.FetchError as e:
+        print('Error retrieving comments for ' + str(video_id))
+        if e.code == '429' and settings.route_tor:
+            comments_info['error'] = 'Error: Youtube blocked the request because the Tor exit node is overutilized.'
+            if e.error_message:
+                comments_info['error'] += '\n\n' + e.error_message
+            comments_info['error'] += '\n\nExit node IP address: %s' % e.ip
+        else:
+            comments_info['error'] = traceback.format_exc()
 
-    return {}
+    except Exception as e:
+        print('Error retrieving comments for ' + str(video_id))
+        comments_info['error'] = traceback.format_exc()
+
+    return comments_info
 
 
 

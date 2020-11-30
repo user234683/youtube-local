@@ -43,13 +43,19 @@
             <a class="sort-button" href="{{ link_url }}">{{ link_text }}</a>
         {% endfor %}
     </div>
-    <div class="comments">
-        {% for comment in comments_info['comments'] %}
-            {{ render_comment(comment, comments_info['include_avatars'], True) }}
-        {% endfor %}
-    </div>
-    {% if 'more_comments_url' is in comments_info %}
-        <a class="page-button more-comments" href="{{ comments_info['more_comments_url'] }}">More comments</a>
+    {% if comments_info['error'] %}
+        <div class="comments">
+            <div class="code-box"><code>{{ comments_info['error'] }}</code></div>
+        </div>
+    {% else %}
+        <div class="comments">
+            {% for comment in comments_info['comments'] %}
+                {{ render_comment(comment, comments_info['include_avatars'], True) }}
+            {% endfor %}
+        </div>
+        {% if 'more_comments_url' is in comments_info %}
+            <a class="page-button more-comments" href="{{ comments_info['more_comments_url'] }}">More comments</a>
+        {% endif %}
     {% endif %}
 {% endmacro %}
 
