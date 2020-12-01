@@ -166,16 +166,28 @@
                 grid-row: 4;
                 justify-self:end;
             }
-            .video-info > .download-dropdown{
-                grid-column:1 / span 2;
-                grid-row: 6;
+            .video-info > .external-player-controls{
+                justify-self: start;
+                grid-row: 5;
+                grid-column: 1;
+                margin-bottom: 8px;
             }
+                #speed-control{
+                    width: 65px;
+                    text-align: center;
+                    background-color: var(--interface-color);
+                    color: var(--text-color);
+                }
             .video-info > .checkbox{
                 justify-self:end;
                 align-self: start;
 
                 grid-row: 5;
                 grid-column: 2;
+            }
+            .video-info > .download-dropdown{
+                grid-column:1 / span 2;
+                grid-row: 6;
             }
             .video-info > .description{
                 background-color:var(--interface-color);
@@ -422,6 +434,24 @@ Reload without invidious (for usage of new identity button).</a>
 
         <time datetime="$upload_date">Published on {{ time_published }}</time>
         <span class="likes-dislikes">{{ like_count }} likes {{ dislike_count }} dislikes</span>
+
+        <div class="external-player-controls">
+            <input id="speed-control" type="text">
+            <script>
+                var video = document.querySelector('video');
+                var speedInput = document.querySelector('#speed-control');
+                speedInput.addEventListener('keyup', (event) => {
+                    if (event.key === 'Enter') {
+                        var speed = parseFloat(speedInput.value);
+                        if(!isNaN(speed)){
+                            video.playbackRate = speed;
+                        }
+                    }
+                });
+            </script>
+        </div>
+        <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
+
         <details class="download-dropdown">
             <summary class="download-dropdown-label">Download</summary>
             <ul class="download-dropdown-content">
@@ -450,7 +480,6 @@ Reload without invidious (for usage of new identity button).</a>
                 {% endfor %}
             </ul>
         </details>
-        <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
 
 
         <span class="description">{{ common_elements.text_runs(description)|escape|urlize|timestamps|safe }}</span>
