@@ -602,6 +602,19 @@ def update_with_age_restricted_info(info, video_info_page):
     _extract_formats(info, player_response)
     _extract_playability_error(info, player_response, error_prefix=ERROR_PREFIX)
 
+html_watch_page_base_js_re = re.compile(r'jsUrl":\s*"([\w\-\./]+/base.js)"')
+def update_with_missing_base_js(info, html_watch_page):
+    '''Extracts base_js url and player_name from html watch page. return err
+    Use when base_js is missing from the json page.'''
+    match = html_watch_page_base_js_re.search(html_watch_page)
+    if match:
+        info['base_js'] = normalize_url(match.group(1))
+        # must uniquely identify url
+        info['player_name'] = urllib.parse.urlparse(info['base_js']).path
+        return False
+    else:
+        return 'Could not find base_js url in watch page html'
+
 def requires_decryption(info):
     return ('formats' in info) and info['formats'] and info['formats'][0]['s']
 

@@ -177,14 +177,32 @@ def save_decrypt_cache():
     f.write(json.dumps({'version': 1, 'decrypt_cache':decrypt_cache}, indent=4, sort_keys=True))
     f.close()
 
-def decrypt_signatures(info):
+watch_headers = (
+    ('Accept', '*/*'),
+    ('Accept-Language', 'en-US,en;q=0.5'),
+    ('X-YouTube-Client-Name', '2'),
+    ('X-YouTube-Client-Version', '2.20180830'),
+) + util.mobile_ua
+
+def decrypt_signatures(info, video_id):
     '''return error string, or False if no errors'''
     if not yt_data_extract.requires_decryption(info):
         return False
     if not info['player_name']:
-        return 'Could not find player name'
-    if not info['base_js']:
-        return 'Failed to find base.js'
+        # base.js urls missing. Usually this is because there is no
+        # embedded player response; instead it's in the json as playerResponse,
+        # but there's no base.js key.
+        # Example: https://www.youtube.com/watch?v=W6iQPK3F16U
+        # See https://github.com/user234683/youtube-local/issues/22#issuecomment-706395160
+        url = 'https://m.youtube.com/watch?v=' + video_id + '&bpctr=9999999999'
+        html_watch_page = util.fetch_url(
+            url,
+            headers=watch_headers,
+            report_text='Fetching html watch page to retrieve missing base.js',
+            debug_name='watch_page_html').decode('utf-8')
+        err = yt_data_extract.update_with_missing_base_js(info, html_watch_page)
+        if err:
+            return err
 
     player_name = info['player_name']
     if player_name in decrypt_cache:
@@ -201,13 +219,6 @@ def decrypt_signatures(info):
     err = yt_data_extract.decrypt_signatures(info)
     return err
 
-headers = (
-    ('Accept', '*/*'),
-    ('Accept-Language', 'en-US,en;q=0.5'),
-    ('X-YouTube-Client-Name', '2'),
-    ('X-YouTube-Client-Version', '2.20180830'),
-) + util.mobile_ua
-
 def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     # bpctr=9999999999 will bypass are-you-sure dialogs for controversial
     # videos
@@ -216,7 +227,8 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
         url += '&list=' + playlist_id
     if index:
         url += '&index=' + index
-    polymer_json = util.fetch_url(url, headers=headers, debug_name='watch')
+    polymer_json = util.fetch_url(url, headers=watch_headers,
+                                  debug_name='watch')
     polymer_json = polymer_json.decode('utf-8')
     # TODO: Decide whether this should be done in yt_data_extract.extract_watch_info
     try:
@@ -242,7 +254,7 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
         yt_data_extract.update_with_age_restricted_info(info, video_info_page)
 
     # signature decryption
-    decryption_error = decrypt_signatures(info)
+    decryption_error = decrypt_signatures(info, video_id)
     if decryption_error:
         decryption_error = 'Error decrypting url signatures: ' + decryption_error
         info['playability_error'] = decryption_error
