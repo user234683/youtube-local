@@ -569,6 +569,76 @@ def extract_watch_info(polymer_json):
     info['author_url'] = 'https://www.youtube.com/channel/' + info['author_id'] if info['author_id'] else None
     return info
 
+single_char_codes = {
+    'n': '\n',
+    '\\': '\\',
+    '"': '"',
+    "'": "'",
+    'b': '\b',
+    'f': '\f',
+    'n': '\n',
+    'r': '\r',
+    't': '\t',
+    'v': '\x0b',
+    '0': '\x00',
+    '\n': '', # backslash followed by literal newline joins lines
+}
+def js_escape_replace(match):
+    r'''Resolves javascript string escape sequences such as \x..'''
+    # some js-strings in the watch page html include them for no reason
+    # https://mathiasbynens.be/notes/javascript-escapes
+    escaped_sequence = match.group(1)
+    if escaped_sequence[0] in ('x', 'u'):
+        return chr(int(escaped_sequence[1:], base=16))
+
+    # In javascript, if it's not one of those escape codes, it's just the
+    # literal character. e.g., "\a" = "a"
+    return single_char_codes.get(escaped_sequence, escaped_sequence)
+
+PLAYER_RESPONSE_RE = re.compile(r'<script[^>]*?>var ytInitialPlayerResponse = ({.*?});</script>')
+INITIAL_DATA_RE = re.compile(r"<script[^>]*?>var ytInitialData = '(.+?[^\\])';")
+BASE_JS_RE = re.compile(r'jsUrl":\s*"([\w\-\./]+?/base.js)"')
+JS_STRING_ESCAPE_RE = re.compile(r'\\([^xu]|x..|u....)')
+def extract_watch_info_from_html(watch_html):
+    base_js_match = BASE_JS_RE.search(watch_html)
+    player_response_match = PLAYER_RESPONSE_RE.search(watch_html)
+    initial_data_match = INITIAL_DATA_RE.search(watch_html)
+
+    if base_js_match is not None:
+        base_js_url = base_js_match.group(1)
+    else:
+        base_js_url = None
+
+    if player_response_match is not None:
+        player_response = json.loads(player_response_match.group(1))
+    else:
+        return {'error': 'Could not find ytInitialPlayerResponse'}
+        player_response = None
+
+    if initial_data_match is not None:
+        initial_data = initial_data_match.group(1)
+        initial_data = JS_STRING_ESCAPE_RE.sub(js_escape_replace, initial_data)
+        initial_data = json.loads(initial_data)
+    else:
+        print('extract_watch_info_from_html: failed to find initialData')
+        initial_data = None
+
+    # imitate old format expected by extract_watch_info
+    fake_polymer_json = {
+        'player': {
+            'args': {},
+            'assets': {
+                'js': base_js_url
+            }
+        },
+        'playerResponse': player_response,
+        'response': initial_data,
+    }
+
+    return extract_watch_info(fake_polymer_json)
+
+
+
 def get_caption_url(info, language, format, automatic=False, translation_language=None):
     '''Gets the url for captions with the given language and format. If automatic is True, get the automatic captions for that language. If translation_language is given, translate the captions from `language` to `translation_language`. If automatic is true and translation_language is given, the automatic captions will be translated.'''
     url = info['_captions_base_url']
@@ -601,19 +671,6 @@ def update_with_age_restricted_info(info, video_info_page):
 
     _extract_formats(info, player_response)
     _extract_playability_error(info, player_response, error_prefix=ERROR_PREFIX)
-
-html_watch_page_base_js_re = re.compile(r'jsUrl":\s*"([\w\-\./]+/base.js)"')
-def update_with_missing_base_js(info, html_watch_page):
-    '''Extracts base_js url and player_name from html watch page. return err
-    Use when base_js is missing from the json page.'''
-    match = html_watch_page_base_js_re.search(html_watch_page)
-    if match:
-        info['base_js'] = normalize_url(match.group(1))
-        # must uniquely identify url
-        info['player_name'] = urllib.parse.urlparse(info['base_js']).path
-        return False
-    else:
-        return 'Could not find base_js url in watch page html'
 
 def requires_decryption(info):
     return ('formats' in info) and info['formats'] and info['formats'][0]['s']

@@ -189,20 +189,7 @@ def decrypt_signatures(info, video_id):
     if not yt_data_extract.requires_decryption(info):
         return False
     if not info['player_name']:
-        # base.js urls missing. Usually this is because there is no
-        # embedded player response; instead it's in the json as playerResponse,
-        # but there's no base.js key.
-        # Example: https://www.youtube.com/watch?v=W6iQPK3F16U
-        # See https://github.com/user234683/youtube-local/issues/22#issuecomment-706395160
-        url = 'https://m.youtube.com/watch?v=' + video_id + '&bpctr=9999999999'
-        html_watch_page = util.fetch_url(
-            url,
-            headers=watch_headers,
-            report_text='Fetching html watch page to retrieve missing base.js',
-            debug_name='watch_page_html').decode('utf-8')
-        err = yt_data_extract.update_with_missing_base_js(info, html_watch_page)
-        if err:
-            return err
+        return 'Could not find player name'
 
     player_name = info['player_name']
     if player_name in decrypt_cache:
@@ -222,21 +209,15 @@ def decrypt_signatures(info, video_id):
 def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     # bpctr=9999999999 will bypass are-you-sure dialogs for controversial
     # videos
-    url = 'https://m.youtube.com/watch?v=' + video_id + '&pbj=1&bpctr=9999999999'
+    url = 'https://m.youtube.com/watch?v=' + video_id + '&bpctr=9999999999'
     if playlist_id:
         url += '&list=' + playlist_id
     if index:
         url += '&index=' + index
-    polymer_json = util.fetch_url(url, headers=watch_headers,
-                                  debug_name='watch')
-    polymer_json = polymer_json.decode('utf-8')
-    # TODO: Decide whether this should be done in yt_data_extract.extract_watch_info
-    try:
-        polymer_json = json.loads(polymer_json)
-    except json.decoder.JSONDecodeError:
-        traceback.print_exc()
-        return {'error': 'Failed to parse json response'}
-    info = yt_data_extract.extract_watch_info(polymer_json)
+    watch_page = util.fetch_url(url, headers=watch_headers,
+                                debug_name='watch')
+    watch_page = watch_page.decode('utf-8')
+    info = yt_data_extract.extract_watch_info_from_html(watch_page)
 
     # request player urls if it's missing
     # see https://github.com/user234683/youtube-local/issues/22#issuecomment-706395160
