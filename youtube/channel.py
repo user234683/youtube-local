@@ -174,7 +174,8 @@ def get_number_of_videos_general(base_url):
     return get_number_of_videos_channel(get_channel_id(base_url))
 
 def get_channel_search_json(channel_id, query, page):
-    params = proto.string(2, 'search') + proto.string(15, str(page))
+    offset = proto.unpadded_b64encode(proto.uint(3, (page-1)*30))
+    params = proto.string(2, 'search') + proto.string(15, offset)
     params = proto.percent_b64encode(params)
     ctoken = proto.string(2, channel_id) + proto.string(3, params) + proto.string(11, query)
     ctoken = base64.urlsafe_b64encode(proto.nested(80226972, ctoken)).decode('ascii')
