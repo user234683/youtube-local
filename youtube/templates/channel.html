@@ -187,7 +187,7 @@
 
             {% if current_tab == 'videos' %}
                 <nav class="page-button-row">
-                    {{ common_elements.page_buttons(number_of_pages, channel_url + '/' + current_tab, parameters_dictionary) }}
+                    {{ common_elements.page_buttons(number_of_pages, channel_url + '/' + current_tab, parameters_dictionary, include_ends=(current_sort.__str__() == '3')) }}
                 </nav>
             {% elif current_tab == 'search' %}
                 <nav class="next-previous-button-row">
