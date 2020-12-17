@@ -595,7 +595,13 @@ def js_escape_replace(match):
     # literal character. e.g., "\a" = "a"
     return single_char_codes.get(escaped_sequence, escaped_sequence)
 
-PLAYER_RESPONSE_RE = re.compile(r'<script[^>]*?>var ytInitialPlayerResponse = ({.*?});</script>')
+# works but complicated and unsafe:
+#PLAYER_RESPONSE_RE = re.compile(r'<script[^>]*?>[^<]*?var ytInitialPlayerResponse = ({(?:"(?:[^"\\]|\\.)*?"|[^"])+?});')
+
+# Because there are sometimes additional statements after the json object
+# so we just capture all of those until end of script and tell json decoder
+# to ignore extra stuff after the json object
+PLAYER_RESPONSE_RE = re.compile(r'<script[^>]*?>[^<]*?var ytInitialPlayerResponse = ({.*?)</script>')
 INITIAL_DATA_RE = re.compile(r"<script[^>]*?>var ytInitialData = '(.+?[^\\])';")
 BASE_JS_RE = re.compile(r'jsUrl":\s*"([\w\-\./]+?/base.js)"')
 JS_STRING_ESCAPE_RE = re.compile(r'\\([^xu]|x..|u....)')
@@ -610,7 +616,9 @@ def extract_watch_info_from_html(watch_html):
         base_js_url = None
 
     if player_response_match is not None:
-        player_response = json.loads(player_response_match.group(1))
+        decoder = json.JSONDecoder()
+        # this will make it ignore extra stuff after end of object
+        player_response = decoder.raw_decode(player_response_match.group(1))[0]
     else:
         return {'error': 'Could not find ytInitialPlayerResponse'}
         player_response = None
