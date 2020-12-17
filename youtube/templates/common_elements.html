@@ -118,3 +118,17 @@
             <a class="page-button next-page" href="{{ url + '?' + parameters_dictionary|urlencode }}">Next page</a>
     {% endif %}
 {% endmacro %}
+
+{% macro next_previous_ctoken_buttons(prev_ctoken, next_ctoken, url, parameters_dictionary) %}
+    {% set parameters_dictionary = parameters_dictionary.to_dict() %}
+
+    {% if prev_ctoken %}
+            {% set _ = parameters_dictionary.__setitem__('ctoken', prev_ctoken) %}
+            <a class="page-button previous-page" href="{{ url + '?' + parameters_dictionary|urlencode }}">Previous page</a>
+    {% endif %}
+
+    {% if next_ctoken %}
+            {% set _ = parameters_dictionary.__setitem__('ctoken', next_ctoken) %}
+            <a class="page-button next-page" href="{{ url + '?' + parameters_dictionary|urlencode }}">Next page</a>
+    {% endif %}
+{% endmacro %}

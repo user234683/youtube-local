@@ -109,24 +109,17 @@ def channel_ctoken_v1(channel_id, page, sort, tab, view=1):
 
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
 
-def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1, print_status=True):
+def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1,
+                    ctoken=None, print_status=True):
     message = 'Got channel tab' if print_status else None
 
-    if int(sort) == 2 and int(page) > 1:
-        ctoken = channel_ctoken_v1(channel_id, page, sort, tab, view)
-        ctoken = ctoken.replace('=', '%3D')
-        url = ('https://www.youtube.com/channel/' + channel_id + '/' + tab
-            + '?action_continuation=1&continuation=' + ctoken
-            + '&pbj=1')
-        content = util.fetch_url(url, headers_desktop + real_cookie,
-            debug_name='channel_tab', report_text=message)
-    else:
+    if not ctoken:
         ctoken = channel_ctoken_v3(channel_id, page, sort, tab, view)
         ctoken = ctoken.replace('=', '%3D')
-        url = 'https://www.youtube.com/browse_ajax?ctoken=' + ctoken
-        content = util.fetch_url(url,
-            headers_desktop + generic_cookie,
-            debug_name='channel_tab', report_text=message)
+    url = 'https://www.youtube.com/browse_ajax?ctoken=' + ctoken
+    content = util.fetch_url(url,
+        headers_desktop + generic_cookie,
+        debug_name='channel_tab', report_text=message)
 
     return content
 
@@ -208,11 +201,13 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     sort = request.args.get('sort', '3')
     view = request.args.get('view', '1')
     query = request.args.get('query', '')
+    ctoken = request.args.get('ctoken', '')
 
     if tab == 'videos' and channel_id:
         tasks = (
             gevent.spawn(get_number_of_videos_channel, channel_id),
-            gevent.spawn(get_channel_tab, channel_id, page_number, sort, 'videos', view)
+            gevent.spawn(get_channel_tab, channel_id, page_number, sort,
+                         'videos', view, ctoken)
         )
         gevent.joinall(tasks)
         util.check_gevent_exceptions(*tasks)

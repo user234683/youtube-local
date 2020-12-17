@@ -66,6 +66,7 @@ def extract_channel_info(polymer_json, tab):
 
     # get items
     info['items'] = []
+    info['ctoken'] = None
 
     # empty channel
     if 'contents' not in response and 'continuationContents' not in response:
@@ -75,6 +76,7 @@ def extract_channel_info(polymer_json, tab):
         items, ctoken = extract_items(response)
         additional_info = {'author': info['channel_name'], 'author_url': info['channel_url']}
         info['items'] = [extract_item_info(renderer, additional_info) for renderer in items]
+        info['ctoken'] = ctoken
         if tab == 'search':
             info['is_last_page'] = (ctoken is None)
     elif tab == 'about':
