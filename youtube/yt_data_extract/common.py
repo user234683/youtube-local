@@ -226,6 +226,7 @@ def extract_item_info(item, additional_info={}):
         info['type'] = 'video'
     elif primary_type in ('playlist', 'radio', 'show'):
         info['type'] = 'playlist'
+        info['playlist_type'] = primary_type
     elif primary_type == 'channel':
         info['type'] = 'channel'
     elif type == 'videoWithContextRenderer': # stupid exception
@@ -313,11 +314,15 @@ def extract_item_info(item, additional_info={}):
     elif primary_type in ('playlist', 'radio'):
         info['id'] = item.get('playlistId')
         info['video_count'] = extract_int(item.get('videoCount'))
+        info['first_video_id'] = deep_get(item, 'navigationEndpoint',
+                                          'watchEndpoint', 'videoId')
     elif primary_type == 'channel':
         info['id'] = item.get('channelId')
         info['approx_subscriber_count'] = extract_approx_int(item.get('subscriberCountText'))
     elif primary_type == 'show':
         info['id'] = deep_get(item, 'navigationEndpoint', 'watchEndpoint', 'playlistId')
+        info['first_video_id'] = deep_get(item, 'navigationEndpoint',
+                                          'watchEndpoint', 'videoId')
 
     if primary_type in ('playlist', 'channel'):
         conservative_update(info, 'video_count', extract_int(item.get('videoCountText')))

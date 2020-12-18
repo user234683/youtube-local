@@ -496,10 +496,16 @@ def add_extra_html_info(item):
 
         item['video_info'] = json.dumps(video_info)
 
+    elif item['type'] == 'playlist' and item['playlist_type'] == 'radio':
+        item['url'] = concat_or_none(
+            URL_ORIGIN,
+            '/watch?v=', item['first_video_id'],
+            '&list=', item['id']
+        )
     elif item['type'] == 'playlist':
-        item['url'] = (URL_ORIGIN + '/playlist?list=' + item['id']) if item.get('id') else None
+        item['url'] = concat_or_none(URL_ORIGIN, '/playlist?list=', item['id'])
     elif item['type'] == 'channel':
-        item['url'] = (URL_ORIGIN + "/channel/" + item['id']) if item.get('id') else None
+        item['url'] = concat_or_none(URL_ORIGIN, "/channel/", item['id'])
 
 def parse_info_prepare_for_html(renderer, additional_info={}):
     item = yt_data_extract.extract_item_info(renderer, additional_info)
