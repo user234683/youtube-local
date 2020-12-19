@@ -19,6 +19,7 @@ import socks, sockshandler
 import subprocess
 import re
 import sys
+import time
 
 
 
@@ -32,13 +33,32 @@ def youtu_be(env, start_response):
         env['QUERY_STRING'] += '&v=' + id
     yield from yt_app(env, start_response)
 
+RANGE_RE = re.compile(r'bytes=(\d+-(?:\d+)?)')
+def parse_range(range_header, content_length):
+    # Range header can be like bytes=200-1000 or bytes=200-
+    # amount_received is the length of bytes from the range that have already
+    # been received
+    match = RANGE_RE.fullmatch(range_header.strip())
+    if not match:
+        print('Unsupported range header format:', range_header)
+        return None
+    start, end = match.group(1).split('-')
+    start_byte = int(start)
+    if not end:
+        end_byte = start_byte + content_length - 1
+    else:
+        end_byte = int(end)
+    return start_byte, end_byte
+
 def proxy_site(env, start_response, video=False):
-    headers = {
+    send_headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)',
         'Accept': '*/*',
     }
+    current_range_start = 0
+    range_end = None
     if 'HTTP_RANGE' in env:
-        headers['Range'] = env['HTTP_RANGE']
+        send_headers['Range'] = env['HTTP_RANGE']
 
     url = "https://" + env['SERVER_NAME'] + env['PATH_INFO']
     # remove /name portion
@@ -47,37 +67,94 @@ def proxy_site(env, start_response, video=False):
     if env['QUERY_STRING']:
         url += '?' + env['QUERY_STRING']
 
-    if video:
-        params = urllib.parse.parse_qs(env['QUERY_STRING'])
-        params_use_tor = int(params.get('use_tor', '0')[0])
-        use_tor = (settings.route_tor == 2) or params_use_tor
-        response, cleanup_func = util.fetch_url_response(url, headers,
-                                                         use_tor=use_tor,
-                                                         max_redirects=10)
-    else:
-        response, cleanup_func = util.fetch_url_response(url, headers)
+    try_num = 1
+    first_attempt = True
+    current_attempt_position = 0
+    while try_num <= 3:   # Try a given byte position three times
+        if not first_attempt:
+            print('(Try %d)' % try_num, 'Trying with', send_headers['Range'])
 
-    headers = response.getheaders()
-    if isinstance(headers, urllib3._collections.HTTPHeaderDict):
-        headers = headers.items()
+        if video:
+            params = urllib.parse.parse_qs(env['QUERY_STRING'])
+            params_use_tor = int(params.get('use_tor', '0')[0])
+            use_tor = (settings.route_tor == 2) or params_use_tor
+            response, cleanup_func = util.fetch_url_response(url, send_headers,
+                                                             use_tor=use_tor,
+                                                             max_redirects=10)
+        else:
+            response, cleanup_func = util.fetch_url_response(url, send_headers)
 
-    start_response(str(response.status) + ' ' + response.reason, headers)
-    while True:
-        # a bit over 3 seconds of 360p video
-        # we want each TCP packet to transmit in large multiples,
-        # such as 65,536, so we shouldn't read in small chunks
-        # such as 8192 lest that causes the socket library to limit the
-        # TCP window size
-        # Might need fine-tuning, since this gives us 4*65536
-        # The tradeoff is that larger values (such as 6 seconds) only
-        # allows video to buffer in those increments, meaning user must wait
-        # until the entire chunk is downloaded before video starts playing
-        content_part = response.read(32*8192)
-        if not content_part:
+        response_headers = response.getheaders()
+        if isinstance(response_headers, urllib3._collections.HTTPHeaderDict):
+            response_headers = response_headers.items()
+
+        if first_attempt:
+            start_response(str(response.status) + ' ' + response.reason,
+                           response_headers)
+
+        content_length = int(dict(response_headers).get('Content-Length', 0))
+        if response.status >= 400:
+            print('Error: Youtube returned "%d %s" while routing %s' % (
+                response.status, response.reason, url.split('?')[0]))
+
+        total_received = 0
+        retry = False
+        while True:
+            # a bit over 3 seconds of 360p video
+            # we want each TCP packet to transmit in large multiples,
+            # such as 65,536, so we shouldn't read in small chunks
+            # such as 8192 lest that causes the socket library to limit the
+            # TCP window size
+            # Might need fine-tuning, since this gives us 4*65536
+            # The tradeoff is that larger values (such as 6 seconds) only
+            # allows video to buffer in those increments, meaning user must
+            # wait until the entire chunk is downloaded before video starts
+            # playing
+            content_part = response.read(32*8192)
+            total_received += len(content_part)
+            if not content_part:
+                # Sometimes Youtube closes the connection before sending all of
+                # the content. Retry with a range request for the missing
+                # content. See
+                # https://github.com/user234683/youtube-local/issues/40
+                if total_received < content_length:
+                    if 'Range' in send_headers:
+                        int_range = parse_range(send_headers['Range'],
+                                                content_length)
+                        if not int_range: # give up b/c unrecognized range
+                            break
+                        start, end = int_range
+                    else:
+                        start, end = 0, (content_length - 1)
+
+                    fail_byte = start + total_received
+                    send_headers['Range'] = 'bytes=%d-%d' % (fail_byte, end)
+                    print(
+                        'Warning: Youtube closed the connection before byte',
+                        str(fail_byte) + '.', 'Expected', start+content_length,
+                        'bytes.'
+                    )
+
+                    retry = True
+                    first_attempt = False
+                    if fail_byte == current_attempt_position:
+                        try_num += 1
+                    else:
+                        try_num = 1
+                        current_attempt_position = fail_byte
+                break
+            yield content_part
+        cleanup_func(response)
+        if retry:
+            # Youtube will return 503 Service Unavailable if you do a bunch
+            # of range requests too quickly.
+            time.sleep(1)
+            continue
+        else:
             break
-        yield content_part
-
-    cleanup_func(response)
+    else: # no break
+        print('Error: Youtube closed the connection before',
+              'providing all content. Retried three times:', url.split('?')[0])
 
 def proxy_video(env, start_response):
     yield from proxy_site(env, start_response, video=True)
