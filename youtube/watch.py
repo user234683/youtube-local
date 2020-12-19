@@ -1,3 +1,4 @@
+import youtube
 from youtube import yt_app
 from youtube import util, comments, local_playlist, yt_data_extract
 import settings
@@ -352,11 +353,19 @@ def get_watch_page(video_id=None):
     playlist_id = request.args.get('list')
     index = request.args.get('index')
     use_invidious = bool(int(request.args.get('use_invidious', '1')))
-    tasks = (
-        gevent.spawn(comments.video_comments, video_id, int(settings.default_comment_sorting), lc=lc ),
-        gevent.spawn(extract_info, video_id, use_invidious, playlist_id=playlist_id,
-            index=index)
-    )
+    if request.path.startswith('/embed') and settings.embed_page_mode:
+        tasks = (
+            gevent.spawn((lambda: {})),
+            gevent.spawn(extract_info, video_id, use_invidious,
+                         playlist_id=playlist_id, index=index),
+        )
+    else:
+        tasks = (
+            gevent.spawn(comments.video_comments, video_id,
+                         int(settings.default_comment_sorting), lc=lc),
+            gevent.spawn(extract_info, video_id, use_invidious,
+                         playlist_id=playlist_id, index=index),
+        )
     gevent.joinall(tasks)
     util.check_gevent_exceptions(tasks[1])
     comments_info, info = tasks[0].value, tasks[1].value
@@ -457,7 +466,11 @@ def get_watch_page(video_id=None):
             'url': transcript_url
         })
 
-    return flask.render_template('watch.html',
+    if request.path.startswith('/embed') and settings.embed_page_mode:
+        template_name = 'embed.html'
+    else:
+        template_name = 'watch.html'
+    return flask.render_template(template_name,
         header_playlist_names   = local_playlist.get_playlist_names(),
         uploader_channel_url    = ('/' + info['author_url']) if info['author_url'] else '',
         time_published             = info['time_published'],
@@ -500,7 +513,8 @@ def get_watch_page(video_id=None):
 
         js_data = {
             'video_id': video_info['id'],
-        }
+        },
+        font_family = youtube.font_choices[settings.font], # for embed page
     )
 
 

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>{{ title }}</title>
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; media-src 'self' https://*.googlevideo.com;
+            {{ "img-src 'self' https://*.googleusercontent.com https://*.ggpht.com https://*.ytimg.com;" if not settings.proxy_images else "" }}">
+        <!--<link href="{{ theme_path }}" type="text/css" rel="stylesheet">-->
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+            html {
+                font-family: {{ font_family|safe }};
+            }
+            html, body, div, ol, h2{
+                margin: 0px;
+                padding: 0px;
+            }
+            a:link {
+                color: #22aaff;
+            }
+            a:visited {
+                color: #7755ff;
+            }
+            body{
+                background-color: black;
+                color: white;
+                max-height: 100vh;
+                overflow-y: hidden;
+            }
+            .text-height{
+                font-size: 0.75rem;
+                overflow-y: hidden;
+                height: 1rem;
+            }
+            a.video-link{
+                color: white;
+            }
+                h2 {
+                    font-weight: normal;
+                    margin-left: 5px;
+                }
+            ol.video-info-list{
+                padding: 0px;
+                list-style: none;
+                display: flex;
+                flex-direction: row;
+            }
+                ol.video-info-list li{
+                    margin-left: 20px;
+                    font-size: 0.75rem;
+                    max-width: 75%;
+                }
+                    address{
+                        font-style: normal;
+                    }
+                    .video-info-list span{
+                        height: 1rem;
+                        overflow-y: hidden;
+                        display: inline-block;
+                    }
+            video{
+                max-height: calc(100vh - 2rem);
+                width: 100%;
+                height: 56.25vw; /* 360/640 == 720/1280 */
+            }
+        </style>
+    </head>
+
+    <body>
+        <a class="video-link text-height" href="{{ video_url }}" title="{{ title }}" target="_blank" rel="noopener noreferrer"><h2 class="text-height">{{ title }}</h2></a>
+        <div class="video-info-bar text-height">
+            <ol class="video-info-list text-height">
+                <li class="text-height"><time class="text-height"><span class="text-height">{{ time_published }}</span></time></li>
+                <li class="text-height"><address class="text-height"><span class="text-height">Uploaded by <a class="text-height" href="{{ uploader_channel_url }}" title="{{ uploader }}" target="_blank" rel="noopener noreferrer">{{ uploader }}</a></span></address></li>
+            </ol>
+        </div>
+        <video controls autofocus class="video" height="{{ video_height }}px">
+            {% for video_source in video_sources %}
+                <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
+            {% endfor %}
+
+            {% for source in subtitle_sources %}
+                {% if source['on'] %}
+                    <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
+                {% else %}
+                    <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
+                {% endif %}
+            {% endfor %}
+        </video>
+    </body>
+</html>

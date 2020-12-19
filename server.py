@@ -161,6 +161,7 @@ def proxy_video(env, start_response):
 
 site_handlers = {
     'youtube.com':yt_app,
+    'youtube-nocookie.com':yt_app,
     'youtu.be':youtu_be,
     'ytimg.com': proxy_site,
     'yt3.ggpht.com': proxy_site,

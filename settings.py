@@ -197,6 +197,14 @@ For security reasons, enabling this is not recommended.''',
         'category': 'interface',
     }),
 
+    ('embed_page_mode', {
+        'type': bool,
+        'label': 'Enable embed page',
+        'default': True,
+        'comment': '',
+        'category': 'interface',
+    }),
+
     ('autocheck_subscriptions', {
         'type': bool,
         'default': 0,
