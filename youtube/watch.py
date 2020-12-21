@@ -444,7 +444,7 @@ def get_watch_page(video_id=None):
     # Check for false determination of disabled comments, which comes from
     # the watch page. But if we got comments in the separate request for those,
     # then the determination is wrong.
-    if info['comments_disabled'] and len(comments_info['comments']) != 0:
+    if info['comments_disabled'] and comments_info.get('comments'):
         info['comments_disabled'] = False
         print('Warning: False determination that comments are disabled')
         print('Comment count:', info['comment_count'])
