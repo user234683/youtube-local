@@ -58,6 +58,8 @@ URL_ORIGIN = "/https://www.youtube.com"
 connection_pool = urllib3.PoolManager(cert_reqs = 'CERT_REQUIRED')
 
 class TorManager:
+    MAX_TRIES = 3
+    COOLDOWN_TIME = 5
     def __init__(self):
         self.old_tor_connection_pool = None
         self.tor_connection_pool = urllib3.contrib.socks.SOCKSProxyManager(
@@ -67,6 +69,7 @@ class TorManager:
 
         self.new_identity_lock = gevent.lock.BoundedSemaphore(1)
         self.last_new_identity_time = time.monotonic() - 20
+        self.try_num = 1
 
     def refresh_tor_connection_pool(self):
         self.tor_connection_pool.clear()
@@ -106,9 +109,14 @@ class TorManager:
                 return None
 
             delta = time.monotonic() - self.last_new_identity_time
-            if delta < 20:
-                print('new_identity: Retried already within last 20 seconds')
-                return 'Retried with new circuit once (max) within last 20 seconds.'
+            if delta < self.COOLDOWN_TIME and self.try_num == 1:
+                err = ('Retried with new circuit %d times (max) within last '
+                       '%d seconds.' % (self.MAX_TRIES, self.COOLDOWN_TIME))
+                print('new_identity:', err)
+                return err
+            elif delta >= self.COOLDOWN_TIME:
+                self.try_num = 1
+
             try:
                 port = settings.tor_control_port
                 with stem.control.Controller.from_port(port=port) as controller:
@@ -118,10 +126,14 @@ class TorManager:
                     print('new_identity: NEWNYM signal sent')
                     self.last_new_identity_time = time.monotonic()
                 self.refresh_tor_connection_pool()
-                return None
             except stem.SocketError:
                 traceback.print_exc()
                 return 'Failed to connect to Tor control port.'
+            finally:
+                self.try_num += 1
+                if self.try_num > self.MAX_TRIES:
+                    self.try_num = 1
+            return None
         finally:
             self.new_identity_lock.release()
 
