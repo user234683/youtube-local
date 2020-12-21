@@ -192,6 +192,17 @@ def site_dispatch(env, start_response):
         # correct malformed query string with ? separators instead of &
         env['QUERY_STRING'] = env['QUERY_STRING'].replace('?', '&')
 
+        # Some servers such as uWSGI rewrite double slashes // to / by default,
+        # breaking the https:// schema. Some servers provide
+        # REQUEST_URI (nonstandard), which contains the full, original URL.
+        # See https://github.com/user234683/youtube-local/issues/43
+        if 'REQUEST_URI' in env:
+            # Since it's the original url, the server won't handle percent
+            # decoding for us
+            env['PATH_INFO'] = urllib.parse.unquote(
+                env['REQUEST_URI'].split('?')[0]
+            )
+
         method = env['REQUEST_METHOD']
         path = env['PATH_INFO']
 
