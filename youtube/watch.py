@@ -232,7 +232,9 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
             'eurl': 'https://youtube.googleapis.com/v/' + video_id,
         }
         url = 'https://www.youtube.com/get_video_info?' + urllib.parse.urlencode(data)
-        video_info_page = util.fetch_url(url, debug_name='get_video_info', report_text='Fetched get_video_info page').decode('utf-8')
+        video_info_page = util.fetch_url(
+            url, headers=watch_headers, debug_name='get_video_info',
+            report_text='Fetched get_video_info page').decode('utf-8')
         yt_data_extract.update_with_age_restricted_info(info, video_info_page)
 
     # signature decryption
