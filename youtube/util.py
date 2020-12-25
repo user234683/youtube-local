@@ -59,7 +59,9 @@ connection_pool = urllib3.PoolManager(cert_reqs = 'CERT_REQUIRED')
 
 class TorManager:
     MAX_TRIES = 3
-    COOLDOWN_TIME = 5
+    # Remember the 6-sec wait times, so make cooldown be two of those
+    # (otherwise it will retry forever if 429s never end)
+    COOLDOWN_TIME = 12
     def __init__(self):
         self.old_tor_connection_pool = None
         self.tor_connection_pool = urllib3.contrib.socks.SOCKSProxyManager(
@@ -96,6 +98,12 @@ class TorManager:
 
     def new_identity(self, time_failed_request_started):
         '''return error, or None if no error and the identity is fresh'''
+
+        # The overall pattern at maximum (always returning 429) will be
+        # R N (0) R N (6) R N (6) R | (12) R N (0) R N (6) ...
+        # where R is a request, N is a new identity, (x) is a wait time of
+        # x sec, and | is where we give up and display an error to the user.
+
         print('new_identity: new_identity called')
         # blocks if another greenlet currently has the lock
         self.new_identity_lock.acquire()
@@ -130,9 +138,18 @@ class TorManager:
                 traceback.print_exc()
                 return 'Failed to connect to Tor control port.'
             finally:
+                original_try_num = self.try_num
                 self.try_num += 1
                 if self.try_num > self.MAX_TRIES:
                     self.try_num = 1
+
+            # If we do the request right after second new identity it won't
+            # be a new IP, based on experiments.
+            # Not necessary after first new identity
+            if original_try_num > 1:
+                print('Sleeping for 6 seconds before retrying request')
+                time.sleep(6)   # experimentally determined minimum
+
             return None
         finally:
             self.new_identity_lock.release()
