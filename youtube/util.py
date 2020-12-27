@@ -472,12 +472,6 @@ def update_query_string(query_string, items):
     return urllib.parse.urlencode(parameters, doseq=True)
 
 
-
-def uppercase_escape(s):
-     return re.sub(
-         r'\\U([0-9a-fA-F]{8})',
-         lambda m: chr(int(m.group(1), base=16)), s)
-
 def prefix_url(url):
     if url is None:
         return None
