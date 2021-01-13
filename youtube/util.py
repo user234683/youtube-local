@@ -283,9 +283,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
             content,
             response.getheader('Content-Encoding', default='identity'))
 
-        if (response.status == 429
-                and content.startswith(b'<!DOCTYPE')
-                and b'Our systems have detected unusual traffic' in content):
+        if response.status == 429:
             ip = re.search(
                 br'IP address: ((?:[\da-f]*:)+[\da-f]+|(?:\d+\.)+\d+)',
                 content)
