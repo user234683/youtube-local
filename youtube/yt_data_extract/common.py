@@ -395,7 +395,8 @@ def _traverse_standard_list(renderer):
 nested_renderer_dispatch = {
     'singleColumnBrowseResultsRenderer': _traverse_browse_renderer,
     'twoColumnBrowseResultsRenderer': _traverse_browse_renderer,
-    'twoColumnSearchResultsRenderer': lambda renderer: get(renderer, 'primaryContents', {}),
+    'twoColumnSearchResultsRenderer': lambda r: get(r, 'primaryContents', {}),
+    'richItemRenderer': lambda r: get(r, 'content', {}),
 }
 
 # these renderers contain a list of renderers inside them
@@ -403,6 +404,7 @@ nested_renderer_list_dispatch = {
     'sectionListRenderer': _traverse_standard_list,
     'itemSectionRenderer': _traverse_standard_list,
     'gridRenderer': _traverse_standard_list,
+    'richGridRenderer': _traverse_standard_list,
     'playlistVideoListRenderer': _traverse_standard_list,
     'singleColumnWatchNextResults': lambda r: (deep_get(r, 'results', 'results', 'contents', default=[]), None),
 }
