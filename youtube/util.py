@@ -58,9 +58,9 @@ connection_pool = urllib3.PoolManager(cert_reqs = 'CERT_REQUIRED')
 
 class TorManager:
     MAX_TRIES = 3
-    # Remember the 6-sec wait times, so make cooldown be two of those
+    # Remember the 7-sec wait times, so make cooldown be two of those
     # (otherwise it will retry forever if 429s never end)
-    COOLDOWN_TIME = 12
+    COOLDOWN_TIME = 14
     def __init__(self):
         self.old_tor_connection_pool = None
         self.tor_connection_pool = urllib3.contrib.socks.SOCKSProxyManager(
@@ -146,8 +146,8 @@ class TorManager:
             # be a new IP, based on experiments.
             # Not necessary after first new identity
             if original_try_num > 1:
-                print('Sleeping for 6 seconds before retrying request')
-                time.sleep(6)   # experimentally determined minimum
+                print('Sleeping for 7 seconds before retrying request')
+                time.sleep(7)   # experimentally determined minimum
 
             return None
         finally:
