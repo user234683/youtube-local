@@ -686,7 +686,9 @@ def requires_decryption(info):
 # adapted from youtube-dl and invidious:
 # https://github.com/omarroth/invidious/blob/master/src/invidious/helpers/signatures.cr
 decrypt_function_re = re.compile(r'function\(a\)\{(a=a\.split\(""\)[^\}{]+)return a\.join\(""\)\}')
-op_with_arg_re = re.compile(r'[^\.]+\.([^\(]+)\(a,(\d+)\)')
+# gives us e.g. rt, .xK, 5 from rt.xK(a,5) or rt, ["xK"], 5 from rt["xK"](a,5)
+# (var, operation, argument)
+var_op_arg_re = re.compile(r'(\w+)(\.\w+|\["[^"]+"\])\(a,(\d+)\)')
 def extract_decryption_function(info, base_js):
     '''Insert decryption function into info. Return error string if not successful.
     Decryption function is a list of list[2] of numbers.
@@ -700,10 +702,11 @@ def extract_decryption_function(info, base_js):
     if not function_body:
         return 'Empty decryption function body'
 
-    var_name = get(function_body[0].split('.'), 0)
-    if var_name is None:
+    var_with_operation_match = var_op_arg_re.fullmatch(function_body[0])
+    if var_with_operation_match is None:
         return 'Could not find var_name'
 
+    var_name = var_with_operation_match.group(1)
     var_body_match = re.search(r'var ' + re.escape(var_name) + r'=\{(.*?)\};', base_js, flags=re.DOTALL)
     if var_body_match is None:
         return 'Could not find var_body'
@@ -732,13 +735,13 @@ def extract_decryption_function(info, base_js):
 
     decryption_function = []
     for op_with_arg in function_body:
-        match = op_with_arg_re.fullmatch(op_with_arg)
+        match = var_op_arg_re.fullmatch(op_with_arg)
         if match is None:
             return 'Could not parse operation with arg'
-        op_name = match.group(1)
+        op_name = match.group(2).strip('[].')
         if op_name not in operation_definitions:
-            return 'Unknown op_name: ' + op_name
-        op_argument = match.group(2)
+            return 'Unknown op_name: ' + str(op_name)
+        op_argument = match.group(3)
         decryption_function.append([operation_definitions[op_name], int(op_argument)])
 
     info['decryption_function'] = decryption_function
