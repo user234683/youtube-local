@@ -42,15 +42,6 @@ def make_comment_ctoken(video_id, sort=0, offset=0, lc='', secret_key=''):
     result = proto.nested(2, page_params) + proto.uint(3,6) + proto.nested(6, offset_information)
     return base64.urlsafe_b64encode(result).decode('ascii')
 
-def comment_replies_ctoken(video_id, comment_id, max_results=500):
-
-    params = proto.string(2, comment_id) + proto.uint(9, max_results)
-    params = proto.nested(3, params)
-
-    result = proto.nested(2, proto.string(2, video_id)) + proto.uint(3,6) + proto.nested(6, params)
-    return base64.urlsafe_b64encode(result).decode('ascii')
-
-
 
 mobile_headers = {
     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
@@ -60,10 +51,11 @@ mobile_headers = {
     'X-YouTube-Client-Version': '2.20180823',
 }
 def request_comments(ctoken, replies=False):
-    if replies: # let's make it use different urls for no reason despite all the data being encoded
-        base_url = "https://m.youtube.com/watch_comment?action_get_comment_replies=1&ctoken="
+    base_url = 'https://m.youtube.com/watch_comment?'
+    if replies:
+        base_url += 'action_get_comment_replies=1&ctoken='
     else:
-        base_url = "https://m.youtube.com/watch_comment?action_get_comments=1&ctoken="
+        base_url += 'action_get_comments=1&ctoken='
     url = base_url + ctoken.replace("=", "%3D") + "&pbj=1"
 
     content = util.fetch_url(
@@ -95,12 +87,19 @@ def post_process_comments_info(comments_info):
 
 
         reply_count = comment['reply_count']
-        if reply_count == 0:
-            comment['replies_url'] = None
-        else:
+        comment['replies_url'] = None
+        if comment['reply_ctoken']:
+            # change max_replies field to 250 in ctoken
+            ctoken = comment['reply_ctoken']
+            ctoken, err = proto.set_protobuf_value(
+                ctoken,
+                'base64p', 6, 3, 9, value=250)
+            if err:
+                print('Error setting ctoken value:')
+                print(err)
+                comment['replies_url'] = None
             comment['replies_url'] = concat_or_none(util.URL_ORIGIN,
-                '/comments?parent_id=', comment['id'],
-                '&video_id=', comments_info['video_id'])
+                '/comments?replies=1&ctoken=' + ctoken)
 
         if reply_count == 0:
             comment['view_replies_text'] = 'Reply'
@@ -117,8 +116,9 @@ def post_process_comments_info(comments_info):
 
     comments_info['include_avatars'] = settings.enable_comment_avatars
     if comments_info['ctoken']:
+        replies_param = '&replies=1' if comments_info['is_replies'] else ''
         comments_info['more_comments_url'] = concat_or_none(util.URL_ORIGIN,
-            '/comments?ctoken=', comments_info['ctoken'])
+            '/comments?ctoken=', comments_info['ctoken'], replies_param)
 
     comments_info['page_number'] = page_number = str(int(comments_info['offset']/20) + 1)
 
@@ -184,13 +184,7 @@ def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
 @yt_app.route('/comments')
 def get_comments_page():
     ctoken = request.args.get('ctoken', '')
-    replies = False
-    if not ctoken:
-        video_id = request.args['video_id']
-        parent_id = request.args['parent_id']
-
-        ctoken = comment_replies_ctoken(video_id, parent_id)
-        replies = True
+    replies = request.args.get('replies', '0') == '1'
 
     comments_info = yt_data_extract.extract_comments_info(request_comments(ctoken, replies))
     post_process_comments_info(comments_info)

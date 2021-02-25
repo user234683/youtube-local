@@ -251,13 +251,19 @@ def extract_comments_info(polymer_json):
             info['video_title'] = extract_str(comment_thread.get('commentTargetTitle'))
             if 'replies' not in comment_thread:
                 comment_info['reply_count'] = 0
+                comment_info['reply_ctoken'] = None
             else:
                 comment_info['reply_count'] = extract_int(deep_get(comment_thread,
                     'replies', 'commentRepliesRenderer', 'moreText'
                 ), default=1)   # With 1 reply, the text reads "View reply"
+                comment_info['reply_ctoken'] = deep_get(comment_thread,
+                    'replies', 'commentRepliesRenderer', 'continuations', 0,
+                    'nextContinuationData', 'continuation'
+                )
             comment_renderer = deep_get(comment_thread, 'comment', 'commentRenderer', default={})
         elif 'commentRenderer' in comment:  # replies
             comment_info['reply_count'] = 0     # replyCount, below, not present for replies even if the reply has further replies to it
+            comment_info['reply_ctoken'] = None
             conservative_update(info, 'is_replies', True)
             comment_renderer = comment['commentRenderer']
         else:

@@ -1,6 +1,7 @@
 from math import ceil
 import base64
 import io
+import traceback
 
 def byte(n):
     return bytes((n,))
@@ -118,8 +119,84 @@ def read_protobuf(data):
             raise Exception("Unknown wire type: " + str(wire_type) + ", Tag: " + bytes_to_hex(succinct_encode(tag)) + ", at position " + str(data.tell()))
         yield (wire_type, field_number, value)
 
-def parse(data):
-    return {field_number: value for _, field_number, value in read_protobuf(data)}
+def parse(data, include_wire_type=False):
+    '''Returns a dict mapping field numbers to values
+
+    data is the protobuf structure, which must not be b64-encoded'''
+    if include_wire_type:
+        return {field_number: [wire_type, value]
+                for wire_type, field_number, value in read_protobuf(data)}
+    return {field_number: value
+            for _, field_number, value in read_protobuf(data)}
+
+
+base64_enc_funcs = {
+    'base64': base64.urlsafe_b64encode,
+    'base64s': unpadded_b64encode,
+    'base64p': percent_b64encode,
+}
+def _make_protobuf(data):
+    # must be dict mapping field_number to [wire_type, value]
+    if isinstance(data, dict):
+        new_data = []
+        for field_num, (wire_type, value) in sorted(data.items()):
+            new_data.append((wire_type, field_num, value))
+        data = new_data
+    if isinstance(data, str):
+        return data.encode('utf-8')
+    elif len(data) == 2 and data[0] in base64_enc_funcs:
+        return base64_enc_funcs[data[0]](make_proto(data[1]))
+    elif isinstance(data, list):
+        result = b''
+        for field in data:
+            if field[0] == 0:
+                result += uint(field[1], field[2])
+            elif field[0] == 2:
+                result += string(field[1], _make_protobuf(field[2]))
+            else:
+                raise NotImplementedError('Wire type ' + str(field[0])
+                    + ' not implemented')
+        return result
+    return data
+
+
+def make_protobuf(data):
+    return _make_protobuf(data).decode('ascii')
+
+
+def _set_protobuf_value(data, *path, value):
+    if not path:
+        return value
+    op = path[0]
+    if op in base64_enc_funcs:
+        inner_data = b64_to_bytes(data)
+        return base64_enc_funcs[op](
+            _set_protobuf_value(inner_data, *path[1:], value=value)
+        )
+    pb_dict = parse(data, include_wire_type=True)
+    pb_dict[op][1] = _set_protobuf_value(
+        pb_dict[op][1], *path[1:], value=value
+    )
+    return _make_protobuf(pb_dict)
+
+
+def set_protobuf_value(data, *path, value):
+    '''Set a field's value in a raw protobuf structure
+
+    path is a list of field numbers and/or base64 encoding directives
+
+    The directives are
+        base64: normal base64 encoding with equal signs padding
+        base64s ("stripped"): no padding
+        base64p: %3D instead of = for padding
+
+    return new_protobuf, err'''
+    try:
+        new_protobuf = _set_protobuf_value(data, *path, value=value)
+        return new_protobuf.decode('ascii'), None
+    except Exception:
+        return None, traceback.format_exc()
+
 
 def b64_to_bytes(data):
     if isinstance(data, bytes):

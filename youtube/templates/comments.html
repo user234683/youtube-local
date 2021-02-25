@@ -22,14 +22,18 @@
 
             <span class="likes">{{ comment['likes_text'] if comment['like_count'] else ''}}</span>
             <div class="bottom-row">
-                {% if settings.use_comments_js and comment['reply_count'] %}
-                    <details class="replies" src="{{ comment['replies_url'] }}">
-                        <summary>{{ comment['view_replies_text'] }}</summary>
-                        <a href="{{ comment['replies_url'] }}" class="replies-open-new-tab" target="_blank">Open in new tab</a>
-                        <div class="comment_page">loading..</div>
-                    </details>
-                {% elif comment['reply_count'] %}
-                    <a href="{{ comment['replies_url'] }}" class="replies">{{ comment['view_replies_text'] }}</a>
+                {% if comment['reply_count'] %}
+                    {% if settings.use_comments_js and comment['replies_url'] %}
+                        <details class="replies" src="{{ comment['replies_url'] }}">
+                            <summary>{{ comment['view_replies_text'] }}</summary>
+                            <a href="{{ comment['replies_url'] }}" class="replies-open-new-tab" target="_blank">Open in new tab</a>
+                            <div class="comment_page">loading..</div>
+                        </details>
+                    {% elif comment['replies_url'] %}
+                        <a href="{{ comment['replies_url'] }}" class="replies">{{ comment['view_replies_text'] }}</a>
+                    {% else %}
+                        <a class="replies">{{ comment['view_replies_text'] }} (error constructing url)</a>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
