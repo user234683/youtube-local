@@ -144,8 +144,8 @@ def _make_protobuf(data):
         data = new_data
     if isinstance(data, str):
         return data.encode('utf-8')
-    elif len(data) == 2 and data[0] in base64_enc_funcs:
-        return base64_enc_funcs[data[0]](make_proto(data[1]))
+    elif len(data) == 2 and data[0] in list(base64_enc_funcs.keys()):
+        return base64_enc_funcs[data[0]](_make_protobuf(data[1]))
     elif isinstance(data, list):
         result = b''
         for field in data:
