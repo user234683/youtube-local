@@ -283,6 +283,16 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
             content,
             response.getheader('Content-Encoding', default='identity'))
 
+        if (settings.debugging_save_responses
+                and debug_name is not None
+                and content):
+            save_dir = os.path.join(settings.data_dir, 'debug')
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+
+            with open(os.path.join(save_dir, debug_name), 'wb') as f:
+                f.write(content)
+
         if response.status == 429:
             ip = re.search(
                 br'IP address: ((?:[\da-f]*:)+[\da-f]+|(?:\d+\.)+\d+)',
@@ -312,13 +322,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
     if report_text:
         print(report_text, '    Latency:', round(response_time - start_time,3), '    Read time:', round(read_finish - response_time,3))
 
-    if settings.debugging_save_responses and debug_name is not None:
-        save_dir = os.path.join(settings.data_dir, 'debug')
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
 
-        with open(os.path.join(save_dir, debug_name), 'wb') as f:
-            f.write(content)
 
     return content
 
