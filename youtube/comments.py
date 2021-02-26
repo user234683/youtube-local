@@ -116,9 +116,22 @@ def post_process_comments_info(comments_info):
 
     comments_info['include_avatars'] = settings.enable_comment_avatars
     if comments_info['ctoken']:
-        replies_param = '&replies=1' if comments_info['is_replies'] else ''
+        ctoken = comments_info['ctoken']
+        if comments_info['is_replies']:
+            replies_param = '&replies=1'
+            # change max_replies field to 250 in ctoken
+            new_ctoken, err = proto.set_protobuf_value(
+                ctoken,
+                'base64p', 6, 3, 9, value=250)
+            if err:
+                print('Error setting ctoken value:')
+                print(err)
+            else:
+                ctoken = new_ctoken
+        else:
+            replies_param = ''
         comments_info['more_comments_url'] = concat_or_none(util.URL_ORIGIN,
-            '/comments?ctoken=', comments_info['ctoken'], replies_param)
+            '/comments?ctoken=', ctoken, replies_param)
 
     comments_info['page_number'] = page_number = str(int(comments_info['offset']/20) + 1)
 
