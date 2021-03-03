@@ -225,8 +225,9 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     view = request.args.get('view', '1')
     query = request.args.get('query', '')
     ctoken = request.args.get('ctoken', '')
+    default_params = (page_number == 1 and sort == '3' and view == '1')
 
-    if tab == 'videos' and channel_id and page_number > 1:
+    if tab == 'videos' and channel_id and not default_params:
         tasks = (
             gevent.spawn(get_number_of_videos_channel, channel_id),
             gevent.spawn(get_channel_tab, channel_id, page_number, sort,
