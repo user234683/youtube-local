@@ -116,10 +116,29 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1,
     if not ctoken:
         ctoken = channel_ctoken_v3(channel_id, page, sort, tab, view)
         ctoken = ctoken.replace('=', '%3D')
-    url = 'https://www.youtube.com/browse_ajax?ctoken=' + ctoken
-    content = util.fetch_url(url,
-        headers_desktop + generic_cookie,
-        debug_name='channel_tab', report_text=message)
+
+    # Not sure what the purpose of the key is or whether it will change
+    # For now it seems to be constant for the API endpoint, not dependent
+    # on the browsing session or channel
+    key = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
+    url = 'https://www.youtube.com/youtubei/v1/browse?key=' + key
+
+    data = {
+        'context': {
+            'client': {
+                'hl': 'en',
+                'gl': 'US',
+                'clientName': 'WEB',
+                'clientVersion': '2.20180830',
+            },
+        },
+        'continuation': ctoken,
+    }
+
+    content_type_header = (('Content-Type', 'application/json'),)
+    content = util.fetch_url(
+        url, headers_desktop + content_type_header,
+        data=json.dumps(data), debug_name='channel_tab', report_text=message)
 
     return content
 

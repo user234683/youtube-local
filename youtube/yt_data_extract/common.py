@@ -339,6 +339,11 @@ def extract_item_info(item, additional_info={}):
 
 def extract_response(polymer_json):
     '''return response, error'''
+    # /youtubei/v1/browse endpoint returns response directly
+    if isinstance(polymer_json, dict) and 'responseContext' in polymer_json:
+        # this is the response
+        return polymer_json, None
+
     response = multi_deep_get(polymer_json, [1, 'response'], ['response'])
     if response is None:
         return None, 'Failed to extract response'
