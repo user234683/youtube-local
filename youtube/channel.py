@@ -186,7 +186,11 @@ def post_process_channel_info(info):
         util.add_extra_html_info(item)
 
 
-
+def get_channel_first_page(base_url=None, channel_id=None):
+    if channel_id:
+        base_url = 'https://www.youtube.com/channel/' + channel_id
+    return util.fetch_url(base_url + '/videos?pbj=1&view=0', headers_desktop,
+                          debug_name='gen_channel_videos')
 
 
 playlist_sort_codes = {'2': "da", '3': "dd", '4': "lad"}
@@ -203,7 +207,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     query = request.args.get('query', '')
     ctoken = request.args.get('ctoken', '')
 
-    if tab == 'videos' and channel_id:
+    if tab == 'videos' and channel_id and page_number > 1:
         tasks = (
             gevent.spawn(get_number_of_videos_channel, channel_id),
             gevent.spawn(get_channel_tab, channel_id, page_number, sort,
@@ -213,9 +217,13 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         util.check_gevent_exceptions(*tasks)
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
     elif tab == 'videos':
+        if channel_id:
+            num_videos_call = (get_number_of_videos_channel, channel_id)
+        else:
+            num_videos_call = (get_number_of_videos_general, base_url)
         tasks = (
-            gevent.spawn(get_number_of_videos_general, base_url),
-            gevent.spawn(util.fetch_url, base_url + '/videos?pbj=1&view=0', headers_desktop, debug_name='gen_channel_videos')
+            gevent.spawn(*num_videos_call),
+            gevent.spawn(get_channel_first_page, base_url=base_url),
         )
         gevent.joinall(tasks)
         util.check_gevent_exceptions(*tasks)

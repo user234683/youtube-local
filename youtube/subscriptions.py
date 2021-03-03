@@ -457,7 +457,7 @@ def _get_upstream_videos(channel_id):
 
     tasks = (
         # channel page, need for video duration
-        gevent.spawn(_get_channel_tab, channel_id, channel_status_name),
+        gevent.spawn(channel.get_channel_first_page, channel_id=channel_id),
         # need atoma feed for exact published time
         gevent.spawn(_get_atoma_feed, channel_id)
     )
