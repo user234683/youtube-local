@@ -255,7 +255,7 @@ def fetch_url_response(url, headers=(), timeout=15, data=None,
         else:
             retries = urllib3.Retry(3)
         pool = get_pool(use_tor and settings.route_tor)
-        response = pool.request(method, url, headers=headers,
+        response = pool.request(method, url, headers=headers, body=data,
                                 timeout=timeout, preload_content=False,
                                 decode_content=False, retries=retries)
         cleanup_func = (lambda r: r.release_conn())
@@ -269,7 +269,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
         start_time = time.monotonic()
 
         response, cleanup_func = fetch_url_response(
-            url, headers, timeout=timeout,
+            url, headers, timeout=timeout, data=data,
             cookiejar_send=cookiejar_send, cookiejar_receive=cookiejar_receive,
             use_tor=use_tor)
         response_time = time.monotonic()
