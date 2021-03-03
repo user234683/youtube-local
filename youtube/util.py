@@ -228,9 +228,9 @@ def fetch_url_response(url, headers=(), timeout=15, data=None,
     if data is not None:
         method = "POST"
         if isinstance(data, str):
-            data = data.encode('ascii')
+            data = data.encode('utf-8')
         elif not isinstance(data, bytes):
-            data = urllib.parse.urlencode(data).encode('ascii')
+            data = urllib.parse.urlencode(data).encode('utf-8')
 
     if cookiejar_send is not None or cookiejar_receive is not None:     # Use urllib
         req = urllib.request.Request(url, data=data, headers=headers)
