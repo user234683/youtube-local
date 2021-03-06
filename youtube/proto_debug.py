@@ -38,18 +38,18 @@ Example usage:
 
 The function recursive_pb will try to do dec/pb recursively automatically.
 It's a dumb function (so might try to dec or pb something that isn't really
-base64 or protobuf) and it's a mess right now so disclaimer.
+base64 or protobuf) so be careful.
 The function pp will pretty print the recursive structure:
 
 >>> pp(recursive_pb('4qmFsgJcEhhVQ1lPX2phYl9lc3VGUlY0YjE3QUp0QXcaQEVnWjJhV1JsYjNNWUF5QUFNQUU0QWVvREdFTm5Ua1JSVlVWVFEzZHBYM2gwTTBaeFRuRkZiRFZqUWclM0QlM0Q%3D'))
 
-('base64',
+('base64p',
  [
   [2, 80226972,
    [
     [2, 2, b'UCYO_jab_esuFRV4b17AJtAw'],
     [2, 3,
-     ('base64',
+     ('base64p',
       [
        [2, 2, b'videos'],
        [0, 3, 3],
@@ -57,7 +57,7 @@ The function pp will pretty print the recursive structure:
        [0, 6, 1],
        [0, 7, 1],
        [2, 61,
-        ('base64',
+        ('base64?',
          [
           [2, 1, b'CAA'],
           [2, 2,
@@ -76,14 +76,15 @@ The function pp will pretty print the recursive structure:
  ]
 )
 
-make_proto will take a recursive_pb structure and make a ctoken out of it:
+
 - base64 means a base64 encode with equals sign paddings
 - base64s means a base64 encode without padding
 - base64p means a url base64 encode with equals signs replaced with %3D
+- base64? means the base64 type cannot be inferred because of the length
 
-recursive_pb cannot detect between base64 or base64p or base64s so
-those must be manually specified if recreating the token. Will not have
-make_proto(recursive_pb(x)) == x if x is using base64p or base64s
+make_proto is the inverse function. It will take a recursive_pb structure and
+make a ctoken out of it, so in general,
+x == make_proto(recursive_pb(x))
 
 There are some other functions I wrote while reverse engineering stuff
 that may or may not be useful.
@@ -206,6 +207,7 @@ base64_enc_funcs = {
     'base64': base64.urlsafe_b64encode,
     'base64s': unpadded_b64encode,
     'base64p': percent_b64encode,
+    'base64?': base64.urlsafe_b64encode,
 }
 def _make_protobuf(data):
     # must be dict mapping field_number to [wire_type, value]
@@ -280,6 +282,22 @@ def b64_to_bytes(data):
 
 
 dec = b64_to_bytes
+
+
+def get_b64_type(data):
+    '''return base64, base64s, base64p, or base64?'''
+    if isinstance(data, str):
+        data = data.encode('ascii')
+    if data.endswith(b'='):
+        return 'base64'
+    if data.endswith(b'%3D'):
+        return 'base64p'
+    # Length of data means it wouldn't have an equals sign,
+    # so we can't tell which type it is.
+    if len(data) % 4 == 0:
+        return 'base64?'
+
+    return 'base64s'
 
 
 def enc(t):
@@ -456,30 +474,60 @@ def dec32(data):
         data = data.decode('ascii')
     return b32decode(data + "="*((8 - len(data)%8)%8))
 
-def recursive_pb(data, filt=True):
-    b64 = False
-    if isinstance(data, str) or all(i > 32 for i in data):
-        try:
-            if len(data) > 11 and data[0:2] != b'UC':
-                data = b64_to_bytes(data)
-                b64 = True
+
+_patterns = [
+    (b'UC', 24), # channel
+    (b'PL', 34), # playlist
+    (b'LL', 24), # liked videos playlist
+    (b'UU', 24), # user uploads playlist
+    (b'RD', 15), # radio mix
+    (b'RD', 43), # radio mix
+    (b'', 11),   # video
+    (b'Ug', 26), # comment
+    (b'Ug', 49), # comment reply (of form parent_id.reply_id)
+    (b'9', 22), # comment reply id
+]
+def is_youtube_object_id(data):
+    try:
+        if isinstance(data, str):
+            data = data.encode('ascii')
+    except Exception:
+        return False
+
+    for start_sequence, length in _patterns:
+        if len(data) == length and data.startswith(start_sequence):
+            return True
+
+    return False
+
+
+def recursive_pb(data):
+    try:
+        # check if this fits the basic requirements for base64
+        if isinstance(data, str) or all(i > 32 for i in data):
+            if len(data) > 11 and not is_youtube_object_id(data):
+                raw_data = b64_to_bytes(data)
+                b64_type = get_b64_type(data)
+
+                rpb = recursive_pb(raw_data)
+                if rpb == raw_data:
+                    # could not interpret as protobuf, probably not b64
+                    return data
+                return (b64_type, rpb)
             else:
                 return data
-        except Exception as e:
-            return data
+    except Exception as e:
+        return data
 
     try:
         result = pb(data, mutable=True) 
     except Exception as e:
         return data
+
     for tuple in result:
         if tuple[0] == 2:
-            try:
-                tuple[2] = recursive_pb(tuple[2])
-            except Exception:
-                pass
-    if b64:
-        return ('base64', result)
+            tuple[2] = recursive_pb(tuple[2])
+
     return result
 
 
