@@ -192,7 +192,25 @@ def get_channel_search_json(channel_id, query, page):
     ctoken = proto.string(2, channel_id) + proto.string(3, params) + proto.string(11, query)
     ctoken = base64.urlsafe_b64encode(proto.nested(80226972, ctoken)).decode('ascii')
 
-    polymer_json = util.fetch_url("https://www.youtube.com/browse_ajax?ctoken=" + ctoken, headers_desktop, debug_name='channel_search')
+    key = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
+    url = 'https://www.youtube.com/youtubei/v1/browse?key=' + key
+
+    data = {
+        'context': {
+            'client': {
+                'hl': 'en',
+                'gl': 'US',
+                'clientName': 'WEB',
+                'clientVersion': '2.20180830',
+            },
+        },
+        'continuation': ctoken,
+    }
+
+    content_type_header = (('Content-Type', 'application/json'),)
+    polymer_json = util.fetch_url(
+        url, headers_desktop + content_type_header,
+        data=json.dumps(data), debug_name='channel_search')
 
     return polymer_json
 
