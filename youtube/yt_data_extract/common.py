@@ -450,6 +450,14 @@ def extract_items_from_renderer(renderer, item_types=_item_types):
         if key in item_types:
             items.append(renderer)
 
+        # ctoken sometimes placed in these renderers, e.g. channel playlists
+        elif key == 'continuationItemRenderer':
+            cont = deep_get(
+                value, 'continuationEndpoint', 'continuationCommand', 'token'
+            )
+            if cont:
+                ctoken = cont
+
         # has a list in it, add it to the iter stack
         elif get_nested_renderer_list_function(key):
             renderer_list, cont = get_nested_renderer_list_function(key)(value)

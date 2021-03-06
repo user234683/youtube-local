@@ -77,7 +77,7 @@ def extract_channel_info(polymer_json, tab):
         additional_info = {'author': info['channel_name'], 'author_url': info['channel_url']}
         info['items'] = [extract_item_info(renderer, additional_info) for renderer in items]
         info['ctoken'] = ctoken
-        if tab == 'search':
+        if tab in ('search', 'playlists'):
             info['is_last_page'] = (ctoken is None)
     elif tab == 'about':
         items, _ = extract_items(response, item_types={'channelAboutFullMetadataRenderer'})

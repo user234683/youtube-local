@@ -160,6 +160,11 @@
                     <div id="number-of-results">{{ number_of_videos }} videos</div>
                 {% elif current_tab == 'playlists' %}
                     {% set sorts = [('2', 'oldest'), ('3', 'newest'), ('4', 'last video added')] %}
+                    {% if items %}
+                        <h2 class="page-number">Page {{ page_number }}</h2>
+                    {% else %}
+                        <h2 class="page-number">No items</h2>
+                    {% endif %}
                 {% elif current_tab == 'search' %}
                     {% if items %}
                         <h2 class="page-number">Page {{ page_number }}</h2>
@@ -193,7 +198,7 @@
                 <nav class="page-button-row">
                     {{ common_elements.page_buttons(number_of_pages, channel_url + '/' + current_tab, parameters_dictionary, include_ends=(current_sort.__str__() == '3')) }}
                 </nav>
-            {% elif current_tab == 'search' %}
+            {% elif current_tab == 'playlists' or current_tab == 'search' %}
                 <nav class="next-previous-button-row">
                     {{ common_elements.next_previous_buttons(is_last_page, channel_url + '/' + current_tab, parameters_dictionary) }}
                 </nav>

@@ -268,8 +268,11 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
     elif tab == 'about':
         polymer_json = util.fetch_url(base_url + '/about?pbj=1', headers_desktop, debug_name='gen_channel_about')
-    elif tab == 'playlists':
+    elif tab == 'playlists' and page_number == 1:
         polymer_json = util.fetch_url(base_url+ '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], headers_desktop, debug_name='gen_channel_playlists')
+    elif tab == 'playlists':
+        polymer_json = get_channel_tab(channel_id, page_number, sort,
+                                       'playlists', view)
     elif tab == 'search' and channel_id:
         polymer_json = get_channel_search_json(channel_id, query, page_number)
     elif tab == 'search':
@@ -293,6 +296,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     elif tab == 'search':
         info['search_box_value'] = query
         info['header_playlist_names'] = local_playlist.get_playlist_names()
+    if tab in ('search', 'playlists'):
         info['page_number'] = page_number
     info['subscribed'] = subscriptions.is_subscribed(info['channel_id'])
 
