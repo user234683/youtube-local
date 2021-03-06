@@ -210,7 +210,7 @@ def decrypt_signatures(info, video_id):
 def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     # bpctr=9999999999 will bypass are-you-sure dialogs for controversial
     # videos
-    url = 'https://m.youtube.com/embed/' + video_id + '&bpctr=9999999999'
+    url = 'https://m.youtube.com/embed/' + video_id + '?bpctr=9999999999'
     if playlist_id:
         url += '&list=' + playlist_id
     if index:
