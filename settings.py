@@ -53,6 +53,15 @@ For security reasons, enabling this is not recommended.''',
         'category': 'network',
     }),
 
+    ('allow_foreign_post_requests', {
+        'type': bool,
+        'default': False,
+        'comment': '''Enables requests from foreign addresses to make post requests.
+For security reasons, enabling this is not recommended.''',
+        'hidden': True,
+        'category': 'network',
+    }),
+
     ('subtitles_mode', {
         'type': int,
         'default': 0,
