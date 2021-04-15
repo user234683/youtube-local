@@ -37,33 +37,57 @@ def add_to_playlist(name, video_info_list):
     gevent.spawn(util.download_thumbnails, os.path.join(thumbnails_directory, name), missing_thumbnails)
 
 
-def get_local_playlist_videos(name, offset=0, amount=50):
+def add_extra_info_to_videos(videos, playlist_name):
+    '''Adds extra information necessary for rendering the video item HTML
+
+    Downloads missing thumbnails'''
     try:
-        thumbnails = set(os.listdir(os.path.join(thumbnails_directory, name)))
+        thumbnails = set(os.listdir(os.path.join(thumbnails_directory,
+                                                 playlist_name)))
     except FileNotFoundError:
         thumbnails = set()
     missing_thumbnails = []
 
+    for video in videos:
+        video['type'] = 'video'
+        util.add_extra_html_info(video)
+        if video['id'] + '.jpg' in thumbnails:
+            video['thumbnail'] = (
+                '/https://youtube.com/data/playlist_thumbnails/'
+                + playlist_name
+                + '/' + video['id'] + '.jpg')
+        else:
+            video['thumbnail'] = util.get_thumbnail_url(video['id'])
+            missing_thumbnails.append(video['id'])
+
+    gevent.spawn(util.download_thumbnails,
+                 os.path.join(thumbnails_directory, playlist_name),
+                 missing_thumbnails)
+
+
+def read_playlist(name):
+    '''Returns a list of videos for the given playlist name'''
+    playlist_path = os.path.join(playlists_directory, name + '.txt')
+    with open(playlist_path, 'r', encoding='utf-8') as f:
+        data = f.read()
+
     videos = []
-    with open(os.path.join(playlists_directory, name + ".txt"), 'r', encoding='utf-8') as file:
-        data = file.read()
     videos_json = data.splitlines()
     for video_json in videos_json:
         try:
             info = json.loads(video_json)
-            if info['id'] + ".jpg" in thumbnails:
-                info['thumbnail'] = "/https://youtube.com/data/playlist_thumbnails/" + name + "/" + info['id'] + ".jpg"
-            else:
-                info['thumbnail'] = util.get_thumbnail_url(info['id'])
-                missing_thumbnails.append(info['id'])
-            info['type'] = 'video'
-            util.add_extra_html_info(info)
             videos.append(info)
         except json.decoder.JSONDecodeError:
             if not video_json.strip() == '':
                 print('Corrupt playlist video entry: ' + video_json)
-    gevent.spawn(util.download_thumbnails, os.path.join(thumbnails_directory, name), missing_thumbnails)
+    return videos
+
+
+def get_local_playlist_videos(name, offset=0, amount=50):
+    videos = read_playlist(name)
+    add_extra_info_to_videos(videos, name)
     return videos[offset:offset+amount], len(videos)
+
 
 def get_playlist_names():
     try:
@@ -117,6 +141,7 @@ def get_local_playlist_page(playlist_name=None):
             parameters_dictionary = request.args,
         )
 
+
 @yt_app.route('/playlists/<playlist_name>', methods=['POST'])
 def path_edit_playlist(playlist_name):
     '''Called when making changes to the playlist from that playlist's page'''
@@ -125,8 +150,31 @@ def path_edit_playlist(playlist_name):
         number_of_videos_remaining = remove_from_playlist(playlist_name, videos_to_remove)
         redirect_page_number = min(int(request.values.get('page', 1)), math.ceil(number_of_videos_remaining/50))
         return flask.redirect(util.URL_ORIGIN + request.path + '?page=' + str(redirect_page_number))
+    elif request.values['action'] == 'export':
+        videos = read_playlist(playlist_name)
+        fmt = request.values['export_format']
+        if fmt in ('ids', 'urls'):
+            prefix = ''
+            if fmt == 'urls':
+                prefix = 'https://www.youtube.com/watch?v='
+            id_list = '\n'.join(prefix + v['id'] for v in videos)
+            id_list += '\n'
+            resp = flask.Response(id_list, mimetype='text/plain')
+            cd = 'attachment; filename="%s.txt"' % playlist_name
+            resp.headers['Content-Disposition'] = cd
+            return resp
+        elif fmt == 'json':
+            json_data = json.dumps({'videos': videos}, indent=2,
+                                   sort_keys=True)
+            resp = flask.Response(json_data, mimetype='text/json')
+            cd = 'attachment; filename="%s.json"' % playlist_name
+            resp.headers['Content-Disposition'] = cd
+            return resp
+        else:
+            flask.abort(400)
     else:
         flask.abort(400)
+
 
 @yt_app.route('/edit_playlist', methods=['POST'])
 def edit_playlist():

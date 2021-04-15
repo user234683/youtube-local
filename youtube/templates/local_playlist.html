@@ -11,23 +11,50 @@
         display: flex;
         flex-direction: row;
         justify-content: space-between;
+
+
+        margin: 15px auto;
+        padding: 7px;
+        background-color: var(--interface-color);
     }
         .playlist-title{
         }
+        #export-options{
+            justify-self: end;
+        }
+
+    #video-remove-container{
+        display: flex;
+        justify-content: end;
+        margin: 0px auto 15px auto;
+    }
         #playlist-remove-button{
-            align-self: center;
             white-space: nowrap;
         }
-        #results{
-            display: grid;
-            grid-auto-rows: 0fr;
-            grid-row-gap: 10px;
-        }
+
+    #results{
+        display: grid;
+        grid-auto-rows: 0fr;
+        grid-row-gap: 10px;
+    }
 {% endblock style %}
 
 {% block main %}
     <div class="playlist-metadata">
         <h2 class="playlist-title">{{ playlist_name }}</h2>
+
+        <div id="export-options">
+            <form id="playlist-export" method="post">
+                <select id="export-type" name="export_format">
+                    <option value="json">JSON</option>
+                    <option value="ids">Video id list (txt)</option>
+                    <option value="urls">Video url list (txt)</option>
+                </select>
+                <button type="submit" id="playlist-export-button" name="action" value="export">Export</button>
+            </form>
+        </div>
+    </div>
+    <div id="video-remove-container">
         <input type="hidden" name="playlist_page" value="{{ playlist_name }}" form="playlist-edit">
         <button type="submit" id="playlist-remove-button" name="action" value="remove" form="playlist-edit" formaction="">Remove from playlist</button>
     </div>
