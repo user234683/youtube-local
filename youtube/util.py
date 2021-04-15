@@ -512,11 +512,11 @@ def add_extra_html_info(item):
         item['url'] = (URL_ORIGIN + '/watch?v=' + item['id']) if item.get('id') else None
 
         video_info = {}
-        for key in ('id', 'title', 'author', 'duration'):
+        for key in ('id', 'title', 'author', 'duration', 'author_id'):
             try:
                 video_info[key] = item[key]
             except KeyError:
-                video_info[key] = ''
+                video_info[key] = None
 
         item['video_info'] = json.dumps(video_info)
 
@@ -530,6 +530,9 @@ def add_extra_html_info(item):
         item['url'] = concat_or_none(URL_ORIGIN, '/playlist?list=', item['id'])
     elif item['type'] == 'channel':
         item['url'] = concat_or_none(URL_ORIGIN, "/channel/", item['id'])
+
+    if item.get('author_id') and 'author_url' not in item:
+        item['author_url'] = URL_ORIGIN + '/channel/' + item['author_id']
 
 
 def check_gevent_exceptions(*tasks):
