@@ -4,12 +4,12 @@
 {% import "common_elements.html" as common_elements %}
 {% block style %}
     main > * {
-        max-width: 800px;
+        max-width: 80%;
         margin: auto;
     }
         #result-info{
-            margin-top: 10px;
-            margin-bottom: 10px;
+            margin-top: 30px;
+            margin-bottom: -20px;
             padding-left: 10px;
             padding-right: 10px;
         }
@@ -22,6 +22,19 @@
         }
             .badge{
                 background-color:#cccccc;
+            }
+            .video-infos{
+                position:relative;
+                top:50%;
+            }
+            @media (max-width:1000px){
+                .video-infos{
+                    position:relative;
+                    top:0px;
+                }
+                main > * {
+                    max-width:95%;
+                }
             }
 {% endblock style %}
 

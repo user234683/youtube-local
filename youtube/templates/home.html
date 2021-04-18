@@ -1,22 +1,91 @@
 {% set page_title = title %}
 {% extends "base.html" %}
 {% block style %}
-    ul {
-        background-color: var(--interface-color);
-        padding: 20px;
-        width: 400px;
-        margin: auto;
-        margin-top: 20px;
+    .box-container{
+        display:flex;
+        justify-content:space-evenly;
+        width:100%;
+        position:absolute;
+        top:50%;
+        transform:translateY(-50%);
     }
-        li {
-            margin-bottom: 10px;
+        .box{
+            height:200px;
+            width:200px;
+            background:#fff;
+            text-align:center;
+            border-radius:10px;
+            cursor:pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            overflow:hidden;
+            position: relative;
+        }
+        .box svg{
+           height:80%; 
+            transition:200ms ease-in-out;
+            transition-property:height;
+        }
+        .box span{
+            position:absolute;
+            bottom:-25px;
+            color:#fff;
+            transition:200ms ease-in-out;
+            font-size:18px;
+        }
+        .box:hover{
+            background:linear-gradient(45deg,#2e73ff 20%,#ff0032 52%,#0c0c0f 95%);
+        }
+        .box:hover span{
+            bottom:5px;
+            font-family:arial;
+        }
+        .box:hover svg{
+            fill:#fff;
+            height:70%;
+        }
+        @media (max-width:1000px){
+            .box-container{
+                flex-direction:column;
+                position:relative;
+                transform:none;
+                margin-top:40px;
+                width:fit-content;
+                left:calc(50% - 100px);
+            }
+            .box{
+                margin-top:40px;
+            }
         }
 {% endblock style %}
 {% block main %}
-    <ul>
-        <li><a href="/youtube.com/playlists">Local playlists</a></li>
-        <li><a href="/youtube.com/subscriptions">Subscriptions</a></li>
-        <li><a href="/youtube.com/subscription_manager">Subscription Manager</a></li>
-        <li><a href="/youtube.com/settings">Settings</a></li>
-    </ul>
+
+    <div class="box-container">
+    <a href="/youtube.com/playlists">
+        <div class="box" style="margin-left:0px;">
+            <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" focusable="false" class="style-scope yt-icon" style="pointer-events: none; display: block;"><g class="style-scope yt-icon"><path d="M11.23 13.08c-.29-.21-.48-.51-.54-.86-.06-.35.02-.71.23-.99.21-.29.51-.48.86-.54.35-.06.7.02.99.23.29.21.48.51.54.86.06.35-.02.71-.23.99a1.327 1.327 0 01-1.08.56c-.28 0-.55-.08-.77-.25zM22 12c0 5.52-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2s10 4.48 10 10zm-3.97-6.03L9.8 9.8l-3.83 8.23 8.23-3.83 3.83-8.23z" class="style-scope yt-icon"></path></g></svg>
+            <span>Local Playlist</span>
+        </div>
+    </a>
+    <a href="/youtube.com/subscriptions">
+    <div class="box">
+        <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" focusable="false" class="style-scope yt-icon" style="pointer-events: none; display: block;"><g class="style-scope yt-icon"><path fill="none" d="M0 0h24v24H0z" class="style-scope yt-icon"></path><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z" class="style-scope yt-icon"></path></g></svg>
+            <span>Subscriptions</span>
+    </div>
+    </a>
+    <a href="/youtube.com/subscription_manager">
+    <div class="box">
+       <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" focusable="false" class="style-scope yt-icon" style="pointer-events: none; display: block;"><g class="style-scope yt-icon"><path d="M18.7 8.7H5.3V7h13.4v1.7zm-1.7-5H7v1.6h10V3.7zm3.3 8.3v6.7c0 1-.7 1.6-1.6 1.6H5.3c-1 0-1.6-.7-1.6-1.6V12c0-1 .7-1.7 1.6-1.7h13.4c1 0 1.6.8 1.6 1.7zm-5 3.3l-5-2.7V18l5-2.7z" class="style-scope yt-icon"></path></g></svg> 
+            <span>Channel</span>
+    </div>
+    </a>
+    <a href="/youtube.com/settings">
+    <div class="box">
+        <svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" focusable="false" class="style-scope yt-icon" style="pointer-events: none; display: block;"><g class="style-scope yt-icon"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.1-1.65c.2-.15.25-.42.13-.64l-2-3.46c-.12-.22-.4-.3-.6-.22l-2.5 1c-.52-.4-1.08-.73-1.7-.98l-.37-2.65c-.06-.24-.27-.42-.5-.42h-4c-.27 0-.48.18-.5.42l-.4 2.65c-.6.25-1.17.6-1.7.98l-2.48-1c-.23-.1-.5 0-.6.22l-2 3.46c-.14.22-.08.5.1.64l2.12 1.65c-.04.32-.07.65-.07.98s.02.66.06.98l-2.1 1.65c-.2.15-.25.42-.13.64l2 3.46c.12.22.4.3.6.22l2.5-1c.52.4 1.08.73 1.7.98l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.6-.25 1.17-.6 1.7-.98l2.48 1c.23.1.5 0 .6-.22l2-3.46c.13-.22.08-.5-.1-.64l-2.12-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z" class="style-scope yt-icon"></path></g></svg>
+            <span>Settings</span>
+    </div>
+    </a>
+    </div>
 {% endblock main %}

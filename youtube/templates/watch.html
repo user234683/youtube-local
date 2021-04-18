@@ -5,10 +5,13 @@
 {% block style %}
     details > summary{
         background-color: var(--interface-color);
-        border-style: outset;
-        border-width: 2px;
         font-weight: bold;
-        padding-bottom: 2px;
+        padding:5px;
+        padding-left:20px;
+        border-radius:12px;
+    }
+    .horizontal-item-box{
+        margin-top:20px!important;
     }
     details > summary:hover{
         text-decoration: underline;
@@ -69,11 +72,11 @@
             grid-column: 1 / span 5;
             justify-self: center;
             max-width: 100%;
-            width: {{ theater_video_target_width }}px;
+            width: 100%;
             margin-bottom: 10px;
         }
             #video-container-inner{
-                height: {{ video_height}}px;
+                height: 500px;
                 position: relative;
             }
             @media(max-width:{{ video_width }}px){
@@ -112,9 +115,8 @@
 
     main{
         display:grid;
-        grid-template-columns: 1fr 640px 40px 400px 1fr;
-        grid-template-rows: auto auto auto auto;
         align-content: start;
+        justify-content:center;
     }
 
         .video-info{
@@ -191,20 +193,20 @@
             }
             .video-info > .description{
                 background-color:var(--interface-color);
-                margin-top:8px;
+                margin-top:20px;
                 white-space: pre-wrap;
                 min-width: 0;
                 word-wrap: break-word;
                 grid-column: 1 / span 2;
                 grid-row: 7;
-                padding: 5px;
+                padding: 20px;
+                border-radius:10px;
             }
 
             .music-list{
                 grid-row:8;
                 grid-column: 1 / span 2;
                 background-color: var(--interface-color);
-                padding-bottom: 7px;
             }
                 .music-list table,th,td{
                     border: 1px solid;
@@ -222,6 +224,7 @@
                 grid-row: 9;
                 grid-column: 1 / span 2;
                 background-color: var(--interface-color);
+                margin-top:20px;
             }
                 .more-info > summary{
                     font-weight: normal;
@@ -254,6 +257,7 @@
         .side-videos{
             grid-column: 4;
             max-width: 640px;
+            margin-left:150px;
         }
             #transcript-details{
                 margin-bottom: 10px;
@@ -332,9 +336,11 @@
 
     .download-dropdown-content{
         background-color: var(--interface-color);
-        padding: 10px;
+        padding: 20px;
         list-style: none;
         margin: 0px;
+        margin-top:20px;
+        border-radius:20px;
     }
         li.download-format{
             margin-bottom: 7px;

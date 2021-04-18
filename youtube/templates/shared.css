@@ -19,32 +19,32 @@ body{
     margin:0;
     padding: 0;
     color:var(--text-color);
-
-
     background-color:var(--background-color);
-
     min-height:100vh;
     display: flex;
     flex-direction: column;
+    font-family:arial;
 }
 
     header{
-        background-color:#333333;
-        height: 50px;
-
+        background-color:var(--background-color);
+        height: 60px;
         display: flex;
         justify-content: center;
+        position: relative;
     }
 
         #home-link{
             align-self: center;
             margin-left:10px;
             color: #ffffff;
+            position: absolute;
+            left:20px;
         }
 
 
         #site-search{
-            max-width: 600px;
+            max-width: 700px;
             margin-left:10px;
             display: flex;
             flex-grow: 1;
@@ -52,29 +52,59 @@ body{
 
             #site-search .search-box{
                 align-self:center;
-                height:25px;
-                border:0;
-
+                height:35px;
+                font-size:16px;
+                text-align:center;
+                border:1px solid #333;
+                border-right:none;
                 flex-grow: 1;
+                background:var(--background-color);
+                color:var(--text-color);
+                outline:none;
+            }
+            #site-search .search-box:focus{
+                border: 1px solid #4e4e4e;
+                border-right:none;
             }
             #site-search .search-button{
                 align-self:center;
-                height:25px;
-
-                border-style:solid;
-                border-width:1px;
+                height:35px;
+                width:45px;
+                background:var(--interface-color);
+                border:none;
+                position: relative;
+            }
+            #site-search .search-button .search-icon{
+                fill:var(--text-color);
+                position: absolute;
+                top:50%;
+                left:50%;
+                transform:translate(-50%,-50%);
             }
             #site-search .dropdown{
                 margin-left:5px;
                 align-self:center;
                 height:25px;
+
             }
                 #site-search .dropdown button{
                     align-self:center;
                     height:25px;
-
-                    border-style:solid;
-                    border-width:1px;
+                    background:var(--background-color);
+                    border:none;
+                    text-transform:uppercase;
+                    color:var(--text-color);
+                    display:flex;
+                    align-items:center;
+                    margin-left:20px;
+                }
+                #site-search .dropdown button .filter-icon{
+                    fill:var(--text-color);
+                }
+                #site-search .dropdown button span{
+                    position: relative;
+                    left:10px;
+                    font-size:16px;
                 }
                 #site-search .css-sucks{
                     width:0px;
@@ -131,16 +161,29 @@ body{
     .dropdown-content{
         display:none;
         background-color: var(--interface-color);
+        padding:0px 20px 20px 20px;
+        border-radius:5px;
+        font-family:arial;
     }
     .dropdown:hover .dropdown-content{
         /* For some reason, if this is just grid, it will insist on being 0px wide just like its 0px by 0px parent */
         /* making it inline-grid happened to fix it */
         display:inline-grid;
     }
-
+    .dropdown:hover .dropdown-content h3{
+        margin-bottom:10px;
+        margin-top:10px;
+    }
+    .dropdown:hover .dropdown-content label{
+        margin-top:5px;
+        margin-left:5px;
+    }
+    .dropdown:hover .dropdown-content input{
+        margin-top:7px;
+    }
 .item-list{
     display: grid;
-    grid-row-gap: 10px;
+    grid-row-gap: 15px;
 
 }
 
@@ -171,12 +214,16 @@ body{
 .vertical-item-box{
 }
 .horizontal-item-box{
+    margin-top:60px;
 }
     .item{
-        background-color:var(--interface-color);
+        background-color:var(--background-color);
         text-decoration:none;
         font-size: 0.8125rem;
         color: #767676;
+    }
+    .channel-item img{
+        border-radius:100%;
     }
 
     .horizontal-item-box .item {
@@ -199,7 +246,7 @@ body{
         }
         .horizontal-item-box  .thumbnail-box{
             grid-row: 1 / span 5;
-            margin-right: 4px;
+            margin-right: 30px;
         }
         .no-description .thumbnail-box{
             width: 168px;
@@ -241,9 +288,11 @@ body{
                     display: block;
                     max-height: 100%;
                     max-width: 100%;
+                    border-radius:5px;
                 }
                 .horizontal-item-box .thumbnail-img{
                     height: 100%;
+                    border-radius:20px;
                 }
 
         .item .title{
@@ -252,11 +301,11 @@ body{
             max-height:3.75em;
             overflow-y: hidden;
             overflow-wrap: break-word;
-
             color: var(--text-color);
             font-size: 1rem;
             font-weight: 500;
             text-decoration:initial;
+            margin-bottom: 10px;
         }
 
         .stats{
@@ -292,17 +341,18 @@ body{
             }
 
     .item-checkbox{
-        justify-self:start;
-        align-self:center;
+        position:relative;
         height:30px;
         width:30px;
         min-width:30px;
         margin: 0px;
+        top:50%;
+        transform:translateY(-50%);
     }
 
 
 .page-button-row{
-    margin-top: 10px;
+    margin-top: 50px;
     margin-bottom: 10px;
     justify-self:center;
     justify-content: center;
@@ -310,7 +360,15 @@ body{
     grid-auto-columns: 40px;
     grid-auto-flow: column;
     height: 40px;
+    grid-column-gap: 15px;
 }
+.page-button-row a{
+    text-decoration:none;
+}
+
+    div[class="page-button"]{
+        background:linear-gradient(45deg,#2e73ff 0%,#ff0032 52%,#0c0c0f 95%);
+    }
 .next-previous-button-row{
     margin: 10px 0px;
     display: flex;
@@ -320,11 +378,15 @@ body{
 }
     .page-button{
         background-color: var(--interface-color);
-        border-style: outset;
-        border-width: 2px;
         font-weight: bold;
         text-align: center;
         padding: 5px;
+        border-radius:100%;
+        display:flex;
+        align-items: center;
+        justify-content: center;
+        color:var(--text-color);
+
     }
     .next-page:nth-child(2){    /* only if there's also a previous page button */
         margin-left: 10px;
@@ -361,3 +423,4 @@ h1{
     border-width:1px;
     border-radius:5px;
 }
+
