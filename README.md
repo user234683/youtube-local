@@ -106,6 +106,16 @@ If you wish to route the video through Tor, set "Route Tor" to "On, including vi
 
 In general, Tor video routing will be slower (for instance, moving around in the video is quite slow). I've never seen any signs that watch history in youtube-local affects on-site Youtube recommendations. It's likely that requests to googlevideo are logged for some period of time, but are not integrated into Youtube's larger advertisement/recommendation systems, since those presumably depend more heavily on in-page tracking through Javascript rather than CDN requests to googlevideo.
 
+### Importing subscriptions
+
+1. Go to the [Google takeout manager](https://takeout.google.com/takeout/custom/youtube).
+2. Log in if asked.
+3. Click on "All data included", then on "Deselect all", then select only "subscriptions" and click "OK".
+4. Click on "Next step" and then on "Create export".
+5. Click on the "Download" button after it appears.
+6. From the downloaded takeout zip extract the .json file. It is usually located under `YouTube and YouTube Music/subscriptions/subscriptions.json`
+7. Go to the subscriptions manager in youtube-local. In the import area, select your .json file, then press import.
+
 ## Contributing
 
 Pull requests and issues are welcome
