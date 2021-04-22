@@ -711,6 +711,49 @@ def import_subscriptions():
     return flask.redirect(util.URL_ORIGIN + '/subscription_manager', 303)
 
 
+@yt_app.route('/export_subscriptions', methods=['POST'])
+def export_subscriptions():
+    include_muted = request.values.get('include_muted') == 'on'
+    with open_database() as connection:
+        with connection as cursor:
+            sub_list = []
+            for channel_name, channel_id, muted in (
+                    _get_subscribed_channels(cursor)):
+                if muted and not include_muted:
+                    continue
+                if request.values['export_format'] == 'json':
+                    sub_list.append({
+                        'kind': 'youtube#subscription',
+                        'snippet': {
+                            'muted': bool(muted),
+                            'resourceId': {
+                                'channelId': channel_id,
+                                'kind': 'youtube#channel',
+                            },
+                            'tags': _get_tags(cursor, channel_id),
+                            'title': channel_name,
+                        },
+                    })
+                elif request.values['export_format'] == 'opml':
+                    sub_list.append({
+                        'channel_name': channel_name,
+                        'channel_id': channel_id,
+                    })
+    if request.values['export_format'] == 'json':
+        r = flask.Response(json.dumps(sub_list), mimetype='text/json')
+        cd = 'attachment; filename="subscriptions.json"'
+        r.headers['Content-Disposition'] = cd
+        return r
+    elif request.values['export_format'] == 'opml':
+        r = flask.Response(
+            flask.render_template('subscriptions.xml', sub_list=sub_list),
+            mimetype='text/xml')
+        cd = 'attachment; filename="subscriptions.xml"'
+        r.headers['Content-Disposition'] = cd
+        return r
+    else:
+        return '400 Bad Request', 400
+
 
 @yt_app.route('/subscription_manager', methods=['GET'])
 def get_subscription_manager_page():

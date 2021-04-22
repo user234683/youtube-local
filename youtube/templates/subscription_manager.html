@@ -4,23 +4,25 @@
     .import-export{
         display: flex;
         flex-direction: row;
-        padding-left: 10px;
+        flex-wrap: wrap;
         padding-top: 10px;
     }
-        .subscriptions-import-form{
+        .subscriptions-import-export-form{
             background-color: var(--interface-color);
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            max-width: 300px;
+            max-width: 400px;
             padding:10px;
+            margin-left: 10px;
+            margin-bottom: 10px;
         }
-            .subscriptions-import-form h2{
+            .subscriptions-import-export-form h2{
                 font-size: 1.25rem;
                 margin-bottom: 10px;
             }
 
-            .import-submit-button{
+            .import-export-submit-button{
                 margin-top:15px;
                 align-self: flex-end;
             }
@@ -93,16 +95,24 @@
 
 {% block main %}
     <div class="import-export">
-        <form class="subscriptions-import-form" enctype="multipart/form-data" action="/youtube.com/import_subscriptions" method="POST">
+        <form class="subscriptions-import-export-form" enctype="multipart/form-data" action="/youtube.com/import_subscriptions" method="POST">
             <h2>Import subscriptions</h2>
             <input type="file" id="subscriptions-import" accept="application/json, application/xml, text/x-opml" name="subscriptions_file">
-            <input type="submit" value="Import" class="import-submit-button">
+            <input type="submit" value="Import" class="import-export-submit-button">
         </form>
 
-        <!--<ul class="subscriptions-export-links">
-            <li><a href="/youtube.com/subscriptions.opml">Export subscriptions (OPML)</a></li>
-            <li><a href="/youtube.com/subscriptions.xml">Export subscriptions (RSS)</a></li>
-        </ul>-->
+        <form class="subscriptions-import-export-form" action="/youtube.com/export_subscriptions" method="POST">
+            <h2>Export subscriptions</h2>
+            <div>
+                <select id="export-type" name="export_format" title="Export format">
+                    <option value="json">JSON</option>
+                    <option value="opml">OPML (RSS, no tags)</option>
+                </select>
+                <label for="include-muted">Include muted</label>
+                <input id="include-muted" type="checkbox" name="include_muted" checked>
+            </div>
+            <input type="submit" value="Export" class="import-export-submit-button">
+        </form>
     </div>
 
     <hr>

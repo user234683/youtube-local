@@ -1,0 +1,9 @@
+<opml version="1.1">
+    <body>
+        <outline text="YouTube Subscriptions" title="YouTube Subscriptions">
+            {% for sub in sub_list %}
+            <outline text="{{sub['channel_name']}}" title="{{sub['channel_name']}}" type="rss" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id={{sub['channel_id']}}" />
+            {%- endfor %}
+        </outline>
+    </body>
+</opml>
