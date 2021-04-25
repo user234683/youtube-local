@@ -8,112 +8,115 @@
 {% import "common_elements.html" as common_elements %}
 {% block style %}
     main{
-        display:grid;
-{% if current_tab == 'about' %}
-        grid-template-rows: 0fr 0fr 1fr;
-        grid-template-columns: 0fr 1fr;
-{% else %}
-        grid-template-rows: repeat(5, 0fr);
-        grid-template-columns: auto 1fr;
-{% endif %}
+        padding-left: 0px;
+        padding-right: 0px;
     }
-        main .avatar{
-            grid-row:1;
-            grid-column:1;
+    .channel-metadata{
+        display: flex;
+        align-items: center;
+    }
+        .avatar{
             height:200px;
             width:200px;
         }
-        main .summary{
-            grid-row:1;
-            grid-column:2;
+        .summary{
             margin-left: 5px;
+            /* Prevent uninterupted words in description overflowing the page: https://daverupert.com/2017/09/breaking-the-grid/ */
+            min-width: 0px;
         }
-            .summary subscribe-unsubscribe, .summary short-description{
-                margin-top: 10px;
+            .short-description{
+                max-height: 6em;
+                overflow: hidden;
             }
-        main .channel-tabs{
-            grid-row:2;
-            grid-column: 1 / span 2;
 
-            display:grid;
-            grid-auto-flow: column;
-            justify-content:start;
+    .channel-tabs{
+        display: flex;
+        flex-wrap: wrap;
+        justify-content:start;
 
-            background-color: var(--interface-color);
-            padding: 3px;
-            padding-left: 6px;
-        }
-        #links-metadata{
-            display: grid;
-            grid-auto-flow: column;
-            grid-column-gap: 10px;
-            grid-column: 1/span 2;
-            justify-content: start;
-            padding-top: 8px;
-            padding-bottom: 8px;
-            padding-left: 6px;
-            margin-bottom: 10px;
-        }
-            #number-of-results{
-                font-weight:bold;
-            }
-        .content{
-            grid-row: 4;
-            grid-column: 1 / span 2;
-        }
-        .search-content{
-            width: 800px;
+        background-color: var(--interface-color);
+        padding: 3px;
+        padding-left: 6px;
+    }
+    #links-metadata{
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: start;
+        padding-bottom: 8px;
+        padding-left: 6px;
+        margin-bottom: 10px;
+    }
+        #links-metadata > *{
+            margin-top: 8px;
             margin-left: 10px;
         }
-            .item-grid{
-                padding-left: 20px;
-            }
-            .item-list{
-                width:800px;
-                margin: auto;
-            }
-            .page-button-row{
-                margin-left: auto;
-                margin-right: auto;
-            }
-            .next-previous-button-row{
-                margin-left: auto;
-                margin-right: auto;
-            }
-        .tab{
-            padding: 5px 75px;
+        #number-of-results{
+            font-weight:bold;
         }
-        .channel-info{
-            grid-row: 3;
-            grid-column: 1 / span 3;
+    .content{
+    }
+    .search-content{
+        max-width: 800px;
+        margin-left: 10px;
+    }
+        .item-grid{
+            padding-left: 20px;
         }
-        .channel-info ul{
-            padding-left: 40px;
+        .item-list{
+            max-width:800px;
+            margin: auto;
         }
-        .channel-info h3{
-            margin-left: 40px;
+        .page-button-row{
+            margin-left: auto;
+            margin-right: auto;
         }
-        .channel-info .description{
-            white-space: pre-wrap;
-            min-width: 0;
-            margin-left: 40px;
+        .next-previous-button-row{
+            margin-left: auto;
+            margin-right: auto;
         }
-        .medium-item img{
-            max-width: 168px;
+    .tab{
+        padding: 5px 0px;
+        width: 200px;
+    }
+    .channel-info{
+    }
+    .channel-info ul{
+        padding-left: 40px;
+    }
+    .channel-info h3{
+        margin-left: 40px;
+    }
+    .channel-info .description{
+        white-space: pre-wrap;
+        min-width: 0;
+        margin-left: 40px;
+    }
+    .medium-item img{
+        max-width: 168px;
+    }
+
+    @media (max-width:500px){
+        .channel-metadata{
+            flex-direction: column;
+            text-align: center;
+            margin-bottom: 30px;
         }
+    }
 {% endblock style %}
 
 {% block main %}
-    <img class="avatar" src="{{ avatar }}">
-    <div class="summary">
-        <h2 class="title">{{ channel_name }}</h2>
-        <p class="short-description">{{ short_description }}</p>
-        <form method="POST" action="/youtube.com/subscriptions" class="subscribe-unsubscribe">
-            <input type="submit" value="{{ 'Unsubscribe' if subscribed else 'Subscribe' }}">
-            <input type="hidden" name="channel_id" value="{{ channel_id }}">
-            <input type="hidden" name="channel_name" value="{{ channel_name }}">
-            <input type="hidden" name="action" value="{{ 'unsubscribe' if subscribed else 'subscribe' }}">
-        </form>
+    <div class="channel-metadata">
+        <img class="avatar" src="{{ avatar }}" width="200px" height="200px">
+        <div class="summary">
+            <h2 class="title">{{ channel_name }}</h2>
+            <p class="short-description">{{ short_description }}</p>
+            <form method="POST" action="/youtube.com/subscriptions" class="subscribe-unsubscribe">
+                <input type="submit" value="{{ 'Unsubscribe' if subscribed else 'Subscribe' }}">
+                <input type="hidden" name="channel_id" value="{{ channel_id }}">
+                <input type="hidden" name="channel_name" value="{{ channel_name }}">
+                <input type="hidden" name="action" value="{{ 'unsubscribe' if subscribed else 'subscribe' }}">
+            </form>
+        </div>
     </div>
     <nav class="channel-tabs">
         {% for tab_name in ('Videos', 'Playlists', 'About') %}

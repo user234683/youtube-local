@@ -1,26 +1,43 @@
 .video-metadata{
     display: grid;
     grid-template-columns: auto 1fr;
-    grid-template-rows: auto auto 1fr auto;
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+        "video-metadata-thumbnail-box title"
+        "video-metadata-thumbnail-box page"
+        "video-metadata-thumbnail-box sort";
+    margin-bottom: 10px;
 }
     .video-metadata > .video-metadata-thumbnail-box{
-        grid-row: 1 / span 3;
+        grid-area: video-metadata-thumbnail-box;
+        /* https://www.smashingmagazine.com/2020/03/setting-height-width-images-important-again/ */
+        position: relative;
+        width:320px;
+        max-width:100%;
     }
+    .video-metadata > .video-metadata-thumbnail-box:before{
+        display: block;
+        content: "";
+        height: 0px;
+        padding-top: calc(180/320*100%);
+    }
+        .video-metadata-thumbnail-box img{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
     .video-metadata > .title{
         word-wrap:break-word;
-        grid-row: 1;
+        grid-area: title;
     }
     .video-metadata > h2{
-        grid-row: 2;
+        grid-area: page;
         font-size: 0.875rem;
     }
     .video-metadata > span{
-        grid-row:3;
-    }
-    .video-metadata > hr{
-        grid-row: 4;
-        grid-column: 1 / span 2;
-        width: 100%;
+        grid-area: sort;
     }
 
 .comment-form{
@@ -67,69 +84,65 @@
 
 .comment{
     display:grid;
-    grid-template-columns: auto auto 100px 1fr;
-    grid-template-rows: 0fr 0fr 0fr 0fr;
+    grid-template-columns: repeat(3, auto) 1fr;
+    grid-template-rows: repeat(4, auto);
+    grid-template-areas:
+        "author-avatar author-name   permalink     ."
+        "author-avatar comment-text  comment-text  comment-text"
+        "author-avatar comment-likes comment-likes comment-likes"
+        ".             bottom-row    bottom-row    bottom-row";
     background-color: var(--interface-color);
     justify-content: start;
 }
 
-.comment .author-avatar{
-    grid-column: 1;
-    grid-row: 1 / span 3;
-    align-self: start;
-    margin-right: 5px;
-    height:32px;
-    width:32px;
-}
-    .comment .author-avatar-img{
-        max-height: 100%;
+    .comment .author-avatar{
+        grid-area: author-avatar;
+        align-self: start;
+        margin-right: 5px;
+        height:32px;
+        width:32px;
+    }
+        .comment .author-avatar-img{
+            max-height: 100%;
+        }
+
+    .comment .author-name{
+        grid-area: author-name;
+        margin-right:15px;
+        white-space: nowrap;
+        overflow:hidden;
     }
 
-.comment address{
-    grid-column: 2;
-    grid-row: 1;
-    margin-right:15px;
-    white-space: nowrap;
-    overflow:hidden;
-}
+    .comment .text{
+        grid-area: comment-text;
+        white-space: pre-wrap;
+        min-width: 0;
+        word-wrap: break-word;
+    }
 
-.comment .text{
-    grid-column: 2 / span 3;
-    grid-row: 2;
-    white-space: pre-wrap;
-    min-width: 0;
-    word-wrap: break-word;
-}
-
-.comment .permalink{
-    grid-column: 3;
-    grid-row: 1;
-    white-space: nowrap;
-}
+    .comment .permalink{
+        grid-area: permalink;
+        white-space: nowrap;
+    }
 
 
-.comment .likes{
-    grid-column:2;
-    grid-row:3;
-    font-weight:bold;
-    white-space: nowrap;
-}
+    .comment .likes{
+        grid-area: comment-likes;
+        font-weight:bold;
+        white-space: nowrap;
+    }
 
-.comment .bottom-row{
-    grid-column:2 / span 3;
-    grid-row:4;
-    justify-self:start;
-    display: grid;
-    grid-auto-flow: column;
-    grid-column-gap: 10px;
-}
+    .comment .bottom-row{
+        grid-area: bottom-row;
+        justify-self:start;
+    }
 
 details.replies > summary{
     background-color: var(--interface-color);
     border-style: outset;
     border-width: 1px;
     font-weight: bold;
-    padding-bottom: 0px;
+    padding: 2px;
 }
 
 .replies-open-new-tab{
@@ -138,11 +151,46 @@ details.replies > summary{
 }
 
 details.replies .comment{
-    width: 600px;
+    max-width: 600px;
 }
 
 .more-comments{
     justify-self:center;
     margin-top:10px;
     margin-bottom: 10px;
+}
+
+@media (max-width:500px){
+    .video-metadata{
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto auto auto;
+        grid-template-areas:
+            "video-metadata-thumbnail-box"
+            "title"
+            "page"
+            "sort";
+    }
+    .video-metadata > .video-metadata-thumbnail-box{
+        grid-area: video-metadata-thumbnail-box;
+        /* Switching these is required. Otherwise it breaks for some reason. CSS is terrible */
+        width: 100%;
+        max-width: 320px;
+    }
+    .comment{
+        grid-template-columns: auto 1fr;
+        grid-template-rows: repeat(5, auto);
+        grid-template-areas:
+            "author-avatar author-name"
+            "author-avatar comment-text"
+            "author-avatar comment-likes"
+            "author-avatar permalink"
+            ".             bottom-row";
+    }
+        .comment .author-name{
+            margin-right: 0px;
+        }
+        .comment .permalink{
+            justify-self: start;
+            margin-bottom: 10px;
+        }
 }

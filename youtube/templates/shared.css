@@ -13,6 +13,7 @@ address{
 
 html{
     font-family: {{ font_family }};
+    --interface-border-color: var(--text-color);
 }
 
 body{
@@ -30,66 +31,74 @@ body{
 
     header{
         background-color:#333333;
-        height: 50px;
+        min-height: 50px;
+        padding: 0px 5px;
 
         display: flex;
         justify-content: center;
     }
-
-        #home-link{
-            align-self: center;
-            margin-left:10px;
-            color: #ffffff;
-        }
-
-
         #site-search{
-            max-width: 600px;
-            margin-left:10px;
-            display: flex;
+            max-width: 670px;
+            display: grid;
+            grid-template-columns: auto 1fr auto auto auto;
+            grid-template-rows: 50px 0fr;
+            grid-template-areas: "home search-bar search-button filter-button playlist"
+                                 ".    .          .             dropdown      .";
+            grid-column-gap: 10px;
+            align-items: center;
             flex-grow: 1;
+            position: relative;
         }
-
+            #home-link{
+                align-self: center;
+                color: #ffffff;
+                grid-area: home;
+            }
             #site-search .search-box{
                 align-self:center;
                 height:25px;
                 border:0;
-
+                grid-area: search-bar;
                 flex-grow: 1;
             }
             #site-search .search-button{
                 align-self:center;
                 height:25px;
-
-                border-style:solid;
-                border-width:1px;
+                grid-area: search-button;
             }
-            #site-search .dropdown{
-                margin-left:5px;
+
+            #site-search .filter-dropdown-toggle-button{
                 align-self:center;
                 height:25px;
+                grid-area: filter-button;
             }
-                #site-search .dropdown button{
-                    align-self:center;
-                    height:25px;
-
-                    border-style:solid;
-                    border-width:1px;
+            #site-search .playlist-form-toggle-button{
+                height:25px;
+                grid-area: playlist;
+                display: none;
+            }
+            #site-search .filter-dropdown-content{
+                position: absolute;
+                grid-area: dropdown;
+                display: grid;
+                grid-template-columns: auto auto;
+                white-space: nowrap;
+                background-color: var(--interface-color);
+                padding: 0px 10px 10px 10px;
+                border-width: 0px 1px 1px 1px;
+                border-style: solid;
+                border-color: var(--interface-border-color);
+                top: 0px;
+                z-index:1;
+            }
+            #filter-dropdown-toggle-cbox:not(:checked) + .filter-dropdown-content{
+                display: none;
+            }
+                #site-search .filter-dropdown-content h3{
+                    grid-column:1 / span 2;
                 }
-                #site-search .css-sucks{
-                    width:0px;
-                    height:0px;
-                }
-                    #site-search .dropdown-content{
-                        grid-template-columns: auto auto;
-                        white-space: nowrap;
-                    }
-                        #site-search .dropdown-content h3{
-                            grid-column:1 / span 2;
-                        }
 
         #playlist-edit{
-            margin-left: 10px;
             align-self: center;
         }
             #local-playlists{
@@ -97,18 +106,20 @@ body{
                 color: #ffffff;
             }
             #playlist-name-selection{
+                height:25px;
+                border: 0px;
             }
             #playlist-add-button{
-                padding-left: 10px;
-                padding-right: 10px;
+                height:25px;
             }
             #item-selection-reset{
-                padding-left: 10px;
-                padding-right: 10px;
+                height:25px;
             }
 
     main{
         flex-grow: 1;
+        padding-left: 5px;
+        padding-right: 5px;
         padding-bottom: 20px;
     }
         #message-box{
@@ -124,24 +135,41 @@ body{
             transition-duration: 0.3s;
         }
 
-
-.dropdown{
-    z-index:1;
+.button{
+    text-align: center;
+    white-space: nowrap;
+    padding-left: 10px;
+    padding-right: 10px;
+    background-color: #f0f0f0;
+    color: black;
+    border: 1px solid #919191;
+    border-radius: 5px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center; /* center text */
+    font-size: 0.85rem;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
-    .dropdown-content{
-        display:none;
-        background-color: var(--interface-color);
-    }
-    .dropdown:hover .dropdown-content{
-        /* For some reason, if this is just grid, it will insist on being 0px wide just like its 0px by 0px parent */
-        /* making it inline-grid happened to fix it */
-        display:inline-grid;
-    }
+.button:hover{
+    background-color: #DCDCDC
+}
+.button:active{
+    background: #e9e9e9;
+    position: relative;
+    top: 1px;
+    text-shadow: none;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, .3) inset;
+}
 
 .item-list{
     display: grid;
     grid-row-gap: 10px;
-
+    justify-content: center;
 }
 
 
@@ -302,13 +330,15 @@ body{
 
 
 .page-button-row{
-    margin-top: 10px;
     margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
     justify-self:center;
     justify-content: center;
-    display: grid;
-    grid-auto-columns: 40px;
-    grid-auto-flow: column;
+}
+.page-button-row .page-button{
+    margin-top: 10px;
+    width: 40px;
     height: 40px;
 }
 .next-previous-button-row{
@@ -361,3 +391,105 @@ h1{
     border-width:1px;
     border-radius:5px;
 }
+
+@media (max-width:950px){
+    #site-search{
+        grid-template-areas: "home search-bar search-button filter-button playlist"
+                             ".    dropdown   dropdown      dropdown      .";
+    }
+    #site-search .filter-dropdown-content{
+        justify-self: end;
+    }
+}
+@media (max-width:920px){
+    header{
+        flex-direction:column;
+    }
+        #site-search{
+            margin-bottom: 5px;
+            width: 100%;
+            align-self: center;
+        }
+        #playlist-edit > *{
+            margin-bottom: 10px;
+        }
+    #playlist-form-toggle-cbox:not(:checked) + #playlist-edit{
+        display: none;
+    }
+    #site-search .playlist-form-toggle-button{
+        display: inline-flex;
+    }
+
+}
+
+/* convert big items (has-description) to vertical format. e.g. search results */
+@media (max-width:600px){
+    .has-description.horizontal-item-box .item {
+        flex-grow: unset;
+        display: block;
+        width: 246px;
+    }
+        .has-description.horizontal-item-box  .thumbnail-box{
+            margin-right: 0px;
+        }
+                .has-description.horizontal-item-box .thumbnail-img{
+                    height: 100%;
+                }
+
+        .has-description .horizontal-stats{
+            max-height: unset;
+            overflow:hidden;
+        }
+            .has-description .horizontal-stats > li{
+                display: initial;
+            }
+
+            .has-description .horizontal-stats > li::after{
+                content: "";
+            }
+
+        .has-description .horizontal-stats{
+            display: flex;
+            flex-direction: column;
+        }
+            .has-description .horizontal-stats li{
+                max-height: 1.3em;
+                overflow: hidden;
+            }
+}
+
+
+@media (max-width:500px){
+    #site-search{
+        grid-template-columns: 0fr auto auto auto;
+        grid-template-rows: 40px 40px 0fr;
+        grid-template-areas: "home search-bar    search-bar    search-bar"
+                             ".    search-button filter-button playlist"
+                             ".    dropdown      dropdown      dropdown";
+    }
+    #site-search .filter-dropdown-content{
+        justify-self: center;
+    }
+}
+
+@media (max-width:400px) {
+    .horizontal-item-box.no-description .thumbnail-box{
+        width: 120px;
+    }
+        .horizontal-item-box.no-description .thumbnail-img{
+            object-fit: scale-down;
+            object-position: center;
+        }
+}
+
+@media (max-width: 300px){
+    #site-search{
+        grid-template-columns: auto auto auto;
+        grid-template-areas: "home          search-bar    search-bar"
+                             "search-button filter-button playlist"
+                             "dropdown      dropdown      dropdown";
+    }
+}
+
+
+

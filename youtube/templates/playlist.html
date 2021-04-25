@@ -3,37 +3,29 @@
 {% import "common_elements.html" as common_elements %}
 {% block style %}
     main > * {
-        width: 800px;
+        max-width: 800px;
         margin:auto;
     }
 
     .playlist-metadata{
         display:grid;
         grid-template-columns: 0fr 1fr;
+        grid-template-areas:
+            "thumbnail title"
+            "thumbnail author"
+            "thumbnail stats"
+            "thumbnail description";
     }
         .playlist-thumbnail{
-            grid-row: 1 / span 5;
-            grid-column:1;
-            justify-self:start;
+            grid-area: thumbnail;
             width:250px;
             margin-right: 10px;
         }
-        .playlist-title{
-            grid-row: 1;
-            grid-column:2;
-        }
-        .playlist-author{
-            grid-row:2;
-            grid-column:2;
-        }
-        .playlist-stats{
-            grid-row:3;
-            grid-column:2;
-        }
-
+        .playlist-title{ grid-area: title }
+        .playlist-author{ grid-area: author }
+        .playlist-stats{ grid-area: stats }
         .playlist-description{
-            grid-row:4;
-            grid-column:2;
+            grid-area: description;
             min-width:0px;
             white-space: pre-line;
         }
@@ -45,6 +37,22 @@
         grid-auto-rows: 0fr;
         grid-row-gap: 10px;
 
+    }
+        .thumbnail-box{     /* overides rule in shared.css */
+            height: 90px !important;
+            width: 120px !important;
+        }
+    @media (max-width:600px){
+        .playlist-metadata{
+            grid-template-columns: 1fr;
+            grid-template-areas:
+                "thumbnail"
+                "title"
+                "author"
+                "stats"
+                "description";
+            justify-items: center;
+        }
     }
 {% endblock style %}
 

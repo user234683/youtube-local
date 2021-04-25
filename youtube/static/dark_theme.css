@@ -3,14 +3,16 @@ body{
     --text-color: #cccccc;
     --background-color: #000000;
     --video-background-color: #080808;
+    --link-color-rgb: 34, 170, 255;
+    --visited-link-color-rgb: 119, 85, 255;
 }
 
 a:link {
-    color: #22aaff;
+    color: rgb(var(--link-color-rgb));
 }
 
 a:visited {
-    color: #7755ff;
+    color: rgb(var(--visited-link-color-rgb));
 }
 
 a:not([href]){

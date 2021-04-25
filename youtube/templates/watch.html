@@ -8,7 +8,7 @@
         border-style: outset;
         border-width: 2px;
         font-weight: bold;
-        padding-bottom: 2px;
+        padding: 4px;
     }
     details > summary:hover{
         text-decoration: underline;
@@ -16,7 +16,7 @@
 
     .playability-error{
         height: 360px;
-        width: 640px;
+        max-width: 640px;
         grid-column: 2;
         background-color: var(--video-background-color);
         text-align:center;
@@ -28,8 +28,8 @@
         }
 
     .live-url-choices{
-        height: 360px;
-        width: 640px;
+        min-height: 360px;
+        max-width: 640px;
         grid-column: 2;
         background-color: var(--video-background-color);
         padding: 25px 0px 0px 25px;
@@ -41,7 +41,8 @@
             margin-top: 15px;
         }
         .live-url-choices input{
-            width: 400px;
+            max-width: 400px;
+            width: 100%;
         }
         .url-choice-label{
             display: inline-block;
@@ -92,10 +93,10 @@
                 }
         .side-videos{
             grid-row: 2 /span 3;
-            width: 400px;
+            max-width: 400px;
         }
         .video-info{
-            width: 640px;
+            max-width: 640px;
         }
     {% else %}
         #video-container{
@@ -115,21 +116,33 @@
         grid-template-columns: 1fr 640px 40px 400px 1fr;
         grid-template-rows: auto auto auto auto;
         align-content: start;
+        padding-left: 0px;
+        padding-right: 0px;
     }
 
         .video-info{
             grid-column: 2;
             grid-row: 2;
             display: grid;
-            grid-template-rows: 0fr 0fr 0fr 20px 0fr 0fr;
             grid-template-columns: 1fr 1fr;
             align-content: start;
+            grid-template-areas:
+                "v-title                  v-title"
+                "v-labels                 v-labels"
+                "v-uploader               v-views"
+                "v-date                   v-likes-dislikes"
+                "external-player-controls v-checkbox"
+                "v-download               v-download"
+                "v-description            v-description"
+                "v-music-list             v-music-list"
+                "v-more-info              v-more-info";
         }
             .video-info > .title{
-                grid-column: 1 / span 2;
+                grid-area: v-title;
                 min-width: 0;
             }
             .video-info > .labels{
+                grid-area: v-labels;
                 justify-self:start;
                 list-style: none;
                 padding: 0px;
@@ -147,29 +160,24 @@
                     border-width: 1px;
                 }
             .video-info > address{
-                grid-column: 1;
-                grid-row: 3;
+                grid-area: v-uploader;
                 justify-self: start;
             }
             .video-info > .views{
-                grid-column: 2;
-                grid-row: 3;
+                grid-area: v-views;
                 justify-self:end;
             }
             .video-info > time{
-                grid-column: 1;
-                grid-row: 4;
+                grid-area: v-date;
                 justify-self:start;
             }
             .video-info > .likes-dislikes{
-                grid-column: 2;
-                grid-row: 4;
+                grid-area: v-likes-dislikes;
                 justify-self:end;
             }
             .video-info > .external-player-controls{
+                grid-area: external-player-controls;
                 justify-self: start;
-                grid-row: 5;
-                grid-column: 1;
                 margin-bottom: 8px;
             }
                 #speed-control{
@@ -179,15 +187,14 @@
                     color: var(--text-color);
                 }
             .video-info > .checkbox{
+                grid-area: v-checkbox;
                 justify-self:end;
                 align-self: start;
-
-                grid-row: 5;
-                grid-column: 2;
+                height: 25px;
+                width: 25px;
             }
             .video-info > .download-dropdown{
-                grid-column:1 / span 2;
-                grid-row: 6;
+                grid-area: v-download;
             }
             .video-info > .description{
                 background-color:var(--interface-color);
@@ -195,14 +202,12 @@
                 white-space: pre-wrap;
                 min-width: 0;
                 word-wrap: break-word;
-                grid-column: 1 / span 2;
-                grid-row: 7;
+                grid-area: v-description;
                 padding: 5px;
             }
 
             .music-list{
-                grid-row:8;
-                grid-column: 1 / span 2;
+                grid-area: v-music-list;
                 background-color: var(--interface-color);
                 padding-bottom: 7px;
             }
@@ -219,8 +224,7 @@
                     margin-bottom:5px;
                 }
             .more-info{
-                grid-row: 9;
-                grid-column: 1 / span 2;
+                grid-area: v-more-info;
                 background-color: var(--interface-color);
             }
                 .more-info > summary{
@@ -248,7 +252,7 @@
             padding-top: 10px;
         }
             .comment{
-                width:640px;
+                max-width:640px;
             }
 
         .side-videos{
@@ -313,11 +317,55 @@
                     width: 120px !important;
                 }
 
+    .download-dropdown-content{
+        background-color: var(--interface-color);
+        padding: 10px;
+        list-style: none;
+        margin: 0px;
+    }
+        li.download-format{
+            margin-bottom: 7px;
+        }
+            .download-link{
+                display: block;
+                background-color: rgba(var(--link-color-rgb), 0.07);
+            }
+            .download-link:visited{
+                background-color: rgba(var(--visited-link-color-rgb), 0.07);
+            }
+                .format-attributes{
+                    list-style: none;
+                    padding: 0px;
+                    margin: 0px;
+                    display: flex;
+                    flex-direction: row;
+                    flex-wrap: wrap;
+                }
+                    .format-attributes li{
+                        white-space: nowrap;
+                        max-height: 1.2em;
+                    }
+                    .format-ext{
+                        width: 60px;
+                    }
+                    .format-video-quality{
+                        width: 140px;
+                    }
+                    .format-audio-quality{
+                        width: 120px;
+                    }
+                    .format-file-size{
+                        width: 80px;
+                    }
+                    .format-codecs{
+
+                    }
+
     /* Put related vids below videos when window is too small */
     /* 1100px instead of 1080 because W3C is full of idiots who include scrollbar width */
     @media (max-width:1100px){
         main{
-            grid-template-columns: 1fr 640px 40px 1fr;
+            grid-template-columns: 1fr 640px 0fr 1fr;
         }
         .side-videos{
             margin-top: 10px;
@@ -330,41 +378,40 @@
         }
     }
 
-    .download-dropdown-content{
-        background-color: var(--interface-color);
-        padding: 10px;
-        list-style: none;
-        margin: 0px;
-    }
-        li.download-format{
-            margin-bottom: 7px;
+    @media (max-width:660px){
+        main{
+            grid-template-columns: 5px 1fr 0fr 5px;
         }
-            .format-attributes{
-                list-style: none;
-                padding: 0px;
-                margin: 0px;
-                display: flex;
-                flex-direction: row;
+        .format-attributes{
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 140px);
+        }
+            .format-codecs{
+                grid-column: auto / span 2;
             }
-                .format-attributes li{
-                    white-space: nowrap;
-                    max-height: 1.2em;
-                }
-                .format-ext{
-                    width: 60px;
-                }
-                .format-video-quality{
-                    width: 140px;
-                }
-                .format-audio-quality{
-                    width: 120px;
-                }
-                .format-file-size{
-                    width: 80px;
-                }
-                .format-codecs{
-                    width: 120px;
-                }
+    }
+    @media (max-width:500px){
+        .video-info{
+            grid-template-areas:
+                "v-title                  v-title"
+                "v-labels                 v-labels"
+                "v-uploader               v-uploader"
+                "v-date                   v-date"
+                "v-views                  v-views"
+                "v-likes-dislikes         v-likes-dislikes"
+                "external-player-controls v-checkbox"
+                "v-download               v-download"
+                "v-description            v-description"
+                "v-music-list             v-music-list"
+                "v-more-info              v-more-info";
+        }
+            .video-info > .views{
+                justify-self: start;
+            }
+            .video-info > .likes-dislikes{
+                justify-self: start;
+            }
+    }
 {% endblock style %}
 
 {% block main %}

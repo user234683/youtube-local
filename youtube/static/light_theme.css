@@ -3,6 +3,8 @@ body{
     --text-color: #222222;
     --background-color: #f8f8f8;
     --video-background-color: #ffffff;
+    --link-color-rgb: 0, 0, 238;
+    --visited-link-color-rgb: 85, 26, 139;
 }
 
 .comment .permalink{

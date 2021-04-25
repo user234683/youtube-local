@@ -10,6 +10,7 @@
     main{
         display:flex;
         flex-direction: row;
+        padding-right:0px;
     }
     .video-section{
         flex-grow: 1;
@@ -22,16 +23,22 @@
         .video-section .page-button-row{
             justify-content: center;
         }
+    .subscriptions-sidebar-fixed-container{
+        display: none;
+    }
     .subscriptions-sidebar{
-        flex-basis: 300px;
+        width: 310px;
+        max-width: 100%;
         background-color: var(--interface-color);
-        border-left: 2px;
+        border-left: 1px solid;
+        border-left-color: var(--interface-border-color);
     }
         .sidebar-links{
             display:flex;
             justify-content: space-between;
             padding-left:10px;
             padding-right: 10px;
+            margin-top: 10px;
         }
 
         .sidebar-list{
@@ -50,6 +57,48 @@
                     overflow: hidden;
                     max-width: 200px;
                 }
+    @media (max-width:750px){
+        main{
+            display: initial;
+            position: relative;
+            padding-bottom: 70px;
+        }
+        .subscriptions-sidebar{
+            position: absolute;
+            right: 0px;
+            top: 0px;
+        }
+        #subscriptions-sidebar-toggle-cbox:not(:checked) + .subscriptions-sidebar{
+            visibility: hidden;
+        }
+            .subscriptions-sidebar-fixed-container{
+                display: flex;
+                align-items: center;
+                position: fixed;
+                bottom: 0px;
+                right: 0px;
+                background-color: var(--interface-color);
+                height: 70px;
+                width: 310px;
+                max-width: 100%;
+                border-width: 1px 0px 0px 1px;
+                border-style: solid;
+                border-color: var(--interface-border-color);
+            }
+                .subscriptions-sidebar-toggle-button{
+                    display: block;
+                    visibility: visible;
+                    height: 60px;
+                    width: 60px;
+                    opacity: 0.75;
+                    margin-left: auto;
+                }
+                    .subscriptions-sidebar-toggle-button .button{
+                        width:100%;
+                        height:100%;
+                        white-space: pre-wrap;
+                    }
+    }
 {% endblock style %}
 
 {% block main %}
@@ -68,7 +117,14 @@
         </nav>
     </div>
 
+    <input id="subscriptions-sidebar-toggle-cbox" type="checkbox" hidden>
     <div class="subscriptions-sidebar">
+        <div class="subscriptions-sidebar-fixed-container">
+            <div class="subscriptions-sidebar-toggle-button">
+                <label class="button" for="subscriptions-sidebar-toggle-cbox">Toggle
+Sidebar</label>
+            </div>
+        </div>
         <div class="sidebar-links">
             <a href="/youtube.com/subscription_manager" class="sub-manager-link">Subscription Manager</a>
             <form method="POST" class="refresh-all">
@@ -119,7 +175,6 @@
                 </li>
             {% endfor %}
         </ol>
-
     </div>
 
 {% endblock main %}
