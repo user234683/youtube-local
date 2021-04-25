@@ -22,7 +22,7 @@
                 <form id="site-search" action="/youtube.com/search">
                     <a href="/youtube.com" id="home-link">Home</a>
                     <input type="search" name="query" class="search-box" value="{{ search_box_value }}"
-                        {{ "autofocus" if request.path == "/" else "" }}>
+                        {{ "autofocus" if request.path == "/" else "" }} placeholder="Type to search...">
                     <button type="submit" value="Search" class="button search-button">Search</button>
                     <label for="filter-dropdown-toggle-cbox" class="filter-dropdown-toggle-button button">Filter</label>
                     <input id="filter-dropdown-toggle-cbox" type="checkbox" hidden>
@@ -99,7 +99,7 @@
             {% if header_playlist_names is defined %}
                 <input id="playlist-form-toggle-cbox" type="checkbox" hidden>
                 <form id="playlist-edit" action="/youtube.com/edit_playlist" method="post" target="_self">
-                    <input name="playlist_name" id="playlist-name-selection" list="playlist-options" type="text">
+                    <input name="playlist_name" id="playlist-name-selection" list="playlist-options" type="text" placeholder="Playlist name">
                     <datalist id="playlist-options">
                     {% for playlist_name in header_playlist_names %}
                         <option value="{{ playlist_name }}">{{ playlist_name }}</option>
