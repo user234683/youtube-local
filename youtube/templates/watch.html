@@ -517,7 +517,7 @@ Reload without invidious (for usage of new identity button).</a>
                 {% endfor %}
                 {% for download in other_downloads %}
                     <li class="download-format">
-                        <a href="{{ download['url'] }}">
+                        <a class="download-link" href="{{ download['url'] }}">
                             <ol class="format-attributes">
                                 <li class="format-ext">{{ download['ext'] }}</li>
                                 <li class="format-label">{{ download['label'] }}</li>
