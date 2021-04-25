@@ -89,6 +89,8 @@ def extract_channel_info(polymer_json, tab):
         info['links'] = []
         for link_json in channel_metadata.get('primaryLinks', ()):
             url = remove_redirect(deep_get(link_json, 'navigationEndpoint', 'urlEndpoint', 'url'))
+            if not (url.startswith('http://') or url.startswith('https://')):
+                url = 'http://' + url
             text = extract_str(link_json.get('title'))
             info['links'].append( (text, url) )
 
