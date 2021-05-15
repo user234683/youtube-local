@@ -376,10 +376,11 @@ def get_watch_page(video_id=None):
         return flask.render_template('error.html', error_message = info['error'])
 
     video_info = {
-        "duration": util.seconds_to_timestamp(info["duration"] or 0),
-        "id":       info['id'],
-        "title":    info['title'],
-        "author":   info['author'],
+        'duration':  util.seconds_to_timestamp(info['duration'] or 0),
+        'id':        info['id'],
+        'title':     info['title'],
+        'author':    info['author'],
+        'author_id': info['author_id'],
     }
 
     # prefix urls, and other post-processing not handled by yt_data_extract
