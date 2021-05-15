@@ -213,8 +213,6 @@ def extract_item_info(item, additional_info={}):
         info['type'] = 'unsupported'
         return info
 
-    info.update(additional_info)
-
     # type looks like e.g. 'compactVideoRenderer' or 'gridVideoRenderer'
     # camelCase split, https://stackoverflow.com/a/37697078
     type_parts = [s.lower() for s in re.sub(r'([A-Z][a-z]+)', r' \1', type).split()]
@@ -335,6 +333,9 @@ def extract_item_info(item, additional_info={}):
         conservative_update(info, 'video_count', extract_int(deep_get(
             overlay, 'thumbnailOverlayBottomPanelRenderer', 'text'
         )))
+
+    info.update(additional_info)
+
     return info
 
 def extract_response(polymer_json):
