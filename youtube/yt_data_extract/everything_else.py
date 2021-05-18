@@ -284,6 +284,8 @@ def extract_comments_info(polymer_json):
         comment_info['text'] = extract_formatted_text(comment_renderer.get('contentText'))
         comment_info['time_published'] = extract_str(comment_renderer.get('publishedTimeText'))
         comment_info['like_count'] = comment_renderer.get('likeCount')
+        liberal_update(comment_info, 'like_count',
+                       extract_int(comment_renderer.get('voteCount')))
         liberal_update(comment_info, 'reply_count', comment_renderer.get('replyCount'))
 
         info['comments'].append(comment_info)
