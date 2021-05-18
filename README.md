@@ -129,6 +129,11 @@ This project is licensed under the GNU Affero General Public License v3 (GNU AGP
 
 Permission is hereby granted to the youtube-dl project at [https://github.com/ytdl-org/youtube-dl](https://github.com/ytdl-org/youtube-dl) to relicense any portion of this software under the Unlicense, public domain, or whichever license is in use by youtube-dl at the time of relicensing, for the purpose of inclusion of said portion into youtube-dl. Relicensing permission is not granted for any purpose outside of direct inclusion into the [official repository](https://github.com/ytdl-org/youtube-dl) of youtube-dl. If inclusion happens during the process of a pull-request, relicensing happens at the moment the pull request is merged into youtube-dl; until that moment, any cloned repositories of youtube-dl which make use of this software are subject to the terms of the GNU AGPLv3.
 
+## Donate
+
+Bitcoin: bc1qnxfm8mk2gdcdr56308794a4f97dd7wu6qawguw
+Monero: 469tczUEVTX6Y7bMEgTyrUJ2K7R8qVNjn5eh5VVHKvi4QsbMD7vrFW8RaCqM1jmZMR9GM87yByvPKZb8gsSxUzrdGCM1yXv
+
 ## Similar projects
 - [invidious](https://github.com/iv-org/invidious) Similar to this project, but also allows it to be hosted as a server to serve many users
 - [Yotter](https://github.com/ytorg/Yotter) Similar to this project and to invidious. Also supports Twitter
