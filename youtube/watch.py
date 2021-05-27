@@ -207,6 +207,14 @@ def decrypt_signatures(info, video_id):
     err = yt_data_extract.decrypt_signatures(info)
     return err
 
+
+def _add_to_error(info, key, additional_message):
+    if key in info and info[key]:
+        info[key] += additional_message
+    else:
+        info[key] = additional_message
+
+
 def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     # bpctr=9999999999 will bypass are-you-sure dialogs for controversial
     # videos
@@ -231,11 +239,21 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
             'video_id': video_id,
             'eurl': 'https://youtube.googleapis.com/v/' + video_id,
         }
-        url = 'https://www.youtube.com/get_video_info?' + urllib.parse.urlencode(data)
-        video_info_page = util.fetch_url(
-            url, headers=watch_headers, debug_name='get_video_info',
-            report_text='Fetched get_video_info page').decode('utf-8')
-        yt_data_extract.update_with_age_restricted_info(info, video_info_page)
+        url = 'https://www.youtube.com/get_video_info?html5=1&'
+        url += urllib.parse.urlencode(data)
+        try:
+            video_info_page = util.fetch_url(
+                url, headers=watch_headers, debug_name='get_video_info',
+                report_text='Fetched get_video_info page').decode('utf-8')
+        except util.FetchError as e:
+            if e.code == '404':
+                _add_to_error(info, 'playability_error',
+                              '\n\nget_video_info not available (404).')
+            else:
+                raise
+        else:
+            yt_data_extract.update_with_age_restricted_info(info,
+                                                            video_info_page)
 
     # signature decryption
     decryption_error = decrypt_signatures(info, video_id)
