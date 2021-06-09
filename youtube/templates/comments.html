@@ -20,7 +20,7 @@
                 <span class="text">{{ common_elements.text_runs(comment['text']) }}</span>
             {% endif %}
 
-            <span class="likes">{{ comment['likes_text'] if comment['like_count'] else ''}}</span>
+            <span class="likes">{{ comment['likes_text'] if comment['approx_like_count'] else ''}}</span>
             <div class="bottom-row">
                 {% if comment['reply_count'] %}
                     {% if settings.use_comments_js and comment['replies_url'] %}

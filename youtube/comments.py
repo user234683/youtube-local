@@ -109,10 +109,11 @@ def post_process_comments_info(comments_info):
             comment['view_replies_text'] = str(reply_count) + ' replies'
 
 
-        if comment['like_count'] == 1:
+        if comment['approx_like_count'] == '1':
             comment['likes_text'] = '1 like'
         else:
-            comment['likes_text'] = str(comment['like_count']) + ' likes'
+            comment['likes_text'] = (str(comment['approx_like_count'])
+                                     + ' likes')
 
     comments_info['include_avatars'] = settings.enable_comment_avatars
     if comments_info['ctoken']:
