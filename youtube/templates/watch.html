@@ -133,6 +133,7 @@
                 "v-uploader               v-views"
                 "v-date                   v-likes-dislikes"
                 "external-player-controls v-checkbox"
+                "v-direct-link            v-direct-link"
                 "v-download               v-download"
                 "v-description            v-description"
                 "v-music-list             v-music-list"
@@ -193,6 +194,10 @@
                 align-self: start;
                 height: 25px;
                 width: 25px;
+            }
+            .video-info > .direct-link{
+                grid-area: v-direct-link;
+                margin-bottom: 8px;
             }
             .video-info > .download-dropdown{
                 grid-area: v-download;
@@ -499,6 +504,8 @@ Reload without invidious (for usage of new identity button).</a>
             </script>
         </div>
         <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
+
+        <span class="direct-link"><a href="https://youtu.be/{{ video_id }}">Direct Link</a></span>
 
         <details class="download-dropdown">
             <summary class="download-dropdown-label">Download</summary>
