@@ -94,7 +94,7 @@ latest_dist_url = 'https://www.python.org/ftp/python/' + latest_version + '/pyth
 # I've verified that all the dlls in the following are signed by Microsoft.
 # Using this because Microsoft only provides installers whose files can't be
 # extracted without a special tool.
-visual_c_runtime_url = 'https://github.com/eladkarako/vc-archive/raw/master/archives/vc15_(14.10.25017.0)_2017_x86.7z'
+visual_c_runtime_url = 'https://github.com/yuempek/vc-archive/raw/master/archives/vc15_(14.10.25017.0)_2017_x86.7z'
 visual_c_runtime_sha256 = '2549eb4d2ce4cf3a87425ea01940f74368bf1cda378ef8a8a1f1a12ed59f1547'
 
 download_if_not_exists('get-pip.py', get_pip_url)
