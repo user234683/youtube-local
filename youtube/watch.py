@@ -238,12 +238,16 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
         data = {
             'video_id': video_id,
             'eurl': 'https://youtube.googleapis.com/v/' + video_id,
+            'html5': '1',
+            # See https://github.com/ytdl-org/youtube-dl/issues/29333#issuecomment-864049544
+            'c': 'TVHTML5',
+            'cver': '6.20180913',
         }
-        url = 'https://www.youtube.com/get_video_info?html5=1&'
+        url = 'https://www.youtube.com/get_video_info?'
         url += urllib.parse.urlencode(data)
         try:
             video_info_page = util.fetch_url(
-                url, headers=watch_headers, debug_name='get_video_info',
+                url, headers=util.mobile_ua, debug_name='get_video_info',
                 report_text='Fetched get_video_info page').decode('utf-8')
         except util.FetchError as e:
             if e.code == '404':
