@@ -637,18 +637,36 @@ Reload without invidious (for usage of new identity button).</a>
                     </script>
                 {% endif %}
             </div>
-        {% else %}
+        {% elif settings.related_videos_mode != 0 %}
             <li>Autoplay: <input type="checkbox" id="autoplay-toggle"></li>
         {% endif %}
 
+        {% if settings.related_videos_mode != 0 or playlist %}
         <script>
             var playability_error = {{ 'true' if playability_error else 'false' }};
+            {% if playlist and playlist['current_index'] is not none %}
+                {% set isPlaylist = true %}
+            {% endif %}
+
+            {% if isPlaylist %}
+                // from https://stackoverflow.com/a/6969486
+                function escapeRegExp(string) {
+                    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+                }
+                var playlist_id = {{ playlist['id']|tojson }};
+                playlist_id = escapeRegExp(playlist_id);
+            {% endif %}
 
             // read cookies on whether to autoplay
             // pain in the ass:
             // https://developer.mozilla.org/en-US/docs/Web/API/Document/cookie
-            var cookieValue = document.cookie.replace(new RegExp(
-                '(?:(?:^|.*;\\s*)autoplay\\s*\\=\\s*([^;]*).*$)|^.*$'), '$1');
+            {% if isPlaylist %}
+                var cookieValue = document.cookie.replace(new RegExp(
+                    '(?:(?:^|.*;\\s*)autoplay_' + playlist_id + '\\s*\\=\\s*([^;]*).*$)|^.*$'), '$1');
+            {% else %}
+                var cookieValue = document.cookie.replace(new RegExp(
+                    '(?:(?:^|.*;\\s*)autoplay\\s*\\=\\s*([^;]*).*$)|^.*$'), '$1');
+            {% endif %}
 
             var autoplayEnabled = 0;
             if(cookieValue.length === 0){
@@ -664,13 +682,17 @@ Reload without invidious (for usage of new identity button).</a>
             }
 
             // listen for checkbox to turn autoplay on and off
+            var cookie = 'autoplay'
+            {% if isPlaylist %}
+                cookie += '_' + playlist_id;
+            {% endif %}
             checkbox.addEventListener( 'change', function() {
                 if(this.checked) {
                     autoplayEnabled = 1;
-                    document.cookie = 'autoplay=1; SameSite=Strict';
+                    document.cookie = cookie + '=1; SameSite=Strict';
                 } else {
                     autoplayEnabled = 0;
-                    document.cookie = 'autoplay=0; SameSite=Strict';
+                    document.cookie = cookie + '=0; SameSite=Strict';
                 }
             });
 
@@ -683,7 +705,7 @@ Reload without invidious (for usage of new identity button).</a>
             }
 
             // determine next video url
-            {% if playlist and playlist['current_index'] %}
+            {% if isPlaylist %}
                 var currentIndex = {{ playlist['current_index']|tojson }};
                 {% if playlist['current_index']+1 == playlist['items']|length %}
                     var nextVideoUrl = null;
@@ -722,6 +744,7 @@ Reload without invidious (for usage of new identity button).</a>
                 }
             }
         </script>
+        {% endif %}
 
         {% if subtitle_sources %}
             <details id="transcript-details">
