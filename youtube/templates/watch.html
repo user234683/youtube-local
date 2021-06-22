@@ -257,6 +257,7 @@
             }
 
         .side-videos{
+            list-style: none;
             grid-column: 4;
             max-width: 640px;
         }
@@ -596,85 +597,6 @@ Reload without invidious (for usage of new identity button).</a>
                         {% endif %}
                     {% endfor %}
                 </nav>
-                {% if playlist['current_index'] is not none %}
-                    <script>
-                        // from https://stackoverflow.com/a/6969486
-                        function escapeRegExp(string) {
-                          return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
-                        }
-                        var playability_error = {{ 'true' if playability_error else 'false' }};
-                        var playlist_id = {{ playlist['id']|tojson }};
-                        playlist_id = escapeRegExp(playlist_id);
-
-                        // read cookies on whether to autoplay thru playlist
-                        // pain in the ass:
-                        // https://developer.mozilla.org/en-US/docs/Web/API/Document/cookie
-                        var cookieValue = document.cookie.replace(new RegExp(
-                            '(?:(?:^|.*;\\s*)autoplay_' + playlist_id + '\\s*\\=\\s*([^;]*).*$)|^.*$'), '$1');
-                        var autoplayEnabled = 0;
-                        if(cookieValue.length === 0){
-                            autoplayEnabled = 0;
-                        } else {
-                            autoplayEnabled = Number(cookieValue);
-                        }
-
-                        // check the checkbox if autoplay is on
-                        var checkbox = document.querySelector('#autoplay-toggle');
-                        if(autoplayEnabled){
-                            checkbox.checked = true;
-                        }
-
-                        // listen for checkbox to turn autoplay on and off
-                        checkbox.addEventListener( 'change', function() {
-                            if(this.checked) {
-                                autoplayEnabled = 1;
-                                document.cookie = 'autoplay_' + playlist_id + '=1';
-                            } else {
-                                autoplayEnabled = 0;
-                                document.cookie = 'autoplay_' + playlist_id + '=0';
-                            }
-                        });
-
-                        if(!playability_error){
-                            // play the video if autoplay is on
-                            var vid = document.querySelector('video');
-                            if(autoplayEnabled){
-                                vid.play();
-                            }
-                        }
-
-                        var currentIndex = {{ playlist['current_index']|tojson }};
-                        {% if playlist['current_index']+1 == playlist['items']|length %}
-                            var nextVideoUrl = null;
-                        {% else %}
-                            var nextVideoUrl = {{ (playlist['items'][playlist['current_index']+1]['url'])|tojson }};
-                        {% endif %}
-                        var nextVideoDelay = 1000;
-
-                        // scroll playlist to proper position
-                        var pl = document.querySelector('.playlist-videos');
-                        // item height + gap == 100
-                        pl.scrollTop = 100*currentIndex;
-
-                        // go to next video when video ends
-                        // https://stackoverflow.com/a/2880950
-                        if(nextVideoUrl){
-                            if(playability_error){
-                                videoEnded();
-                            } else {
-                                vid.addEventListener('ended', videoEnded, false);
-                            }
-                            function nextVideo(){
-                                if(autoplayEnabled){
-                                    window.location.href = nextVideoUrl;
-                                }
-                            }
-                            function videoEnded(e) {
-                                window.setTimeout(nextVideo, nextVideoDelay);
-                            }
-                        }
-                    </script>
-                {% endif %}
                 {% if playlist['id'] is not none %}
                     <script>
                         // lazy load playlist images
@@ -715,6 +637,113 @@ Reload without invidious (for usage of new identity button).</a>
                     </script>
                 {% endif %}
             </div>
+        {% elif settings.related_videos_mode != 0 %}
+            <li>Autoplay: <input type="checkbox" id="autoplay-toggle"></li>
+        {% endif %}
+
+        {% if settings.related_videos_mode != 0 or playlist %}
+            <script>
+                var playability_error = {{ 'true' if playability_error else 'false' }};
+                {% if playlist and playlist['current_index'] is not none %}
+                    {% set isPlaylist = true %}
+                {% endif %}
+
+                {% if isPlaylist %}
+                    // from https://stackoverflow.com/a/6969486
+                    function escapeRegExp(string) {
+                        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+                    }
+                    var playlist_id = {{ playlist['id']|tojson }};
+                    playlist_id = escapeRegExp(playlist_id);
+                {% endif %}
+
+                // read cookies on whether to autoplay
+                // pain in the ass:
+                // https://developer.mozilla.org/en-US/docs/Web/API/Document/cookie
+                {% if isPlaylist %}
+                    var cookieValue = document.cookie.replace(new RegExp(
+                        '(?:(?:^|.*;\\s*)autoplay_' + playlist_id + '\\s*\\=\\s*([^;]*).*$)|^.*$'), '$1');
+                {% else %}
+                    var cookieValue = document.cookie.replace(new RegExp(
+                        '(?:(?:^|.*;\\s*)autoplay\\s*\\=\\s*([^;]*).*$)|^.*$'), '$1');
+                {% endif %}
+
+                var autoplayEnabled = 0;
+                if(cookieValue.length === 0){
+                    autoplayEnabled = 0;
+                } else {
+                    autoplayEnabled = Number(cookieValue);
+                }
+
+                // check the checkbox if autoplay is on
+                var checkbox = document.querySelector('#autoplay-toggle');
+                if(autoplayEnabled){
+                    checkbox.checked = true;
+                }
+
+                // listen for checkbox to turn autoplay on and off
+                var cookie = 'autoplay'
+                {% if isPlaylist %}
+                    cookie += '_' + playlist_id;
+                {% endif %}
+                checkbox.addEventListener( 'change', function() {
+                    if(this.checked) {
+                        autoplayEnabled = 1;
+                        document.cookie = cookie + '=1; SameSite=Strict';
+                    } else {
+                        autoplayEnabled = 0;
+                        document.cookie = cookie + '=0; SameSite=Strict';
+                    }
+                });
+
+                if(!playability_error){
+                    // play the video if autoplay is on
+                    var vid = document.querySelector('video');
+                    if(autoplayEnabled){
+                        vid.play();
+                    }
+                }
+
+                // determine next video url
+                {% if isPlaylist %}
+                    var currentIndex = {{ playlist['current_index']|tojson }};
+                    {% if playlist['current_index']+1 == playlist['items']|length %}
+                        var nextVideoUrl = null;
+                    {% else %}
+                        var nextVideoUrl = {{ (playlist['items'][playlist['current_index']+1]['url'])|tojson }};
+                    {% endif %}
+
+                    // scroll playlist to proper position
+                    // item height + gap == 100
+                    var pl = document.querySelector('.playlist-videos');
+                    pl.scrollTop = 100*currentIndex;
+                {% else %}
+                    {% if related|length == 0 %}
+                        var nextVideoUrl = null;
+                    {% else %}
+                        var nextVideoUrl = {{ (related[0]['url'])|tojson }};
+                    {% endif %}
+                {% endif %}
+                var nextVideoDelay = 1000;
+
+                // go to next video when video ends
+                // https://stackoverflow.com/a/2880950
+                if (nextVideoUrl) {
+                    if(playability_error){
+                        videoEnded();
+                    } else {
+                        vid.addEventListener('ended', videoEnded, false);
+                    }
+                    function nextVideo(){
+                        if(autoplayEnabled){
+                            window.location.href = nextVideoUrl;
+                        }
+                    }
+                    function videoEnded(e) {
+                        window.setTimeout(nextVideo, nextVideoDelay);
+                    }
+                }
+            </script>
         {% endif %}
 
         {% if subtitle_sources %}
