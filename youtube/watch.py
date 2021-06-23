@@ -420,10 +420,11 @@ def get_watch_page(video_id=None):
                 item['url'] += '&index=' + str(item['index'])
         info['playlist']['author_url'] = util.prefix_url(
             info['playlist']['author_url'])
-    # Don't prefix hls_formats for now because the urls inside the manifest
-    # would need to be prefixed as well.
-    for fmt in info['formats']:
-        fmt['url'] = util.prefix_url(fmt['url'])
+    if settings.img_prefix:
+        # Don't prefix hls_formats for now because the urls inside the manifest
+        # would need to be prefixed as well.
+        for fmt in info['formats']:
+            fmt['url'] = util.prefix_url(fmt['url'])
 
     # Add video title to end of url path so it has a filename other than just
     # "videoplayback" when downloaded
