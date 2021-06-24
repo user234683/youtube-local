@@ -313,6 +313,10 @@
                     grid-row-gap: 10px;
                     padding-top: 10px;
                 }
+            .autoplay-toggle-container{
+                margin-bottom: 10px;
+            }
+
             .related-videos-inner{
                 padding-top: 10px;
                 display: grid;
@@ -645,7 +649,7 @@ Reload without invidious (for usage of new identity button).</a>
                 {% endif %}
             </div>
         {% elif settings.related_videos_mode != 0 %}
-            <li>Autoplay: <input type="checkbox" id="autoplay-toggle"></li>
+            <div class="autoplay-toggle-container"><label for="autoplay-toggle">Autoplay: </label><input type="checkbox" id="autoplay-toggle"></div>
         {% endif %}
 
         {% if settings.related_videos_mode != 0 or playlist %}
