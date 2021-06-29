@@ -4,7 +4,11 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
         <title>{{ page_title }}</title>
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; media-src 'self' https://*.googlevideo.com;
+        <meta http-equiv="Content-Security-Policy" content="
+            default-src 'self' 'unsafe-inline';
+            media-src 'self' https://*.googlevideo.com;
+            font-src 'self' data:;
+            worker-src 'self' blob:;
             {{ "img-src 'self' https://*.googleusercontent.com https://*.ggpht.com https://*.ytimg.com;" if not settings.proxy_images else "" }}">
         <link href="{{ theme_path }}" type="text/css" rel="stylesheet">
         <link href="/youtube.com/shared.css" type="text/css" rel="stylesheet">

@@ -443,7 +443,7 @@ Reload without invidious (for usage of new identity button).</a>
     {% else %}
         <div id="video-container">
             <div id="video-container-inner">
-                <video controls autofocus class="video" height="{{ video_height }}px">
+                <video controls autofocus id="player" class="video video-js" height="{{ video_height }}px">
                     {% for video_source in video_sources %}
                         <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
                     {% endfor %}
@@ -459,6 +459,9 @@ Reload without invidious (for usage of new identity button).</a>
                 </video>
             </div>
         </div>
+        {% if settings.use_video_js %}
+            <audio id="audio-el" preload="auto"></audio>
+        {% endif %}
         {% if time_start != 0 %}
             <script>
                 document.querySelector('video').currentTime = {{ time_start|tojson }};
@@ -802,4 +805,14 @@ Reload without invidious (for usage of new identity button).</a>
     {% if settings.use_video_hotkeys %} <script src="/youtube.com/static/js/hotkeys.js"></script> {% endif %}
     {% if settings.use_comments_js %} <script src="/youtube.com/static/js/comments.js"></script> {% endif %}
     {% if settings.use_sponsorblock_js %} <script src="/youtube.com/static/js/sponsorblock.js"></script> {% endif %}
+
+    {% if settings.use_video_js %}
+        <script> var download_formats = {{ download_formats|tojson }} </script>
+        <script src="/youtube.com/static/video-js/video.min.js"></script>
+        <link href="/youtube.com/static/video-js/video-js.min.css" rel="stylesheet">
+        <script src="/youtube.com/static/video-js/silvermine-videojs-quality-selector.min.js"></script>
+        <link href="/youtube.com/static/video-js/quality-selector.css" rel="stylesheet">
+        <script src="/youtube.com/static/video-js/player.js"></script>
+        <link href="/youtube.com/static/video-js/player.css" rel="stylesheet">
+    {% endif %}
 {% endblock main %}

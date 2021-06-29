@@ -593,3 +593,19 @@ def to_valid_filename(name):
         name = '_' + name
 
     return name
+
+def download_if_not_exists(file_name, url, sha256=None, log=None):
+    log = log or print
+    if not os.path.exists('./' + file_name):
+        log('Downloading ' + file_name + '..')
+        data = urllib.request.urlopen(url).read()
+        log('Finished downloading ' + file_name)
+        with open('./' + file_name, 'wb') as f:
+            f.write(data)
+        if sha256:
+            digest = hashlib.sha256(data).hexdigest()
+            if digest != sha256:
+                log('Error: ' + file_name + ' has wrong hash: ' + digest)
+                sys.exit(1)
+    else:
+        log('Using existing ' + file_name)

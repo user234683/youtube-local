@@ -256,7 +256,25 @@ class FilteredRequestLog:
         if not self.filter_re.search(s):
             sys.stderr.write(s)
 
+def init_js():
+    import os
+    from youtube.util import download_if_not_exists
+    os.chdir(os.path.dirname(__file__))
+
+    dir = "youtube/static/video-js"
+    os.makedirs(dir, exist_ok=True)
+    download_if_not_exists(f"{dir}/video.min.js", 'https://unpkg.com/video.js@7.10.2/dist/video.min.js')
+    download_if_not_exists(f"{dir}/video-js.min.css", 'https://unpkg.com/video.js@7.10.2/dist/video-js.min.css')
+    download_if_not_exists(f"{dir}/silvermine-videojs-quality-selector.min.js", 'https://unpkg.com/@silvermine/videojs-quality-selector@1.2.5/dist/js/silvermine-videojs-quality-selector.min.js')
+    download_if_not_exists(f"{dir}/quality-selector.css", 'https://unpkg.com/@silvermine/videojs-quality-selector@1.2.5/dist/css/quality-selector.css')
+
 if __name__ == '__main__':
+    from sys import argv
+    if len(argv) > 1 and argv[1] == "init-js":
+        init_js()
+        print("done")
+        exit()
+
     if settings.allow_foreign_addresses:
         server = WSGIServer(('0.0.0.0', settings.port_number), site_dispatch,
                             log=FilteredRequestLog())

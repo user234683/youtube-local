@@ -180,6 +180,14 @@ For security reasons, enabling this is not recommended.''',
         'category': 'playback',
     }),
 
+    ('use_video_js', {
+        'label': 'Enable videojs',
+        'type': bool,
+        'default': False,
+        'comment': '',
+        'category': 'playback',
+    }),
+
     ('theme', {
         'type': int,
         'default': 0,

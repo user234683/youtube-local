@@ -30,20 +30,9 @@ def remove_files_with_extensions(path, extensions):
             if os.path.splitext(file)[1] in extensions:
                 os.remove(os.path.join(root, file))
 
-def download_if_not_exists(file_name, url, sha256=None):
-    if not os.path.exists('./' + file_name):
-        log('Downloading ' + file_name + '..')
-        data = urllib.request.urlopen(url).read()
-        log('Finished downloading ' + file_name)
-        with open('./' + file_name, 'wb') as f:
-            f.write(data)
-        if sha256:
-            digest = hashlib.sha256(data).hexdigest()
-            if digest != sha256:
-                log('Error: ' + file_name + ' has wrong hash: ' + digest)
-                sys.exit(1)
-    else:
-        log('Using existing ' + file_name)
+from youtube.util import download_if_not_exists as _download_if_not_exists
+download_if_not_exists = lambda *a: _download_if_not_exists(*a, log)
+
 
 def wine_run_shell(command):
     if os.name == 'posix':
