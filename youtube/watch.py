@@ -242,6 +242,7 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
             # See https://github.com/ytdl-org/youtube-dl/issues/29333#issuecomment-864049544
             'c': 'TVHTML5',
             'cver': '6.20180913',
+            'hl': 'en',
         }
         url = 'https://www.youtube.com/get_video_info?'
         url += urllib.parse.urlencode(data)
