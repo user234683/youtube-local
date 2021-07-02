@@ -58,15 +58,13 @@ def get_search_json(query, page, autocorrect, sort, filters):
     return info
 
 
+@yt_app.route('/results')
 @yt_app.route('/search')
 def get_search_page():
-    if len(request.args) == 0:
-        return flask.render_template('base.html', title="Search")
+    query = request.args.get('search_query') or request.args.get('query')
+    if query is None:
+        return flask.render_template('base.html', title='Search')
 
-    if 'query' not in request.args:
-        abort(400)
-
-    query = request.args.get("query")
     page = request.args.get("page", "1")
     autocorrect = int(request.args.get("autocorrect", "1"))
     sort = int(request.args.get("sort", "0"))
@@ -87,12 +85,12 @@ def get_search_page():
     corrections = search_info['corrections']
     if corrections['type'] == 'did_you_mean':
         corrected_query_string = request.args.to_dict(flat=False)
-        corrected_query_string['query'] = [corrections['corrected_query']]
-        corrections['corrected_query_url'] = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(corrected_query_string, doseq=True)
+        corrected_query_string['search_query'] = [corrections['corrected_query']]
+        corrections['corrected_query_url'] = util.URL_ORIGIN + '/results?' + urllib.parse.urlencode(corrected_query_string, doseq=True)
     elif corrections['type'] == 'showing_results_for':
         no_autocorrect_query_string = request.args.to_dict(flat=False)
         no_autocorrect_query_string['autocorrect'] = ['0']
-        no_autocorrect_query_url = util.URL_ORIGIN + '/search?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
+        no_autocorrect_query_url = util.URL_ORIGIN + '/results?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
         corrections['original_query_url'] = no_autocorrect_query_url
 
     return flask.render_template('search.html',

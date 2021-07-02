@@ -4,8 +4,8 @@
 <InputEncoding>UTF-8</InputEncoding>
 <Image width="16" height="16">data:image/x-icon;base64,AAABAAEAEBAAAAEACAAlAgAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAexJREFUOI2lkzFPmlEUhp/73fshtCUCRtvQkJoKMrDQJvoHnBzUhc3EH0DUQf+As6tujo4M6mTiIDp0kGiMTRojTRNSW6o12iD4YYXv3g7Qr4O0ScM7npz7vOe+J0fk83lDF7K6eQygwkdHhI+P0bYNxmBXq5RmZui5vGQgn0f7fKi7O4oLC1gPD48BP9JpnpRKJFZXcQMB3m1u4vr9NHp76d/bo39/n4/z84ROThBa4/r91OJxMKb9BSn5mskAIOt1eq6uEFpjVyrEcjk+T0+TXlzkbTZLuFDAur9/nIFRipuREQCe7+zgBgK8mZvj/fIylVTKa/6UzXKbSnnuHkA0GnwbH/cA0a0takND3IyOEiwWAXBiMYTWjzLwtvB9bAyAwMUF8ZUVPiwtYTWbHqA6PIxoNv8OMLbN3eBga9TZWYQxaKX+AJJJhOv+AyAlT0slAG6TSX5n8+zszJugkzxA4PzcK9YSCQCk42DXaq1aGwqgfT5ebG9jpMQyUjKwu8vrtbWWqxC83NjAd31NsO2uleJnX58HCJ6eEjk8BGNQAA+RCOXJScpTU2AMwnUxlkXk4ACA+2iUSKGArNeRjkMsl6M8MYHQGtHpmIxSvFpfRzoORinQGqvZBCEwQoAxfMlkaIRCnQH/o66v8Re19MavaDNLfgAAAABJRU5ErkJggg==</Image>
 
-<Url type="text/html" method="GET" template="http://localhost:$port_number/youtube.com/search">
-  <Param name="query" value="{searchTerms}"/>
+<Url type="text/html" method="GET" template="http://localhost:$port_number/youtube.com/results">
+  <Param name="search_query" value="{searchTerms}"/>
 </Url>
-<SearchForm>http://localhost:$port_number/youtube.com/search</SearchForm>
+<SearchForm>http://localhost:$port_number/youtube.com/results</SearchForm>
 </SearchPlugin>
