@@ -232,6 +232,7 @@ def fetch_url_response(url, headers=(), timeout=15, data=None,
         elif not isinstance(data, bytes):
             data = urllib.parse.urlencode(data).encode('utf-8')
 
+
     if cookiejar_send is not None or cookiejar_receive is not None:     # Use urllib
         req = urllib.request.Request(url, data=data, headers=headers)
 
@@ -255,9 +256,27 @@ def fetch_url_response(url, headers=(), timeout=15, data=None,
         else:
             retries = urllib3.Retry(3)
         pool = get_pool(use_tor and settings.route_tor)
-        response = pool.request(method, url, headers=headers, body=data,
-                                timeout=timeout, preload_content=False,
-                                decode_content=False, retries=retries)
+        try:
+            response = pool.request(method, url, headers=headers, body=data,
+                                    timeout=timeout, preload_content=False,
+                                    decode_content=False, retries=retries)
+        except urllib3.exceptions.MaxRetryError as e:
+            exception_cause = e.__context__.__context__
+            if (isinstance(exception_cause, socks.ProxyConnectionError)
+                    and settings.route_tor):
+                msg = ('Failed to connect to Tor. Check that Tor is open and '
+                       'that your internet connection is working.\n\n'
+                       + str(e))
+                raise FetchError('502', reason='Bad Gateway',
+                                 error_message=msg)
+            elif isinstance(e.__context__,
+                            urllib3.exceptions.NewConnectionError):
+                msg = 'Failed to establish a connection.\n\n' + str(e)
+                raise FetchError(
+                    '502', reason='Bad Gateway',
+                     error_message=msg)
+            else:
+                raise
         cleanup_func = (lambda r: r.release_conn())
 
     return response, cleanup_func

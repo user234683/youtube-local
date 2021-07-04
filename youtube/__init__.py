@@ -72,6 +72,12 @@ def error_page(e):
         if exc_info()[1].ip:
             error_message += '\n\nExit node IP address: ' + exc_info()[1].ip
         return flask.render_template('error.html', error_message=error_message, slim=slim), 502
+    elif exc_info()[0] == util.FetchError and exc_info()[1].error_message:
+        return (flask.render_template(
+                    'error.html',
+                    error_message=exc_info()[1].error_message,
+                    slim=slim
+                ), 502)
     return flask.render_template('error.html', traceback=traceback.format_exc(), slim=slim), 500
 
 font_choices = {
