@@ -148,6 +148,4 @@ window.addEventListener('DOMContentLoaded', function() {
   })
 
   Q("input#transcript-use-table").addEventListener("change", renderCues);
-
-  Q(".side-videos").prepend(details_tt);
 });
