@@ -73,6 +73,7 @@
             max-width: 100%;
             width: {{ theater_video_target_width }}px;
             margin-bottom: 10px;
+            --plyr-video-background: rgba(0, 0, 0, 0);
         }
             #video-container-inner{
                 height: {{ video_height}}px;
@@ -84,8 +85,20 @@
                     height: 0px;
                 }
             }
+                /* Avoid visual jumps and flashes as plyr loads */
+                .plyr audio, .plyr iframe, .plyr video{
+                    width: 100% !important;
+                    height: 100% !important;
+                }
+                .plyr__video-wrapper{
+                    height: 100% !important;
+                    width: 100% !important;
+                }
+
                 video{
                     background-color: var(--video-background-color);
+                }
+                #video-container-inner > video, #video-container-inner > .plyr{
                     position: absolute;
                     top: 0px;
                     left: 0px;
@@ -104,13 +117,20 @@
             grid-column: 2;
         }
         #video-container, #video-container-inner, video{
-            height: 360px;
-            width: 640px;
+            height: 360px !important;
+            width: 640px !important;
         }
         .side-videos{
             grid-row: 1 /span 4;
         }
     {% endif %}
+
+    /* Prevent this div from blocking right-click menu for video
+    e.g. Firefox playback speed options */
+    .plyr__poster{
+        display: none !important;
+    }
+
 
     main{
         display:grid;
@@ -425,6 +445,14 @@
     }
 {% endblock style %}
 
+{% block head %}
+    {% if settings.video_player == 1 %}
+        <!-- plyr -->
+        <link href="/youtube.com/static/modules/plyr/plyr.css" rel="stylesheet"/>
+        <!--/ plyr -->
+    {% endif %}
+{% endblock head %}
+
 {% block main %}
     {% if playability_error %}
         <div class="playability-error">
@@ -449,7 +477,7 @@ Reload without invidious (for usage of new identity button).</a>
             <div id="video-container-inner">
                 <video controls autofocus class="video" height="{{ video_height }}px">
                     {% for video_source in video_sources %}
-                        <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
+                        <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}" data-res="{{ video_source['quality'] }}">
                     {% endfor %}
 
                     {% for source in subtitle_sources %}
@@ -467,6 +495,15 @@ Reload without invidious (for usage of new identity button).</a>
             <script>
                 document.querySelector('video').currentTime = {{ time_start|tojson }};
             </script>
+        {% endif %}
+
+        {% if settings.video_player == 1 %}
+            <!-- plyr -->
+            <script src="/youtube.com/static/modules/plyr/plyr.js"></script>
+            <script src="/youtube.com/static/js/plyr-start.js"></script>
+            <!-- /plyr -->
+        {% elif settings.use_video_hotkeys %}
+            <script src="/youtube.com/static/js/hotkeys.js"></script>
         {% endif %}
     {% endif %}
 
@@ -800,10 +837,8 @@ Reload without invidious (for usage of new identity button).</a>
         {% endif %}
     {% endif %}
 
-    <script> data = {{ js_data|tojson }} </script>
     <script src="/youtube.com/static/js/common.js"></script>
     <script src="/youtube.com/static/js/transcript-table.js"></script>
-    {% if settings.use_video_hotkeys %} <script src="/youtube.com/static/js/hotkeys.js"></script> {% endif %}
     {% if settings.use_comments_js %} <script src="/youtube.com/static/js/comments.js"></script> {% endif %}
     {% if settings.use_sponsorblock_js %} <script src="/youtube.com/static/js/sponsorblock.js"></script> {% endif %}
 {% endblock main %}

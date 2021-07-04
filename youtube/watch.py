@@ -541,6 +541,8 @@ def get_watch_page(video_id=None):
 
         js_data = {
             'video_id': video_info['id'],
+            'settings': settings.current_settings_dict,
+            'has_manual_captions': any(s.get('on') for s in subtitle_sources),
         },
         font_family = youtube.font_choices[settings.font], # for embed page
     )

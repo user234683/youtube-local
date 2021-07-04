@@ -6,6 +6,7 @@
         <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; media-src 'self' https://*.googlevideo.com;
             {{ "img-src 'self' https://*.googleusercontent.com https://*.ggpht.com https://*.ytimg.com;" if not settings.proxy_images else "" }}">
         <!--<link href="{{ theme_path }}" type="text/css" rel="stylesheet">-->
+
         <style>
             * {
                 box-sizing: border-box;
@@ -60,12 +61,36 @@
                         overflow-y: hidden;
                         display: inline-block;
                     }
-            video{
+            body > video, body > .plyr{
                 max-height: calc(100vh - 2rem);
                 width: 100%;
                 height: 56.25vw; /* 360/640 == 720/1280 */
             }
+                /* Avoid visual jumps and flashes as plyr loads */
+                .plyr audio, .plyr iframe, .plyr video{
+                    width: 100% !important;
+                    height: 100% !important;
+                }
+                .plyr__video-wrapper{
+                    height: 100% !important;
+                    width: 100% !important;
+                }
+                /* Prevent this div from blocking right-click menu for video
+                e.g. Firefox playback speed options */
+                .plyr__poster{
+                    display: none !important;
+                }
         </style>
+
+        {% if js_data %}
+            <script>data = {{ js_data|tojson }}</script>
+        {% endif %}
+
+        {% if settings.video_player == 1 %}
+            <!-- plyr -->
+            <link href="/youtube.com/static/modules/plyr/plyr.css" rel="stylesheet"/>
+            <!--/ plyr -->
+        {% endif %}
     </head>
 
     <body>
@@ -78,7 +103,7 @@
         </div>
         <video controls autofocus class="video" height="{{ video_height }}px">
             {% for video_source in video_sources %}
-                <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}">
+                <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}" data-res="{{ video_source['quality'] }}">
             {% endfor %}
 
             {% for source in subtitle_sources %}
@@ -89,5 +114,13 @@
                 {% endif %}
             {% endfor %}
         </video>
+        {% if settings.video_player == 1 %}
+            <!-- plyr -->
+            <script src="/youtube.com/static/modules/plyr/plyr.js"></script>
+            <script src="/youtube.com/static/js/plyr-start.js"></script>
+            <!-- /plyr -->
+        {% elif settings.use_video_hotkeys %}
+            <script src="/youtube.com/static/js/hotkeys.js"></script>
+        {% endif %}
     </body>
 </html>

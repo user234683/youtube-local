@@ -16,6 +16,13 @@
 {{ style }}
 {% endblock %}
         </style>
+
+        {% if js_data %}
+            <script>data = {{ js_data|tojson }}</script>
+        {% endif %}
+
+        {% block head %}
+        {% endblock %}
     </head>
     <body>
         <header>

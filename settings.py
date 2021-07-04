@@ -156,6 +156,17 @@ For security reasons, enabling this is not recommended.''',
         'category': 'interface',
     }),
 
+    ('video_player', {
+        'type': int,
+        'default': 1,
+        'comment': '',
+        'options': [
+            (0, 'Browser Default'),
+            (1, 'Plyr'),
+        ],
+        'category': 'interface',
+    }),
+
     ('proxy_images', {
         'label': 'Route images',
         'type': bool,
