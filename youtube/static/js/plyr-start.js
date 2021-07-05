@@ -27,8 +27,9 @@ const player = new Plyr(document.querySelector('video'), {
     blankVideo: "/youtube.com/static/modules/plyr/blank.webm",
     debug: false,
     storage: {enabled: false},
+    // disable plyr hotkeys in favor of hotkeys.js
     keyboard: {
-        focused: data.settings.use_video_hotkeys,
-        global: data.settings.use_video_hotkeys,
+        focused: false,
+        global: false,
     },
 });

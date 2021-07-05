@@ -31,10 +31,14 @@ function onKeyDown(e) {
     }
     else if (c == "c") {
         e.preventDefault();
-        let tt = getActiveTranscriptTrack();
-        if (tt == null) return;
-        if (tt.mode == "showing") tt.mode = "disabled";
-        else tt.mode = "showing";
+        if (data.settings.video_player == 1)
+            player.toggleCaptions();
+        else {
+            let tt = getActiveTranscriptTrack();
+            if (tt == null) return;
+            if (tt.mode == "showing") tt.mode = "disabled";
+            else tt.mode = "showing";
+        }
     }
     else if (c == "t") {
         let ts = Math.floor(Q("video").currentTime);

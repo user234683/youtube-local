@@ -503,8 +503,6 @@ Reload without invidious (for usage of new identity button).</a>
             <script src="/youtube.com/static/modules/plyr/plyr.js"></script>
             <script src="/youtube.com/static/js/plyr-start.js"></script>
             <!-- /plyr -->
-        {% elif settings.use_video_hotkeys %}
-            <script src="/youtube.com/static/js/hotkeys.js"></script>
         {% endif %}
     {% endif %}
 
@@ -840,6 +838,7 @@ Reload without invidious (for usage of new identity button).</a>
 
     <script src="/youtube.com/static/js/common.js"></script>
     <script src="/youtube.com/static/js/transcript-table.js"></script>
+    {% if settings.use_video_hotkeys %} <script src="/youtube.com/static/js/hotkeys.js"></script> {% endif %}
     {% if settings.use_comments_js %} <script src="/youtube.com/static/js/comments.js"></script> {% endif %}
     {% if settings.use_sponsorblock_js %} <script src="/youtube.com/static/js/sponsorblock.js"></script> {% endif %}
 {% endblock main %}
