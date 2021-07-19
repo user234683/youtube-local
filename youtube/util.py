@@ -67,6 +67,10 @@ class TorManager:
             'socks5h://127.0.0.1:' + str(settings.tor_port) + '/',
             cert_reqs = 'CERT_REQUIRED')
         self.tor_pool_refresh_time = time.monotonic()
+        settings.add_setting_changed_hook(
+            'tor_port',
+            lambda old_val, new_val: self.refresh_tor_connection_pool(),
+        )
 
         self.new_identity_lock = gevent.lock.BoundedSemaphore(1)
         self.last_new_identity_time = time.monotonic() - 20
