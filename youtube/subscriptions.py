@@ -430,11 +430,13 @@ def _get_atoma_feed(channel_id):
         # 404 is expected for terminated channels
         if e.code in ('404', '429'):
             return ''
+        if e.code == '502':
+            return str(e)
         raise
 
-def _get_channel_tab(channel_id, channel_status_name):
+def _get_channel_videos_first_page(channel_id, channel_status_name):
     try:
-        return channel.get_channel_tab(channel_id, print_status=False)
+        return channel.get_channel_first_page(channel_id=channel_id)
     except util.FetchError as e:
         if e.code == '429' and settings.route_tor:
             error_message = ('Error checking channel ' + channel_status_name
@@ -444,6 +446,9 @@ def _get_channel_tab(channel_id, channel_status_name):
             if e.ip:
                 error_message += ' Exit node IP address: ' + e.ip
             print(error_message)
+            return None
+        elif e.code == '502':
+            print('Error checking channel', channel_status_name + ':', str(e))
             return None
         raise
 
@@ -457,7 +462,8 @@ def _get_upstream_videos(channel_id):
 
     tasks = (
         # channel page, need for video duration
-        gevent.spawn(channel.get_channel_first_page, channel_id=channel_id),
+        gevent.spawn(_get_channel_videos_first_page, channel_id,
+                     channel_status_name),
         # need atoma feed for exact published time
         gevent.spawn(_get_atoma_feed, channel_id)
     )
