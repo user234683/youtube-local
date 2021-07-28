@@ -33,3 +33,11 @@ const player = new Plyr(document.querySelector('video'), {
         global: false,
     },
 });
+
+// disable double click to fullscreen
+// https://github.com/sampotts/plyr/issues/1370#issuecomment-528966795
+player.eventListeners.forEach(function(eventListener) {
+    if(eventListener.type === 'dblclick') {
+        eventListener.element.removeEventListener(eventListener.type, eventListener.callback, eventListener.options);
+    }
+});
