@@ -116,7 +116,72 @@ _formats = {
     '397': {'vcodec': 'av01.0.05M.08'},
 }
 
-def _extract_metadata_row_info(video_renderer_info):
+
+def _extract_from_video_information_renderer(renderer_content):
+    subtitle = extract_str(renderer_content.get('expandedSubtitle'),
+                           default='')
+    info = {
+        'title': extract_str(renderer_content.get('title')),
+        'view_count': extract_int(subtitle),
+        'unlisted': False,
+        'live': 'watching' in subtitle,
+    }
+    for badge in renderer_content.get('badges', []):
+        if deep_get(badge, 'metadataBadgeRenderer', 'label') == 'Unlisted':
+            info['unlisted'] = True
+    return info
+
+def _extract_likes_dislikes(renderer_content):
+    info = {
+        'like_count': None,
+        'dislike_count': None,
+    }
+    for button in renderer_content.get('buttons', ()):
+        button_renderer = button.get('slimMetadataToggleButtonRenderer', {})
+
+        # all the digits can be found in the accessibility data
+        count = extract_int(deep_get(
+                    button_renderer,
+                    'button', 'toggleButtonRenderer', 'defaultText',
+                    'accessibility', 'accessibilityData', 'label'))
+
+        # this count doesn't have all the digits, it's like 53K for instance
+        dumb_count = extract_int(extract_str(deep_get(
+            button_renderer, 'button', 'toggleButtonRenderer', 'defaultText')))
+
+        # The accessibility text will be "No likes" or "No dislikes" or
+        # something like that, but dumb count will be 0
+        if dumb_count == 0:
+            count = 0
+
+        if 'isLike' in button_renderer:
+            info['like_count'] = count
+        elif 'isDislike' in button_renderer:
+            info['dislike_count'] = count
+    return info
+
+def _extract_from_owner_renderer(renderer_content):
+    return {
+        'author': extract_str(renderer_content.get('title')),
+        'author_id': deep_get(
+            renderer_content,
+            'navigationEndpoint', 'browseEndpoint', 'browseId'),
+    }
+
+def _extract_from_video_header_renderer(renderer_content):
+    return {
+        'title': extract_str(renderer_content.get('title')),
+        'time_published': extract_date(extract_str(
+            renderer_content.get('publishDate'))),
+    }
+
+def _extract_from_description_renderer(renderer_content):
+    return {
+        'description': extract_str(
+            renderer_content.get('descriptionBodyText'), recover_urls=True),
+    }
+
+def _extract_metadata_row_info(renderer_content):
     # extract category and music list
     info = {
         'category': None,
@@ -124,7 +189,7 @@ def _extract_metadata_row_info(video_renderer_info):
     }
 
     current_song = {}
-    for row in deep_get(video_renderer_info, 'metadataRowContainer', 'metadataRowContainerRenderer', 'rows', default=[]):
+    for row in deep_get(renderer_content, 'rows', default=[]):
         row_title = extract_str(deep_get(row, 'metadataRowRenderer', 'title'), default='')
         row_content = extract_str(deep_get(row, 'metadataRowRenderer', 'contents', 0))
         if row_title == 'Category':
@@ -146,18 +211,18 @@ def _extract_metadata_row_info(video_renderer_info):
 
     return info
 
+visible_extraction_dispatch = {
+    'slimVideoInformationRenderer': _extract_from_video_information_renderer,
+    'slimVideoActionBarRenderer': _extract_likes_dislikes,
+    'slimOwnerRenderer': _extract_from_owner_renderer,
+    'videoDescriptionHeaderRenderer': _extract_from_video_header_renderer,
+    'expandableVideoDescriptionRenderer': _extract_from_description_renderer,
+    'metadataRowContainerRenderer': _extract_metadata_row_info,
+}
+
 def _extract_watch_info_mobile(top_level):
+    '''Scrapes information from the visible page'''
     info = {}
-    microformat = deep_get(top_level, 'playerResponse', 'microformat', 'playerMicroformatRenderer', default={})
-
-    family_safe = microformat.get('isFamilySafe')
-    if family_safe is None:
-        info['age_restricted'] = None
-    else:
-        info['age_restricted'] = not family_safe
-    info['allowed_countries'] = microformat.get('availableCountries', [])
-    info['time_published'] = microformat.get('publishDate')
-
     response = top_level.get('response', {})
 
     # this renderer has the stuff visible on the page
@@ -190,47 +255,22 @@ def _extract_watch_info_mobile(top_level):
     else:
         info['playlist'] = None
 
-    # Holds the visible video info. It is inside singleColumnWatchNextResults
-    # but use our convenience function instead
-    items, _ = extract_items(response, item_types={'slimVideoMetadataRenderer'})
-    if items:
-        video_info = items[0]['slimVideoMetadataRenderer']
-    else:
-        print('Failed to extract video metadata')
-        video_info = {}
+    # use dispatch table to get information scattered in various renderers
+    items, _ = extract_items(
+        response,
+        item_types=visible_extraction_dispatch.keys(),
+        search_engagement_panels=True
+    )
+    found = set()
+    for renderer in items:
+        name, renderer_content = list(renderer.items())[0]
+        found.add(name)
+        info.update(visible_extraction_dispatch[name](renderer_content))
+    # Call the function on blank dict for any that weren't found
+    # so that the empty keys get added
+    for name in visible_extraction_dispatch.keys() - found:
+        info.update(visible_extraction_dispatch[name]({}))
 
-    info.update(_extract_metadata_row_info(video_info))
-    info['description'] = extract_str(video_info.get('description'), recover_urls=True)
-    info['view_count'] = extract_int(extract_str(video_info.get('expandedSubtitle')))
-    info['author'] = extract_str(deep_get(video_info, 'owner', 'slimOwnerRenderer', 'title'))
-    info['author_id'] = deep_get(video_info, 'owner', 'slimOwnerRenderer', 'navigationEndpoint', 'browseEndpoint', 'browseId')
-    info['title'] = extract_str(video_info.get('title'))
-    info['live'] = 'watching' in extract_str(video_info.get('expandedSubtitle'), default='')
-    info['unlisted'] = False
-    for badge in video_info.get('badges', []):
-        if deep_get(badge, 'metadataBadgeRenderer', 'label') == 'Unlisted':
-            info['unlisted'] = True
-    info['like_count'] = None
-    info['dislike_count'] = None
-    if not info['time_published']:
-        info['time_published'] = extract_date(extract_str(video_info.get('dateText', None)))
-    for button in video_info.get('buttons', ()):
-        button_renderer = button.get('slimMetadataToggleButtonRenderer', {})
-
-        # all the digits can be found in the accessibility data
-        count = extract_int(deep_get(button_renderer, 'button', 'toggleButtonRenderer', 'defaultText', 'accessibility', 'accessibilityData', 'label'))
-
-        # this count doesn't have all the digits, it's like 53K for instance
-        dumb_count = extract_int(extract_str(deep_get(button_renderer, 'button', 'toggleButtonRenderer', 'defaultText')))
-
-        # the accessibility text will be "No likes" or "No dislikes" or something like that, but dumb count will be 0
-        if dumb_count == 0:
-            count = 0
-
-        if 'isLike' in button_renderer:
-            info['like_count'] = count
-        elif 'isDislike' in button_renderer:
-            info['dislike_count'] = count
 
     # comment section info
     items, _ = extract_items(response, item_types={
@@ -274,7 +314,6 @@ def _extract_watch_info_desktop(top_level):
     info = {
         'comment_count': None,
         'comments_disabled': None,
-        'allowed_countries': [],
         'limited_state': None,
         'playlist': None,
     }
@@ -564,6 +603,12 @@ def extract_watch_info(polymer_json):
     liberal_update(info, 'category', mf.get('category'))
     liberal_update(info, 'time_published', mf.get('publishDate'))
     liberal_update(info, 'time_uploaded', mf.get('uploadDate'))
+    family_safe = mf.get('isFamilySafe')
+    if family_safe is None:
+        conservative_update(info, 'age_restricted', None)
+    else:
+        conservative_update(info, 'age_restricted', not family_safe)
+    info['allowed_countries'] = mf.get('availableCountries', [])
 
     # other stuff
     info['author_url'] = 'https://www.youtube.com/channel/' + info['author_id'] if info['author_id'] else None

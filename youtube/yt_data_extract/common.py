@@ -403,6 +403,7 @@ nested_renderer_dispatch = {
     'twoColumnBrowseResultsRenderer': _traverse_browse_renderer,
     'twoColumnSearchResultsRenderer': lambda r: get(r, 'primaryContents', {}),
     'richItemRenderer': lambda r: get(r, 'content', {}),
+    'engagementPanelSectionListRenderer': lambda r: get(r, 'content', {}),
 }
 
 # these renderers contain a list of renderers inside them
@@ -412,6 +413,8 @@ nested_renderer_list_dispatch = {
     'gridRenderer': _traverse_standard_list,
     'richGridRenderer': _traverse_standard_list,
     'playlistVideoListRenderer': _traverse_standard_list,
+    'structuredDescriptionContentRenderer': _traverse_standard_list,
+    'slimVideoMetadataSectionRenderer': _traverse_standard_list,
     'singleColumnWatchNextResults': lambda r: (deep_get(r, 'results', 'results', 'contents', default=[]), None),
 }
 def get_nested_renderer_list_function(key):
@@ -475,8 +478,11 @@ def extract_items_from_renderer(renderer, item_types=_item_types):
 
         renderer = None
 
-def extract_items(response, item_types=_item_types):
+def extract_items(response, item_types=_item_types,
+                  search_engagement_panels=False):
     '''return items, ctoken'''
+    items = []
+    ctoken = None
     if 'continuationContents' in response:
         # sometimes there's another, empty, junk [something]Continuation key
         # find real one
@@ -484,13 +490,23 @@ def extract_items(response, item_types=_item_types):
                 'continuationContents', {}).items():
             # e.g. commentSectionContinuation, playlistVideoListContinuation
             if key.endswith('Continuation'):
-                items, cont = extract_items_from_renderer({key: renderer_cont},
+                items, ctoken = extract_items_from_renderer(
+                    {key: renderer_cont},
                     item_types=item_types)
                 if items:
-                    return items, cont
-        return [], None
+                    break
     elif 'contents' in response:
         renderer = get(response, 'contents', {})
-        return extract_items_from_renderer(renderer, item_types=item_types)
-    else:
-        return [], None
+        items, ctoken = extract_items_from_renderer(
+            renderer,
+            item_types=item_types)
+
+    if search_engagement_panels and 'engagementPanels' in response:
+        for engagement_renderer in response['engagementPanels']:
+            additional_items, cont = extract_items_from_renderer(
+                engagement_renderer,
+                item_types=item_types)
+            items += additional_items
+            if cont and not ctoken:
+                ctoken = cont
+    return items, ctoken
