@@ -706,15 +706,10 @@ def get_caption_url(info, language, format, automatic=False, translation_languag
         url += '&tlang=' + translation_language
     return url
 
-def update_with_age_restricted_info(info, video_info_page):
-    '''Inserts urls from 'player_response' in get_video_info page'''
+def update_with_age_restricted_info(info, player_response):
+    '''Inserts urls from player_response json'''
     ERROR_PREFIX = 'Error getting missing player or bypassing age-restriction: '
 
-    video_info = urllib.parse.parse_qs(video_info_page)
-    player_response = deep_get(video_info, 'player_response', 0)
-    if player_response is None:
-        info['playability_error'] = ERROR_PREFIX + 'Could not find player_response in video_info_page'
-        return
     try:
         player_response = json.loads(player_response)
     except json.decoder.JSONDecodeError:

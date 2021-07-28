@@ -232,33 +232,41 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     # see https://github.com/user234683/youtube-local/issues/22#issuecomment-706395160
     if info['age_restricted'] or info['player_urls_missing']:
         if info['age_restricted']:
-            print('Age restricted video. Fetching get_video_info page')
+            print('Age restricted video. Fetching /youtubei/v1/player page')
         else:
-            print('Missing player. Fetching get_video_info page')
+            print('Missing player. Fetching /youtubei/v1/player page')
+
+        # https://github.com/yt-dlp/yt-dlp/issues/574#issuecomment-887171136
+        # ANDROID is used instead because its urls don't require decryption
+        # The URLs returned with WEB for videos requiring decryption
+        # couldn't be decrypted with the base.js from the web page for some
+        # reason
+        url ='https://youtubei.googleapis.com/youtubei/v1/player'
+        url += '?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
         data = {
-            'video_id': video_id,
-            'eurl': 'https://youtube.googleapis.com/v/' + video_id,
-            'html5': '1',
-            # See https://github.com/ytdl-org/youtube-dl/issues/29333#issuecomment-864049544
-            'c': 'TVHTML5',
-            'cver': '6.20180913',
-            'hl': 'en',
+            'videoId': video_id,
+            'context': {
+                'client': {
+                    'clientName': 'ANDROID',
+                    'clientVersion': '16.20',
+                    'clientScreen': 'EMBED',
+                    'gl': 'US',
+                    'hl': 'en',
+                },
+                # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
+                'thirdParty': {
+                    'embedUrl': 'https://google.com',  # Can be any valid URL
+                }
+            }
         }
-        url = 'https://www.youtube.com/get_video_info?'
-        url += urllib.parse.urlencode(data)
-        try:
-            video_info_page = util.fetch_url(
-                url, headers=util.mobile_ua, debug_name='get_video_info',
-                report_text='Fetched get_video_info page').decode('utf-8')
-        except util.FetchError as e:
-            if e.code == '404':
-                _add_to_error(info, 'playability_error',
-                              '\n\nget_video_info not available (404).')
-            else:
-                raise
-        else:
-            yt_data_extract.update_with_age_restricted_info(info,
-                                                            video_info_page)
+        data = json.dumps(data)
+        content_header = (('Content-Type', 'application/json'),)
+        player_response = util.fetch_url(
+            url, data=data, headers=util.mobile_ua + content_header,
+            debug_name='youtubei_player',
+            report_text='Fetched youtubei player page').decode('utf-8')
+        yt_data_extract.update_with_age_restricted_info(info,
+                                                            player_response)
 
     # signature decryption
     decryption_error = decrypt_signatures(info, video_id)
