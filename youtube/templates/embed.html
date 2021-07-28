@@ -66,20 +66,6 @@
                 width: 100%;
                 height: 56.25vw; /* 360/640 == 720/1280 */
             }
-                /* Avoid visual jumps and flashes as plyr loads */
-                .plyr audio, .plyr iframe, .plyr video{
-                    width: 100% !important;
-                    height: 100% !important;
-                }
-                .plyr__video-wrapper{
-                    height: 100% !important;
-                    width: 100% !important;
-                }
-                /* Prevent this div from blocking right-click menu for video
-                e.g. Firefox playback speed options */
-                .plyr__poster{
-                    display: none !important;
-                }
         </style>
 
         {% if js_data %}
@@ -89,6 +75,7 @@
         {% if settings.video_player == 1 %}
             <!-- plyr -->
             <link href="/youtube.com/static/modules/plyr/plyr.css" rel="stylesheet"/>
+            <link href="/youtube.com/static/plyr_fixes.css" rel="stylesheet"/>
             <!--/ plyr -->
         {% endif %}
     </head>

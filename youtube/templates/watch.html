@@ -85,16 +85,6 @@
                     height: 0px;
                 }
             }
-                /* Avoid visual jumps and flashes as plyr loads */
-                .plyr audio, .plyr iframe, .plyr video{
-                    width: 100% !important;
-                    height: 100% !important;
-                }
-                .plyr__video-wrapper{
-                    height: 100% !important;
-                    width: 100% !important;
-                }
-
                 video{
                     background-color: var(--video-background-color);
                 }
@@ -125,11 +115,6 @@
         }
     {% endif %}
 
-    /* Prevent this div from blocking right-click menu for video
-    e.g. Firefox playback speed options */
-    .plyr__poster{
-        display: none !important;
-    }
 
 
     main{
@@ -450,6 +435,7 @@
     {% if settings.video_player == 1 %}
         <!-- plyr -->
         <link href="/youtube.com/static/modules/plyr/plyr.css" rel="stylesheet"/>
+        <link href="/youtube.com/static/plyr_fixes.css" rel="stylesheet"/>
         <!--/ plyr -->
     {% endif %}
 {% endblock head %}

@@ -1,0 +1,30 @@
+body{
+	--plyr-video-controls-background: rgba(0,0,0,0.8);
+}
+
+/* make buffered progress more visible */
+.plyr--video .plyr__progress__buffer{
+    color: rgba(255,255,255,0.75) !important;
+}
+
+/* Avoid visual jumps and flashes as plyr loads */
+.plyr audio, .plyr iframe, .plyr video{
+    width: 100% !important;
+    height: 100% !important;
+}
+.plyr__video-wrapper{
+    height: 100% !important;
+    width: 100% !important;
+}
+
+/* Prevent this div from blocking right-click menu for video
+e.g. Firefox playback speed options */
+.plyr__poster{
+    display: none !important;
+}
+
+/* Get rid of obnoxiously high padding on controls bar */
+.plyr__controls{
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+}
