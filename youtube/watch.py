@@ -32,7 +32,8 @@ def get_video_sources(info, tor_bypass=False):
     for fmt in info['formats']:
         if not all(fmt[attr] for attr in ('quality', 'width', 'ext', 'url')):
             continue
-        if fmt['acodec'] and fmt['vcodec'] and fmt['height'] <= max_resolution:
+        if (fmt['acodec'] and fmt['vcodec']
+                and fmt['quality'] <= max_resolution):
             video_sources.append({
                 'src': fmt['url'],
                 'type': 'video/' + fmt['ext'],
