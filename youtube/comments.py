@@ -134,7 +134,10 @@ def post_process_comments_info(comments_info):
         comments_info['more_comments_url'] = concat_or_none(util.URL_ORIGIN,
             '/comments?ctoken=', ctoken, replies_param)
 
-    comments_info['page_number'] = page_number = str(int(comments_info['offset']/20) + 1)
+    if comments_info['offset'] is None:
+        comments_info['page_number'] = None
+    else:
+        comments_info['page_number'] = int(comments_info['offset']/20) + 1
 
     if not comments_info['is_replies']:
         comments_info['sort_text'] = 'top' if comments_info['sort'] == 0 else 'newest'
@@ -204,7 +207,15 @@ def get_comments_page():
     post_process_comments_info(comments_info)
 
     if not replies:
-        other_sort_url = util.URL_ORIGIN + '/comments?ctoken=' + make_comment_ctoken(comments_info['video_id'], sort=1 - comments_info['sort'])
+        if comments_info['sort'] is None or comments_info['video_id'] is None:
+            other_sort_url = None
+        else:
+            other_sort_url = (
+                util.URL_ORIGIN
+                + '/comments?ctoken='
+                + make_comment_ctoken(comments_info['video_id'],
+                                      sort=1-comments_info['sort'])
+            )
         other_sort_text = 'Sort by ' + ('newest' if comments_info['sort'] == 0 else 'top')
         comments_info['comment_links'] = [(other_sort_text, other_sort_url)]
 

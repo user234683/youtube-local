@@ -1,4 +1,4 @@
-{% set page_title = ('Replies' if comments_info['is_replies'] else 'Comments page ' + comments_info['page_number']) %}
+{% set page_title = ('Replies' if comments_info['is_replies'] else 'Comments page ' + comments_info['page_number']|string) %}
 {% import "comments.html" as comments with context %}
 
 {% if not slim %}
