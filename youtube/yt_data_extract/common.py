@@ -478,6 +478,22 @@ def extract_items_from_renderer(renderer, item_types=_item_types):
 
         renderer = None
 
+
+def extract_items_from_renderer_list(renderers, item_types=_item_types):
+    '''Same as extract_items_from_renderer, but provide a list of renderers'''
+    items = []
+    ctoken = None
+    for renderer in renderers:
+        new_items, new_ctoken = extract_items_from_renderer(
+            renderer,
+            item_types=item_types)
+        items += new_items
+        # prioritize ctoken associated with items
+        if (not ctoken) or (new_ctoken and new_items):
+            ctoken = new_ctoken
+    return items, ctoken
+
+
 def extract_items(response, item_types=_item_types,
                   search_engagement_panels=False):
     '''return items, ctoken'''
@@ -495,6 +511,15 @@ def extract_items(response, item_types=_item_types,
                     item_types=item_types)
                 if items:
                     break
+    elif 'onResponseReceivedEndpoints' in response:
+        for endpoint in response.get('onResponseReceivedEndpoints', []):
+            items, ctoken = extract_items_from_renderer_list(
+                deep_get(endpoint, 'appendContinuationItemsAction',
+                         'continuationItems', default=[]),
+                item_types=item_types,
+            )
+            if items:
+                break
     elif 'contents' in response:
         renderer = get(response, 'contents', {})
         items, ctoken = extract_items_from_renderer(
@@ -502,11 +527,11 @@ def extract_items(response, item_types=_item_types,
             item_types=item_types)
 
     if search_engagement_panels and 'engagementPanels' in response:
-        for engagement_renderer in response['engagementPanels']:
-            additional_items, cont = extract_items_from_renderer(
-                engagement_renderer,
-                item_types=item_types)
-            items += additional_items
-            if cont and not ctoken:
-                ctoken = cont
+        new_items, new_ctoken = extract_items_from_renderer_list(
+            response['engagementPanels'], item_types=item_types
+        )
+        items += new_items
+        if (not ctoken) or (new_ctoken and new_items):
+            ctoken = new_ctoken
+
     return items, ctoken

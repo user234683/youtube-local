@@ -43,23 +43,23 @@ def make_comment_ctoken(video_id, sort=0, offset=0, lc='', secret_key=''):
     return base64.urlsafe_b64encode(result).decode('ascii')
 
 
-mobile_headers = {
-    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1',
-    'Accept': '*/*',
-    'Accept-Language': 'en-US,en;q=0.5',
-    'X-YouTube-Client-Name': '2',
-    'X-YouTube-Client-Version': '2.20180823',
-}
 def request_comments(ctoken, replies=False):
-    base_url = 'https://m.youtube.com/watch_comment?'
-    if replies:
-        base_url += 'action_get_comment_replies=1&ctoken='
-    else:
-        base_url += 'action_get_comments=1&ctoken='
-    url = base_url + ctoken.replace("=", "%3D") + "&pbj=1"
+    url = 'https://m.youtube.com/youtubei/v1/next'
+    url += '?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
+    data = json.dumps({
+        'context': {
+            'client': {
+                'hl': 'en',
+                'gl': 'US',
+                'clientName': 'MWEB',
+                'clientVersion': '2.20210804.02.00',
+            },
+        },
+        'continuation': ctoken.replace('=', '%3D'),
+    })
 
     content = util.fetch_url(
-        url, headers=mobile_headers,
+        url, headers=util.mobile_xhr_headers + util.json_header, data=data,
         report_text='Retrieved comments', debug_name='request_comments')
     content = content.decode('utf-8')
 
@@ -168,10 +168,9 @@ def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
                 ('Direct link', this_sort_url)
             ]
 
+            ctoken = make_comment_ctoken(video_id, sort, offset, lc)
             comments_info.update(yt_data_extract.extract_comments_info(
-                request_comments(
-                    make_comment_ctoken(video_id, sort, offset, lc, secret_key)
-                )
+                request_comments(ctoken), ctoken=ctoken
             ))
             post_process_comments_info(comments_info)
 
@@ -203,7 +202,9 @@ def get_comments_page():
     ctoken = request.args.get('ctoken', '')
     replies = request.args.get('replies', '0') == '1'
 
-    comments_info = yt_data_extract.extract_comments_info(request_comments(ctoken, replies))
+    comments_info = yt_data_extract.extract_comments_info(
+        request_comments(ctoken, replies), ctoken=ctoken
+    )
     post_process_comments_info(comments_info)
 
     if not replies:

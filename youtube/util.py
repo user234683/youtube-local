@@ -379,6 +379,19 @@ mobile_user_agent = 'Mozilla/5.0 (Linux; Android 7.0; Redmi Note 4 Build/NRD90M)
 mobile_ua = (('User-Agent', mobile_user_agent),)
 desktop_user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0'
 desktop_ua = (('User-Agent', desktop_user_agent),)
+json_header = (('Content-Type', 'application/json'),)
+desktop_xhr_headers = (
+    ('Accept', '*/*'),
+    ('Accept-Language', 'en-US,en;q=0.5'),
+    ('X-YouTube-Client-Name', '1'),
+    ('X-YouTube-Client-Version', '2.20180830'),
+) + desktop_ua
+mobile_xhr_headers = (
+    ('Accept', '*/*'),
+    ('Accept-Language', 'en-US,en;q=0.5'),
+    ('X-YouTube-Client-Name', '2'),
+    ('X-YouTube-Client-Version', '2.20180830'),
+) + mobile_ua
 
 
 

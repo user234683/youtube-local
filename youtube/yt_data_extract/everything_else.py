@@ -222,15 +222,13 @@ def _ctoken_metadata(ctoken):
             result['sort'] = 0
     return result
 
-def extract_comments_info(polymer_json):
+def extract_comments_info(polymer_json, ctoken=None):
     response, err = extract_response(polymer_json)
     if err:
         return {'error': err}
     info = {'error': None}
 
-    url = multi_deep_get(polymer_json, [1, 'url'], ['url'])
-    if url:
-        ctoken = urllib.parse.parse_qs(url[url.find('?')+1:])['ctoken'][0]
+    if ctoken:
         metadata = _ctoken_metadata(ctoken)
     else:
         metadata = {}
