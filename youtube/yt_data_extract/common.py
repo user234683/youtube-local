@@ -1,6 +1,7 @@
 import re
 import urllib.parse
 import collections
+import collections.abc
 
 def get(object, key, default=None, types=()):
     '''Like dict.get(), but returns default if the result doesn't match one of the types.
@@ -62,16 +63,39 @@ def multi_deep_get(object, *key_sequences, default=None, types=()):
                 continue
     return default
 
+
+def _is_empty(value):
+    '''Determines if value is None or an empty iterable, such as '' and []'''
+    if value is None:
+        return True
+    elif isinstance(value, collections.abc.Iterable) and not value:
+        return True
+    return False
+
+
 def liberal_update(obj, key, value):
-    '''Updates obj[key] with value as long as value is not None.
-    Ensures obj[key] will at least get a value of None, however'''
-    if (value is not None) or (key not in obj):
+    '''Updates obj[key] with value as long as value is not None or empty.
+    Ensures obj[key] will at least get an empty value, however'''
+    if (not _is_empty(value)) or (key not in obj):
         obj[key] = value
 
 def conservative_update(obj, key, value):
-    '''Only updates obj if it doesn't have key or obj[key] is None'''
-    if obj.get(key) is None:
+    '''Only updates obj if it doesn't have key or obj[key] is None/empty'''
+    if _is_empty(obj.get(key)):
         obj[key] = value
+
+
+def liberal_dict_update(dict1, dict2):
+    '''Update dict1 with keys from dict2 using liberal_update'''
+    for key, value in dict2.items():
+        liberal_update(dict1, key, value)
+
+
+def conservative_dict_update(dict1, dict2):
+    '''Update dict1 with keys from dict2 using conservative_update'''
+    for key, value in dict2.items():
+        conservative_update(dict1, key, value)
+
 
 def concat_or_none(*strings):
     '''Concatenates strings. Returns None if any of the arguments are None'''

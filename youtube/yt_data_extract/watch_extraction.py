@@ -2,7 +2,8 @@ from .common import (get, multi_get, deep_get, multi_deep_get,
     liberal_update, conservative_update, remove_redirect, normalize_url,
     extract_str, extract_formatted_text, extract_int, extract_approx_int,
     extract_date, check_missing_keys, extract_item_info, extract_items,
-    extract_response, concat_or_none)
+    extract_response, concat_or_none, liberal_dict_update,
+    conservative_dict_update)
 
 import json
 import urllib.parse
@@ -211,13 +212,33 @@ def _extract_metadata_row_info(renderer_content):
 
     return info
 
+def _extract_from_video_metadata(renderer_content):
+    info = _extract_from_video_information_renderer(renderer_content)
+    liberal_dict_update(info, _extract_likes_dislikes(renderer_content))
+    liberal_dict_update(info, _extract_from_owner_renderer(renderer_content))
+    liberal_dict_update(info, _extract_metadata_row_info(deep_get(
+        renderer_content, 'metadataRowContainer',
+        'metadataRowContainerRenderer', default={}
+    )))
+    liberal_update(info, 'title', extract_str(renderer_content.get('title')))
+    liberal_update(
+        info, 'description',
+        extract_str(renderer_content.get('description'), recover_urls=True)
+    )
+    liberal_update(info, 'time_published',
+                   extract_date(renderer_content.get('dateText')))
+    return info
+
 visible_extraction_dispatch = {
+    # Either these ones spread around in various places
     'slimVideoInformationRenderer': _extract_from_video_information_renderer,
     'slimVideoActionBarRenderer': _extract_likes_dislikes,
     'slimOwnerRenderer': _extract_from_owner_renderer,
     'videoDescriptionHeaderRenderer': _extract_from_video_header_renderer,
     'expandableVideoDescriptionRenderer': _extract_from_description_renderer,
     'metadataRowContainerRenderer': _extract_metadata_row_info,
+    # OR just this one, which contains SOME of the above inside it
+    'slimVideoMetadataRenderer': _extract_from_video_metadata,
 }
 
 def _extract_watch_info_mobile(top_level):
@@ -265,12 +286,14 @@ def _extract_watch_info_mobile(top_level):
     for renderer in items:
         name, renderer_content = list(renderer.items())[0]
         found.add(name)
-        info.update(visible_extraction_dispatch[name](renderer_content))
+        liberal_dict_update(
+            info,
+            visible_extraction_dispatch[name](renderer_content)
+        )
     # Call the function on blank dict for any that weren't found
     # so that the empty keys get added
     for name in visible_extraction_dispatch.keys() - found:
-        info.update(visible_extraction_dispatch[name]({}))
-
+        liberal_dict_update(info, visible_extraction_dispatch[name]({}))
 
     # comment section info
     items, _ = extract_items(response, item_types={
