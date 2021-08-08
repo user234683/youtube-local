@@ -17,6 +17,7 @@ const player = new Plyr(document.querySelector('video'), {
         'play',
         'progress',
         'current-time',
+        'duration',
         'mute',
         'volume',
         'captions',
