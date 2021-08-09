@@ -267,7 +267,11 @@ def extract_item_info(item, additional_info={}):
             ['ownerText', 'runs', 0, 'navigationEndpoint', 'browseEndpoint', 'browseId']
         ))
         info['author_url'] = ('https://www.youtube.com/channel/' + info['author_id']) if info['author_id'] else None
-    info['description'] = extract_formatted_text(multi_get(item, 'descriptionSnippet', 'descriptionText'))
+    info['description'] = extract_formatted_text(multi_deep_get(
+        item,
+        ['descriptionText'], ['descriptionSnippet'],
+        ['detailedMetadataSnippets', 0, 'snippetText'],
+    ))
     info['thumbnail'] = normalize_url(multi_deep_get(item,
         ['thumbnail', 'thumbnails', 0, 'url'],      # videos
         ['thumbnails', 0, 'thumbnails', 0, 'url'],  # playlists
