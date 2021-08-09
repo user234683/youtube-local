@@ -221,6 +221,10 @@ def post_process_channel_info(info):
     for item in info['items']:
         util.prefix_urls(item)
         util.add_extra_html_info(item)
+    if info['current_tab'] == 'about':
+        for i, (text, url) in enumerate(info['links']):
+            if util.YOUTUBE_URL_RE.fullmatch(url):
+                info['links'][i] = (text, util.prefix_url(url))
 
 
 def get_channel_first_page(base_url=None, channel_id=None):

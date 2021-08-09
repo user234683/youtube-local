@@ -1,6 +1,7 @@
 from youtube import util
 import flask
 from flask import request
+import jinja2
 import settings
 import traceback
 import re
@@ -96,3 +97,14 @@ def get_css():
         ),
         mimetype='text/css',
     )
+
+
+# This is okay because the flask urlize function puts the href as the first
+# property
+YOUTUBE_LINK_RE = re.compile(r'<a href="(' + util.YOUTUBE_URL_RE_STR + ')"')
+old_urlize = jinja2.filters.urlize
+def prefix_urlize(*args, **kwargs):
+    result = old_urlize(*args, **kwargs)
+    return YOUTUBE_LINK_RE.sub(r'<a href="/\1"', result)
+jinja2.filters.urlize = prefix_urlize
+

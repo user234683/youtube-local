@@ -515,6 +515,13 @@ def update_query_string(query_string, items):
     return urllib.parse.urlencode(parameters, doseq=True)
 
 
+YOUTUBE_DOMAINS = ('youtube.com', 'youtu.be', 'youtube-nocookie.com')
+YOUTUBE_URL_RE_STR = r'https?://(?:[a-zA-Z0-9_-]*\.)?(?:'
+YOUTUBE_URL_RE_STR += r'|'.join(map(re.escape, YOUTUBE_DOMAINS))
+YOUTUBE_URL_RE_STR += r')(?:/[^"]*)?'
+YOUTUBE_URL_RE = re.compile(YOUTUBE_URL_RE_STR)
+
+
 def prefix_url(url):
     if url is None:
         return None
