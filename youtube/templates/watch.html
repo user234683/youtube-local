@@ -3,6 +3,11 @@
 {% import "common_elements.html" as common_elements %}
 {% import "comments.html" as comments with context %}
 {% block style %}
+    body {
+        --theater_video_target_width: {{ theater_video_target_width }};
+        --video_height: {{ video_height }};
+        --video_width: {{ video_width }};
+    }
     details > summary{
         background-color: var(--interface-color);
         border-style: outset;
@@ -71,17 +76,17 @@
             grid-column: 1 / span 5;
             justify-self: center;
             max-width: 100%;
-            width: {{ theater_video_target_width }}px;
+            width: calc(var(--theater_video_target_width)*1px);
             margin-bottom: 10px;
             --plyr-video-background: rgba(0, 0, 0, 0);
         }
             #video-container-inner{
-                height: {{ video_height}}px;
+                height: calc(var(--video_height)*1px);
                 position: relative;
             }
             @media(max-width:{{ video_width }}px){
                 #video-container-inner{
-                    padding-top: calc(100%*{{video_height}}/{{video_width}});
+                    padding-top: calc(100%*var(--video_height)/var(--video_width));
                     height: 0px;
                 }
             }
@@ -480,6 +485,19 @@ Reload without invidious (for usage of new identity button).</a>
         </div>
         {% if pair_sources and (not uni_sources or pair_sources[pair_idx][0]['quality'] != uni_sources[uni_idx]['quality']) %}
             <script src="/youtube.com/static/js/av-merge.js"></script>
+            <script>
+                function setVideoDimensions(height, width){
+                    var body = document.querySelector('body');
+                    body.style.setProperty('--video_height', String(height));
+                    body.style.setProperty('--video_width', String(height));
+                    var theaterWidth = Math.max(640, data['video_duration'] || 0, width);
+                    body.style.setProperty('--theater_video_target_width', String(theaterWidth));
+                }
+                var videoSource = data['pair_sources'][data['pair_idx']][0];
+                // Do it dynamically rather than in jinja in case javascript
+                // is disabled
+                setVideoDimensions(videoSource.height, videoSource.width);
+            </script>
         {% endif %}
 
         {% if time_start != 0 %}
