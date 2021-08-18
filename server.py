@@ -87,6 +87,9 @@ def proxy_site(env, start_response, video=False):
         response_headers = response.getheaders()
         if isinstance(response_headers, urllib3._collections.HTTPHeaderDict):
             response_headers = response_headers.items()
+        if video:
+            response_headers = (list(response_headers)
+                                +[('Access-Control-Allow-Origin', '*')])
 
         if first_attempt:
             start_response(str(response.status) + ' ' + response.reason,
