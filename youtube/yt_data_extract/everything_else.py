@@ -256,9 +256,13 @@ def extract_comments_info(polymer_json, ctoken=None):
                 comment_info['reply_count'] = extract_int(deep_get(comment_thread,
                     'replies', 'commentRepliesRenderer', 'moreText'
                 ), default=1)   # With 1 reply, the text reads "View reply"
-                comment_info['reply_ctoken'] = deep_get(comment_thread,
-                    'replies', 'commentRepliesRenderer', 'continuations', 0,
-                    'nextContinuationData', 'continuation'
+                comment_info['reply_ctoken'] = multi_deep_get(
+                    comment_thread,
+                    ['replies', 'commentRepliesRenderer', 'contents', 0,
+                     'continuationItemRenderer', 'button', 'buttonRenderer',
+                     'command', 'continuationCommand', 'token'],
+                    ['replies', 'commentRepliesRenderer', 'continuations', 0,
+                     'nextContinuationData', 'continuation']
                 )
             comment_renderer = deep_get(comment_thread, 'comment', 'commentRenderer', default={})
         elif 'commentRenderer' in comment:  # replies
