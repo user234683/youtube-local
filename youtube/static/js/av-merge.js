@@ -21,48 +21,67 @@
 // TODO: Call abort to cancel in-progress appends?
 
 
-var video_source = data['pair_sources'][data['pair_idx']][0];
-var audio_source = data['pair_sources'][data['pair_idx']][1];
+var avMerge;
 
-var audioStream = null;
-var videoStream = null;
-var seeking = false;
+function avInitialize(...args){
+    avMerge = new AVMerge(...args);
+}
 
-var video = document.querySelector('video');
-var mediaSource = null;
-
-setup();
-
-
-function setup() {
+function AVMerge(video, srcPair, startTime){
+    this.videoSource = srcPair[0];
+    this.audioSource = srcPair[1];
+    this.videoStream = null;
+    this.audioStream = null;
+    this.seeking = false;
+    this.startTime = startTime;
+    this.video = video;
+    this.mediaSource = null;
+    this.setup();
+}
+AVMerge.prototype.setup = function() {
     if ('MediaSource' in window
-            && MediaSource.isTypeSupported(audio_source['mime_codec'])
-            && MediaSource.isTypeSupported(video_source['mime_codec'])) {
-        mediaSource = new MediaSource();
-        video.src = URL.createObjectURL(mediaSource);
-        mediaSource.addEventListener('sourceopen', sourceOpen);
+            && MediaSource.isTypeSupported(this.audioSource['mime_codec'])
+            && MediaSource.isTypeSupported(this.videoSource['mime_codec'])) {
+        this.mediaSource = new MediaSource();
+        this.video.src = URL.createObjectURL(this.mediaSource);
+        this.mediaSource.onsourceopen = this.sourceOpen.bind(this);
     } else {
         reportError('Unsupported MIME type or codec: ',
-                    audio_source['mime_codec'],
-                    video_source['mime_codec']);
+                    this.audioSource['mime_codec'],
+                    this.videoSource['mime_codec']);
     }
 }
 
+AVMerge.prototype.sourceOpen = function(_) {
+    this.videoStream = new Stream(this, this.videoSource, this.startTime);
+    this.audioStream = new Stream(this, this.audioSource, this.startTime);
 
-function sourceOpen(_) {
-    videoStream = new Stream(mediaSource, video_source);
-    audioStream = new Stream(mediaSource, audio_source);
+    this.videoStream.setup();
+    this.audioStream.setup();
 
-    videoStream.setup();
-    audioStream.setup();
-
-    video.addEventListener('timeupdate', checkBothBuffers);
-    video.addEventListener('seeking', debounce(seek, 500));
-    //video.addEventListener('seeked', function() {console.log('seeked')});
+    this.video.ontimeupdate = this.checkBothBuffers.bind(this);
+    this.video.onseeking = debounce(this.seek.bind(this), 500);
+    //this.video.onseeked = function() {console.log('seeked')};
+}
+AVMerge.prototype.checkBothBuffers = function() {
+    this.audioStream.checkBuffer();
+    this.videoStream.checkBuffer();
+}
+AVMerge.prototype.seek = function(e) {
+    if (this.mediaSource.readyState === 'open') {
+        this.seeking = true;
+        this.audioStream.handleSeek();
+        this.videoStream.handleSeek();
+        this.seeking = false;
+    } else {
+        this.reportWarning('seek but not open? readyState:',
+                           this.mediaSource.readyState);
+    }
 }
 
-
-function Stream(mediaSource, source) {
+function Stream(avMerge, source, startTime) {
+    this.avMerge = avMerge;
+    this.video = avMerge.video;
     this.url = source['url'];
     this.mimeCodec = source['mime_codec']
     this.streamType = source['acodec'] ? 'audio' : 'video';
@@ -70,11 +89,12 @@ function Stream(mediaSource, source) {
     this.initRange = source['init_range'];
     this.indexRange = source['index_range'];
 
-    this.mediaSource = mediaSource;
+    this.startTime = startTime;
+    this.mediaSource = avMerge.mediaSource;
     this.sidx = null;
     this.appendRetries = 0;
     this.appendQueue = []; // list of [segmentIdx, data]
-    this.sourceBuffer = mediaSource.addSourceBuffer(this.mimeCodec);
+    this.sourceBuffer = this.mediaSource.addSourceBuffer(this.mimeCodec);
     this.sourceBuffer.mode = 'segments';
     this.sourceBuffer.addEventListener('error', (e) => {
         this.reportError('sourceBuffer error', e);
@@ -124,7 +144,7 @@ Stream.prototype.setupSegments = async function(sidxBox){
     this.reportDebug('sidx', this.sidx);
 
     this.reportDebug('appending first segment');
-    this.fetchSegmentIfNeeded(0);
+    this.fetchSegmentIfNeeded(this.getSegmentIdx(this.startTime));
 }
 Stream.prototype.appendSegment = function(segmentIdx, chunk) {
     // cannot append right now, schedule for updateend
@@ -147,7 +167,7 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
         }
         // Delete 3 segments (arbitrary) from beginning of buffer, making sure
         // not to delete current one
-        var currentSegment = this.getSegmentIdx(video.currentTime);
+        var currentSegment = this.getSegmentIdx(this.video.currentTime);
         this.reportDebug('QuotaExceededError. Deleting segments.');
         var numDeleted = 0;
         var i = 0;
@@ -191,15 +211,15 @@ Stream.prototype.shouldFetchNextSegment = function(nextSegment) {
         return false;
     }
     var entry = this.sidx.entries[nextSegment - 1];
-    var currentTick = video.currentTime * this.sidx.timeScale;
+    var currentTick = this.video.currentTime * this.sidx.timeScale;
     return currentTick > (entry.tickStart + entry.subSegmentDuration*0.15);
 }
 Stream.prototype.checkBuffer = async function() {
     this.reportDebug('check Buffer');
-    if (seeking) {
+    if (this.avMerge.seeking) {
         return;
     }
-    var nextSegment = this.getSegmentIdx(video.currentTime) + 1;
+    var nextSegment = this.getSegmentIdx(this.video.currentTime) + 1;
 
     if (this.shouldFetchNextSegment(nextSegment)) {
         this.fetchSegmentIfNeeded(nextSegment);
@@ -242,7 +262,7 @@ Stream.prototype.fetchSegmentIfNeeded = function(segmentIdx) {
     );
 }
 Stream.prototype.handleSeek = async function() {
-    var segmentIdx = this.getSegmentIdx(video.currentTime);
+    var segmentIdx = this.getSegmentIdx(this.video.currentTime);
     this.fetchSegmentIfNeeded(segmentIdx);
 }
 Stream.prototype.reportDebug = function(...args) {
@@ -253,23 +273,6 @@ Stream.prototype.reportWarning = function(...args) {
 }
 Stream.prototype.reportError = function(...args) {
     reportError(String(this.streamType) + ':', ...args);
-}
-
-function checkBothBuffers() {
-    audioStream.checkBuffer();
-    videoStream.checkBuffer();
-}
-
-function seek(e) {
-    if (mediaSource.readyState === 'open') {
-        seeking = true;
-        audioStream.handleSeek();
-        videoStream.handleSeek();
-        seeking = false;
-    } else {
-        this.reportWarning('seek but not open? readyState:',
-                           mediaSource.readyState);
-    }
 }
 
 
