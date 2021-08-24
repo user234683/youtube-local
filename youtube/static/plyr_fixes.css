@@ -28,3 +28,11 @@ e.g. Firefox playback speed options */
     padding-top: 4px !important;
     padding-bottom: 4px !important;
 }
+
+.plyr__captions{
+    pointer-events: none;
+}
+
+button[data-plyr="play"]{
+    pointer-events: none;
+}
