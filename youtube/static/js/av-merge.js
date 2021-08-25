@@ -37,6 +37,7 @@ function AVMerge(video, srcPair, startTime){
     this.startTime = startTime;
     this.video = video;
     this.mediaSource = null;
+    this.closed = false;
     this.setup();
 }
 AVMerge.prototype.setup = function() {
@@ -67,6 +68,9 @@ AVMerge.prototype.sourceOpen = function(_) {
     //this.video.onseeked = function() {console.log('seeked')};
 }
 AVMerge.prototype.close = function() {
+    if (this.closed)
+        return;
+    this.closed = true;
     this.videoStream.close();
     this.audioStream.close();
     this.timeUpdateEvt.remove();
