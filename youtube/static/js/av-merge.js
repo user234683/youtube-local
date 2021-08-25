@@ -17,7 +17,6 @@
 // SourceBuffer data limits:
 // https://developers.google.com/web/updates/2017/10/quotaexceedederror
 
-// TODO: AVMerge.close()
 // TODO: close stream at end?
 // TODO: Better buffering algorithm
 // TODO: Call abort to cancel in-progress appends?
@@ -61,9 +60,18 @@ AVMerge.prototype.sourceOpen = function(_) {
     this.videoStream.setup();
     this.audioStream.setup();
 
-    this.video.ontimeupdate = this.checkBothBuffers.bind(this);
-    this.video.onseeking = debounce(this.seek.bind(this), 500);
+    this.timeUpdateEvt = addEvent(this.video, 'timeupdate',
+                                  this.checkBothBuffers.bind(this));
+    this.seekingEvt = addEvent(this.video, 'seeking',
+                               debounce(this.seek.bind(this), 500));
     //this.video.onseeked = function() {console.log('seeked')};
+}
+AVMerge.prototype.close = function() {
+    this.videoStream.close();
+    this.audioStream.close();
+    this.timeUpdateEvt.remove();
+    this.seekingEvt.remove();
+    this.mediaSource.endOfStream();
 }
 AVMerge.prototype.checkBothBuffers = function() {
     this.audioStream.checkBuffer();
@@ -85,6 +93,7 @@ function Stream(avMerge, source, startTime) {
     this.avMerge = avMerge;
     this.video = avMerge.video;
     this.url = source['url'];
+    this.closed = false;
     this.mimeCodec = source['mime_codec']
     this.streamType = source['acodec'] ? 'audio' : 'video';
     if (this.streamType == 'audio') {
@@ -106,8 +115,7 @@ function Stream(avMerge, source, startTime) {
     this.sourceBuffer.addEventListener('error', (e) => {
         this.reportError('sourceBuffer error', e);
     });
-    this.sourceBuffer.addEventListener('updateend', (e) => {
-        this.reportDebug('updateend', e);
+    this.updateendEvt = addEvent(this.sourceBuffer, 'updateend', (e) => {
         if (this.appendQueue.length != 0) {
             this.appendSegment(...this.appendQueue.pop());
         }
@@ -148,12 +156,20 @@ Stream.prototype.setup = async function(){
 Stream.prototype.setupSegments = async function(sidxBox){
     var box = unbox(sidxBox);
     this.sidx = sidx_parse(box.data, this.indexRange.end+1);
-    this.reportDebug('sidx', this.sidx);
-
-    this.reportDebug('appending first segment');
     this.fetchSegmentIfNeeded(this.getSegmentIdx(this.startTime));
 }
+Stream.prototype.close = function() {
+    // Prevents appendSegment adding to buffer if request finishes
+    // after closing
+    this.closed = true;
+    this.sourceBuffer.abort();
+    this.updateendEvt.remove();
+    this.mediaSource.removeSourceBuffer(this.sourceBuffer);
+}
 Stream.prototype.appendSegment = function(segmentIdx, chunk) {
+    if (this.closed)
+        return;
+
     // cannot append right now, schedule for updateend
     if (this.sourceBuffer.updating) {
         this.reportDebug('sourceBuffer updating, queueing for later');
@@ -306,6 +322,7 @@ Stream.prototype.reportError = function(...args) {
 
 
 // Utility functions
+
 function fetchRange(url, start, end, cb) {
     reportDebug('fetchRange', start, end);
     return new Promise((resolve, reject) => {
@@ -340,6 +357,20 @@ function debounce(func, wait, immediate) {
 
 function clamp(number, min, max) {
   return Math.max(min, Math.min(number, max));
+}
+
+// allow to remove an event listener without having a function reference
+function RegisteredEvent(obj, eventName, func) {
+    this.obj = obj;
+    this.eventName = eventName;
+    this.func = func;
+    obj.addEventListener(eventName, func);
+}
+RegisteredEvent.prototype.remove = function() {
+    this.obj.removeEventListener(this.eventName, this.func);
+}
+function addEvent(obj, eventName, func) {
+    return new RegisteredEvent(obj, eventName, func);
 }
 
 function reportWarning(...args){
