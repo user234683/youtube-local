@@ -228,15 +228,6 @@ Stream.prototype.getSegmentIdx = function(videoTime) {
     this.reportError('Could not find segment index for time', videoTime);
     return 0;
 }
-Stream.prototype.shouldFetchNextSegment = function(nextSegment) {
-    // > 15% done with current segment
-    if (nextSegment >= this.sidx.entries.length){
-        return false;
-    }
-    var entry = this.sidx.entries[nextSegment - 1];
-    var currentTick = this.video.currentTime * this.sidx.timeScale;
-    return currentTick > (entry.tickStart + entry.subSegmentDuration*0.15);
-}
 Stream.prototype.checkBuffer = async function() {
     if (this.avMerge.seeking) {
         return;
