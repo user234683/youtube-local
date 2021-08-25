@@ -53,6 +53,7 @@ def get_video_sources(info, tor_bypass=False):
                 'type': 'video/' + fmt['ext'],
                 'quality_string': short_video_quality_string(fmt),
             }
+            source['quality_string'] += ' (integrated)'
             source.update(fmt)
             uni_sources.append(source)
             continue
@@ -658,6 +659,7 @@ def get_watch_page(video_id=None):
             'settings': settings.current_settings_dict,
             'has_manual_captions': any(s.get('on') for s in subtitle_sources),
             **source_info,
+            'using_pair_sources': using_pair_sources,
         },
         font_family = youtube.font_choices[settings.font], # for embed page
         **source_info,
