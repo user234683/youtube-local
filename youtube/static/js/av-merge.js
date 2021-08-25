@@ -17,6 +17,8 @@
 // SourceBuffer data limits:
 // https://developers.google.com/web/updates/2017/10/quotaexceedederror
 
+// TODO: AVMerge.close()
+// TODO: close stream at end?
 // TODO: Better buffering algorithm
 // TODO: Call abort to cancel in-progress appends?
 
@@ -85,6 +87,11 @@ function Stream(avMerge, source, startTime) {
     this.url = source['url'];
     this.mimeCodec = source['mime_codec']
     this.streamType = source['acodec'] ? 'audio' : 'video';
+    if (this.streamType == 'audio') {
+        this.bufferTarget = 5*10**6; // 5 megabytes
+    } else {
+        this.bufferTarget = 50*10**6; // 50 megabytes
+    }
 
     this.initRange = source['init_range'];
     this.indexRange = source['index_range'];
@@ -215,14 +222,32 @@ Stream.prototype.shouldFetchNextSegment = function(nextSegment) {
     return currentTick > (entry.tickStart + entry.subSegmentDuration*0.15);
 }
 Stream.prototype.checkBuffer = async function() {
-    this.reportDebug('check Buffer');
     if (this.avMerge.seeking) {
         return;
     }
-    var nextSegment = this.getSegmentIdx(this.video.currentTime) + 1;
+    // Find the first unbuffered segment, i
+    var currentSegmentIdx = this.getSegmentIdx(this.video.currentTime);
+    var bufferedBytesAhead = 0;
+    var i;
+    for (i = currentSegmentIdx; i < this.sidx.entries.length; i++) {
+        var entry = this.sidx.entries[i];
+        // check if we had it before, but it was deleted by the browser
+        if (entry.have && !this.segmentInBuffer(i)) {
+            this.reportDebug('segment', i, 'deleted by browser');
+            entry.have = false;
+            entry.requested = false;
+        }
+        if (!entry.have) {
+            break;
+        }
+        bufferedBytesAhead += entry.referencedSize;
+        if (bufferedBytesAhead > this.bufferTarget) {
+            return;
+        }
+    }
 
-    if (this.shouldFetchNextSegment(nextSegment)) {
-        this.fetchSegmentIfNeeded(nextSegment);
+    if (i < this.sidx.entries.length && !this.sidx.entries[i].requested) {
+        this.fetchSegment(i);
     }
 }
 Stream.prototype.segmentInBuffer = function(segmentIdx) {
@@ -238,7 +263,20 @@ Stream.prototype.segmentInBuffer = function(segmentIdx) {
     }
     return false;
 }
+Stream.prototype.fetchSegment = function(segmentIdx) {
+    entry = this.sidx.entries[segmentIdx];
+    entry.requested = true;
+    fetchRange(
+        this.url,
+        entry.start,
+        entry.end,
+        this.appendSegment.bind(this, segmentIdx),
+    );
+}
 Stream.prototype.fetchSegmentIfNeeded = function(segmentIdx) {
+    if (segmentIdx < 0 || segmentIdx >= this.sidx.entries.length){
+        return;
+    }
     entry = this.sidx.entries[segmentIdx];
     // check if we had it before, but it was deleted by the browser
     if (entry.have && !this.segmentInBuffer(segmentIdx)) {
@@ -249,17 +287,8 @@ Stream.prototype.fetchSegmentIfNeeded = function(segmentIdx) {
     if (entry.requested) {
         return;
     }
-    if (segmentIdx < 0 || segmentIdx >= this.sidx.entries.length){
-        return;
-    }
-    entry.requested = true;
 
-    fetchRange(
-        this.url,
-        entry.start,
-        entry.end,
-        this.appendSegment.bind(this, segmentIdx),
-    );
+    this.fetchSegment(segmentIdx);
 }
 Stream.prototype.handleSeek = async function() {
     var segmentIdx = this.getSegmentIdx(this.video.currentTime);
