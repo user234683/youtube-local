@@ -597,7 +597,7 @@ Reload without invidious (for usage of new identity button).</a>
                 });
             </script>
 
-            <select id="quality-select">
+            <select id="quality-select" autocomplete="off">
                 {% for src in uni_sources %}
                     <option value='{"type": "uni", "index": {{ loop.index0 }}}' {{ 'selected' if loop.index0 == uni_idx and not using_pair_sources else '' }} >{{ src['quality_string'] }}</option>
                 {% endfor %}
