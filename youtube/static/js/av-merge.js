@@ -17,8 +17,6 @@
 // SourceBuffer data limits:
 // https://developers.google.com/web/updates/2017/10/quotaexceedederror
 
-// TODO: close stream at end?
-// TODO: Better buffering algorithm
 // TODO: Call abort to cancel in-progress appends?
 
 
@@ -38,6 +36,9 @@ function AVMerge(video, srcPair, startTime){
     this.video = video;
     this.mediaSource = null;
     this.closed = false;
+    this.opened = false;
+    this.audioEndOfStreamCalled = false;
+    this.videoEndOfStreamCalled = false;
     this.setup();
 }
 AVMerge.prototype.setup = function() {
@@ -55,6 +56,14 @@ AVMerge.prototype.setup = function() {
 }
 
 AVMerge.prototype.sourceOpen = function(_) {
+    // If after calling mediaSource.endOfStream, the user seeks back
+    // into the video, the sourceOpen event will be fired again. Do not
+    // overwrite the streams.
+    this.audioEndOfStreamCalled = false;
+    this.videoEndOfStreamCalled = false;
+    if (this.opened)
+        return;
+    this.opened = true;
     this.videoStream = new Stream(this, this.videoSource, this.startTime);
     this.audioStream = new Stream(this, this.audioSource, this.startTime);
 
@@ -88,9 +97,23 @@ AVMerge.prototype.seek = function(e) {
         this.videoStream.handleSeek();
         this.seeking = false;
     } else {
-        this.reportWarning('seek but not open? readyState:',
-                           this.mediaSource.readyState);
+        reportWarning('seek but not open? readyState:',
+                      this.mediaSource.readyState);
     }
+}
+AVMerge.prototype.audioEndOfStream = function() {
+    if (this.videoEndOfStreamCalled && !this.audioEndOfStreamCalled) {
+        reportDebug('Calling mediaSource.endOfStream()');
+        this.mediaSource.endOfStream();
+    }
+    this.audioEndOfStreamCalled = true;
+}
+AVMerge.prototype.videoEndOfStream = function() {
+    if (this.audioEndOfStreamCalled && !this.videoEndOfStreamCalled) {
+        reportDebug('Calling mediaSource.endOfStream()');
+        this.mediaSource.endOfStream();
+    }
+    this.videoEndOfStreamCalled = true;
 }
 
 function Stream(avMerge, source, startTime) {
@@ -259,6 +282,14 @@ Stream.prototype.checkBuffer = async function() {
 
     if (i < this.sidx.entries.length && !this.sidx.entries[i].requested) {
         this.fetchSegment(i);
+    // We are playing the last segment and we have it.
+    // Signal the end of stream
+    } else if (currentSegmentIdx == this.sidx.entries.length - 1
+               && this.sidx.entries[currentSegmentIdx].have) {
+        if (this.streamType == 'audio')
+            this.avMerge.audioEndOfStream();
+        else
+            this.avMerge.videoEndOfStream();
     }
 }
 Stream.prototype.segmentInBuffer = function(segmentIdx) {
