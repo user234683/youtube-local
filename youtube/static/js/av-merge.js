@@ -29,6 +29,10 @@ function avInitialize(...args){
 function AVMerge(video, srcPair, startTime){
     this.videoSource = srcPair[0];
     this.audioSource = srcPair[1];
+    if (this.videoSource.bitrate && this.audioSource.bitrate)
+        this.avRatio = this.audioSource.bitrate/this.videoSource.bitrate;
+    else
+        this.avRatio = 1/10;
     this.videoStream = null;
     this.audioStream = null;
     this.seeking = false;
@@ -64,8 +68,10 @@ AVMerge.prototype.sourceOpen = function(_) {
     if (this.opened)
         return;
     this.opened = true;
-    this.videoStream = new Stream(this, this.videoSource, this.startTime);
-    this.audioStream = new Stream(this, this.audioSource, this.startTime);
+    this.videoStream = new Stream(this, this.videoSource, this.startTime,
+                                  this.avRatio);
+    this.audioStream = new Stream(this, this.audioSource, this.startTime,
+                                  this.avRatio);
 
     this.videoStream.setup();
     this.audioStream.setup();
@@ -116,7 +122,7 @@ AVMerge.prototype.videoEndOfStream = function() {
     this.videoEndOfStreamCalled = true;
 }
 
-function Stream(avMerge, source, startTime) {
+function Stream(avMerge, source, startTime, avRatio) {
     this.avMerge = avMerge;
     this.video = avMerge.video;
     this.url = source['url'];
@@ -124,7 +130,7 @@ function Stream(avMerge, source, startTime) {
     this.mimeCodec = source['mime_codec']
     this.streamType = source['acodec'] ? 'audio' : 'video';
     if (this.streamType == 'audio') {
-        this.bufferTarget = 5*10**6; // 5 megabytes
+        this.bufferTarget = avRatio*50*10**6;
     } else {
         this.bufferTarget = 50*10**6; // 50 megabytes
     }
