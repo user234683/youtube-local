@@ -285,10 +285,9 @@ Stream.prototype.checkBuffer = async function() {
 
     if (i < this.sidx.entries.length && !this.sidx.entries[i].requested) {
         this.fetchSegment(i);
-    // We are playing the last segment and we have it.
+    // We have all the segments until the end
     // Signal the end of stream
-    } else if (currentSegmentIdx == this.sidx.entries.length - 1
-               && this.sidx.entries[currentSegmentIdx].have) {
+    } else if (i == this.sidx.entries.length) {
         if (this.streamType == 'audio')
             this.avMerge.audioEndOfStream();
         else
