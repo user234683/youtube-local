@@ -227,7 +227,7 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
         while (numDeleted < 3 && i < currentSegment) {
             let entry = this.sidx.entries[i];
             let start = entry.tickStart/this.sidx.timeScale;
-            let end = entry.tickEnd/this.sidx.timeScale;
+            let end = (entry.tickEnd+1)/this.sidx.timeScale;
             if (entry.have) {
                 this.reportWarning('Deleting segment', i);
                 this.sourceBuffer.remove(start, end);
@@ -250,7 +250,7 @@ Stream.prototype.getSegmentIdx = function(videoTime) {
     // go up or down to find correct index
     while (index >= 0 && index < this.sidx.entries.length) {
         var entry = this.sidx.entries[index];
-        if (entry.tickStart <= currentTick && entry.tickEnd >= currentTick){
+        if (entry.tickStart <= currentTick && (entry.tickEnd+1) > currentTick){
             return index;
         }
         index = index + increment;
@@ -298,7 +298,7 @@ Stream.prototype.segmentInBuffer = function(segmentIdx) {
     var entry = this.sidx.entries[segmentIdx];
     // allow for 0.01 second error
     var timeStart = entry.tickStart/this.sidx.timeScale + 0.01;
-    var timeEnd = entry.tickEnd/this.sidx.timeScale - 0.01;
+    var timeEnd = (entry.tickEnd+1)/this.sidx.timeScale - 0.01;
     var timeRanges = this.sourceBuffer.buffered;
     for (var i=0; i < timeRanges.length; i++) {
         if (timeRanges.start(i) <= timeStart && timeEnd <= timeRanges.end(i)) {
@@ -313,7 +313,8 @@ Stream.prototype.fetchSegment = function(segmentIdx) {
     this.reportDebug(
         'Fetching segment', segmentIdx, ', bytes',
         entry.start, entry.end, ', seconds',
-        entry.tickStart/this.sidx.timeScale, entry.tickEnd/this.sidx.timeScale
+        entry.tickStart/this.sidx.timeScale,
+        (entry.tickEnd+1)/this.sidx.timeScale
     )
     fetchRange(
         this.url,
