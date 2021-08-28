@@ -197,6 +197,8 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
     if (this.closed)
         return;
 
+    this.reportDebug('Received segment', segmentIdx)
+
     // cannot append right now, schedule for updateend
     if (this.sourceBuffer.updating) {
         this.reportDebug('sourceBuffer updating, queueing for later');
@@ -308,6 +310,11 @@ Stream.prototype.segmentInBuffer = function(segmentIdx) {
 Stream.prototype.fetchSegment = function(segmentIdx) {
     entry = this.sidx.entries[segmentIdx];
     entry.requested = true;
+    this.reportDebug(
+        'Fetching segment', segmentIdx, ', bytes',
+        entry.start, entry.end, ', seconds',
+        entry.tickStart/this.sidx.timeScale, entry.tickEnd/this.sidx.timeScale
+    )
     fetchRange(
         this.url,
         entry.start,
@@ -350,14 +357,12 @@ Stream.prototype.reportError = function(...args) {
 // Utility functions
 
 function fetchRange(url, start, end, cb) {
-    reportDebug('fetchRange', start, end);
     return new Promise((resolve, reject) => {
         var xhr = new XMLHttpRequest();
         xhr.open('get', url);
         xhr.responseType = 'arraybuffer';
         xhr.setRequestHeader('Range', 'bytes=' + start + '-' + end);
         xhr.onload = function() {
-            reportDebug('fetched bytes: ', start, end);
             //bytesFetched += end - start + 1;
             resolve(cb(xhr.response));
         };
