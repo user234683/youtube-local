@@ -483,80 +483,6 @@ Reload without invidious (for usage of new identity button).</a>
                 </video>
             </div>
         </div>
-        <script src="/youtube.com/static/js/av-merge.js"></script>
-        <!-- Needed for av-merge initialize or after changing quality -->
-        <script>
-            function setVideoDimensions(height, width){
-                var body = document.querySelector('body');
-                body.style.setProperty('--video_height', String(height));
-                body.style.setProperty('--video_width', String(height));
-                var theaterWidth = Math.max(640, data['video_duration'] || 0, width);
-                body.style.setProperty('--theater_video_target_width', String(theaterWidth));
-                function setVideoAspectRatio(){
-                    // Recreate the video constant aspect ratio media query
-                    // in javascript because media queries do not accept css
-                    // variables and cannot be modified by javascript
-                    var videoContainerInner = document.querySelector('#video-container-inner');
-                    if (window.innerWidth < width){
-                        videoContainerInner.style.paddingTop = String(100*height/width) + '%';
-                        videoContainerInner.style.height = '0px';
-                    } else {
-                        videoContainerInner.style.paddingTop = '';
-                        videoContainerInner.style.height = '';
-                    }
-                }
-                setVideoAspectRatio();
-                window.onresize = function(event) { setVideoAspectRatio() };
-            }
-            function changeQuality(selection) {
-                var video = document.querySelector('video');
-                var currentVideoTime = video.currentTime;
-                var videoPaused = video.paused;
-                var videoSpeed = video.playbackRate;
-                var videoSource;
-                if (avMerge)
-                    avMerge.close();
-                if (selection.type == 'uni'){
-                    videoSource = data['uni_sources'][selection.index];
-                    video.src = videoSource.url;
-                } else {
-                    let srcPair = data['pair_sources'][selection.index];
-                    videoSource = srcPair[0];
-                    avInitialize(video, srcPair, currentVideoTime);
-                }
-                setVideoDimensions(videoSource.height, videoSource.width);
-                video.currentTime = currentVideoTime;
-                if (!videoPaused){
-                    video.play();
-                }
-                video.playbackRate = videoSpeed;
-            }
-        </script>
-        {% if using_pair_sources %}
-            <!-- Initialize av-merge -->
-            <script>
-                var srcPair = data['pair_sources'][data['pair_idx']];
-                var video = document.querySelector('video');
-                var videoSource = srcPair[0];
-                // Do it dynamically rather than as the default in jinja
-                // in case javascript is disabled
-                setVideoDimensions(videoSource.height, videoSource.width);
-                avInitialize(video, srcPair, 0);
-            </script>
-        {% endif %}
-
-        {% if time_start != 0 %}
-            <script>
-                document.querySelector('video').currentTime = {{ time_start|tojson }};
-            </script>
-        {% endif %}
-
-        {% if settings.video_player == 1 %}
-            <!-- plyr -->
-            <script src="/youtube.com/static/modules/plyr/plyr.js"></script>
-            <script src="/youtube.com/static/js/plyr-start.js"></script>
-            <!-- /plyr -->
-        {% endif %}
     {% endif %}
 
     <div class="video-info">
@@ -584,18 +510,6 @@ Reload without invidious (for usage of new identity button).</a>
 
         <div class="external-player-controls">
             <input id="speed-control" type="text" title="Video speed" placeholder="Speed">
-            <script>
-                var video = document.querySelector('video');
-                var speedInput = document.querySelector('#speed-control');
-                speedInput.addEventListener('keyup', (event) => {
-                    if (event.key === 'Enter') {
-                        var speed = parseFloat(speedInput.value);
-                        if(!isNaN(speed)){
-                            video.playbackRate = speed;
-                        }
-                    }
-                });
-            </script>
 
             <select id="quality-select" autocomplete="off">
                 {% for src in uni_sources %}
@@ -605,13 +519,6 @@ Reload without invidious (for usage of new identity button).</a>
                     <option value='{"type": "pair", "index": {{ loop.index0}}}' {{ 'selected' if loop.index0 == pair_idx and using_pair_sources else '' }} >{{ src_pair[0]['quality_string'] }}, {{ src_pair[1]['quality_string'] }}</option>
                 {% endfor %}
             </select>
-            <script>
-                document.querySelector('#quality-select').addEventListener(
-                    'change', function(e) {
-                        changeQuality(JSON.parse(this.value))
-                    }
-                );
-            </script>
         </div>
         <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
 
@@ -713,154 +620,11 @@ Reload without invidious (for usage of new identity button).</a>
                         {% endif %}
                     {% endfor %}
                 </nav>
-                {% if playlist['id'] is not none %}
-                    <script>
-                        // lazy load playlist images
-                        // copied almost verbatim from
-                        // https://css-tricks.com/tips-for-rolling-your-own-lazy-loading/
-                        // IntersectionObserver isn't supported in pre-quantum
-                        // firefox versions, but the alternative of making it
-                        // manually is a performance drain, so oh well
-                        var observer = new IntersectionObserver(lazyLoad, {
-
-                          // where in relation to the edge of the viewport, we are observing
-                          rootMargin: "100px",
-
-                          // how much of the element needs to have intersected
-                          // in order to fire our loading function
-                          threshold: 1.0
-
-                        });
-
-                        function lazyLoad(elements) {
-                          elements.forEach(item => {
-                            if (item.intersectionRatio > 0) {
-
-                              // set the src attribute to trigger a load
-                              item.target.src = item.target.dataset.src;
-
-                              // stop observing this element. Our work here is done!
-                              observer.unobserve(item.target);
-                            };
-                          });
-                        };
-
-                        // Tell our observer to observe all img elements with a "lazy" class
-                        var lazyImages = document.querySelectorAll('img.lazy');
-                        lazyImages.forEach(img => {
-                          observer.observe(img);
-                        });
-                    </script>
-                {% endif %}
             </div>
         {% elif settings.related_videos_mode != 0 %}
             <div class="autoplay-toggle-container"><label for="autoplay-toggle">Autoplay: </label><input type="checkbox" id="autoplay-toggle"></div>
         {% endif %}
 
-        {% if settings.related_videos_mode != 0 or playlist %}
-            <script>
-                var playability_error = {{ 'true' if playability_error else 'false' }};
-                {% if playlist and playlist['current_index'] is not none %}
-                    {% set isPlaylist = true %}
-                {% endif %}
-
-                {% if isPlaylist %}
-                    // from https://stackoverflow.com/a/6969486
-                    function escapeRegExp(string) {
-                        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
-                    }
-                    var playlist_id = {{ playlist['id']|tojson }};
-                    playlist_id = escapeRegExp(playlist_id);
-                {% endif %}
-
-                // read cookies on whether to autoplay
-                // pain in the ass:
-                // https://developer.mozilla.org/en-US/docs/Web/API/Document/cookie
-                {% if isPlaylist %}
-                    var cookieValue = document.cookie.replace(new RegExp(
-                        '(?:(?:^|.*;\\s*)autoplay_' + playlist_id + '\\s*\\=\\s*([^;]*).*$)|^.*$'), '$1');
-                {% else %}
-                    var cookieValue = document.cookie.replace(new RegExp(
-                        '(?:(?:^|.*;\\s*)autoplay\\s*\\=\\s*([^;]*).*$)|^.*$'), '$1');
-                {% endif %}
-
-                var autoplayEnabled = 0;
-                if(cookieValue.length === 0){
-                    autoplayEnabled = 0;
-                } else {
-                    autoplayEnabled = Number(cookieValue);
-                }
-
-                // check the checkbox if autoplay is on
-                var checkbox = document.querySelector('#autoplay-toggle');
-                if(autoplayEnabled){
-                    checkbox.checked = true;
-                }
-
-                // listen for checkbox to turn autoplay on and off
-                var cookie = 'autoplay'
-                {% if isPlaylist %}
-                    cookie += '_' + playlist_id;
-                {% endif %}
-                checkbox.addEventListener( 'change', function() {
-                    if(this.checked) {
-                        autoplayEnabled = 1;
-                        document.cookie = cookie + '=1; SameSite=Strict';
-                    } else {
-                        autoplayEnabled = 0;
-                        document.cookie = cookie + '=0; SameSite=Strict';
-                    }
-                });
-
-                if(!playability_error){
-                    // play the video if autoplay is on
-                    var vid = document.querySelector('video');
-                    if(autoplayEnabled){
-                        vid.play();
-                    }
-                }
-
-                // determine next video url
-                {% if isPlaylist %}
-                    var currentIndex = {{ playlist['current_index']|tojson }};
-                    {% if playlist['current_index']+1 == playlist['items']|length %}
-                        var nextVideoUrl = null;
-                    {% else %}
-                        var nextVideoUrl = {{ (playlist['items'][playlist['current_index']+1]['url'])|tojson }};
-                    {% endif %}
-
-                    // scroll playlist to proper position
-                    // item height + gap == 100
-                    var pl = document.querySelector('.playlist-videos');
-                    pl.scrollTop = 100*currentIndex;
-                {% else %}
-                    {% if related|length == 0 %}
-                        var nextVideoUrl = null;
-                    {% else %}
-                        var nextVideoUrl = {{ (related[0]['url'])|tojson }};
-                    {% endif %}
-                {% endif %}
-                var nextVideoDelay = 1000;
-
-                // go to next video when video ends
-                // https://stackoverflow.com/a/2880950
-                if (nextVideoUrl) {
-                    if(playability_error){
-                        videoEnded();
-                    } else {
-                        vid.addEventListener('ended', videoEnded, false);
-                    }
-                    function nextVideo(){
-                        if(autoplayEnabled){
-                            window.location.href = nextVideoUrl;
-                        }
-                    }
-                    function videoEnded(e) {
-                        window.setTimeout(nextVideo, nextVideoDelay);
-                    }
-                }
-            </script>
-        {% endif %}
 
         {% if subtitle_sources %}
             <details id="transcript-details">
@@ -905,6 +669,14 @@ Reload without invidious (for usage of new identity button).</a>
         {% endif %}
     {% endif %}
 
+    <script src="/youtube.com/static/js/av-merge.js"></script>
+    <script src="/youtube.com/static/js/watch.js"></script>
+    {% if settings.video_player == 1 %}
+        <!-- plyr -->
+        <script src="/youtube.com/static/modules/plyr/plyr.js"></script>
+        <script src="/youtube.com/static/js/plyr-start.js"></script>
+        <!-- /plyr -->
+    {% endif %}
     <script src="/youtube.com/static/js/common.js"></script>
     <script src="/youtube.com/static/js/transcript-table.js"></script>
     {% if settings.use_video_hotkeys %} <script src="/youtube.com/static/js/hotkeys.js"></script> {% endif %}

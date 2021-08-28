@@ -651,7 +651,6 @@ def get_watch_page(video_id=None):
         invidious_reload_button = info['invidious_reload_button'],
         video_url = util.URL_ORIGIN + '/watch?v=' + video_id,
         video_id = video_id,
-        time_start = time_start,
 
         js_data = {
             'video_id': info['id'],
@@ -660,6 +659,10 @@ def get_watch_page(video_id=None):
             'has_manual_captions': any(s.get('on') for s in subtitle_sources),
             **source_info,
             'using_pair_sources': using_pair_sources,
+            'time_start': time_start,
+            'playlist': info['playlist'],
+            'related': info['related_videos'],
+            'playability_error': info['playability_error'],
         },
         font_family = youtube.font_choices[settings.font], # for embed page
         **source_info,
