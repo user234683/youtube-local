@@ -226,7 +226,7 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
         // Delete 3 segments (arbitrary) from beginning of buffer, making sure
         // not to delete current one
         var currentSegment = this.getSegmentIdx(this.video.currentTime);
-        this.reportDebug('QuotaExceededError. Deleting segments.');
+        this.reportWarning('QuotaExceededError. Deleting segments.');
         var numDeleted = 0;
         var i = 0;
         while (numDeleted < 3 && i < currentSegment) {
@@ -234,7 +234,7 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
             let start = entry.tickStart/this.sidx.timeScale;
             let end = entry.tickEnd/this.sidx.timeScale;
             if (entry.have) {
-                this.reportDebug('Deleting segment', i);
+                this.reportWarning('Deleting segment', i);
                 this.sourceBuffer.remove(start, end);
             }
         }
