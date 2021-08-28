@@ -566,19 +566,24 @@ def get_watch_page(video_id=None):
     pair_sources = source_info['pair_sources']
     uni_idx, pair_idx = source_info['uni_idx'], source_info['pair_idx']
 
-    video_height = yt_data_extract.deep_get(source_info, 'uni_sources',
-                                            uni_idx, 'height',
-                                            default=360)
-    video_width = yt_data_extract.deep_get(source_info, 'uni_sources',
-                                           uni_idx, 'width',
-                                           default=640)
-
     pair_quality = yt_data_extract.deep_get(pair_sources, pair_idx, 0,
                                             'quality')
     uni_quality = yt_data_extract.deep_get(uni_sources, uni_idx, 'quality')
     using_pair_sources = (
         bool(pair_sources) and (not uni_sources or pair_quality != uni_quality)
     )
+    if using_pair_sources:
+        video_height = pair_sources[pair_idx][0]['height']
+        video_width = pair_sources[pair_idx][0]['width']
+    else:
+        video_height = yt_data_extract.deep_get(
+            uni_sources, uni_idx, 'height', default=360
+        )
+        video_width = yt_data_extract.deep_get(
+            uni_sources, uni_idx, 'width', default=640
+        )
+
+
 
     # 1 second per pixel, or the actual video width
     theater_video_target_width = max(640, info['duration'] or 0, video_width)

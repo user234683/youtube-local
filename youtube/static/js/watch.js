@@ -50,9 +50,6 @@ var avMerge;
 if (data.using_pair_sources) {
     var srcPair = data['pair_sources'][data['pair_idx']];
     var videoSource = srcPair[0];
-    // Do it dynamically rather than as the default in jinja
-    // in case javascript is disabled
-    setVideoDimensions(videoSource.height, videoSource.width);
     avMerge = new AVMerge(video, srcPair, 0);
 }
 
