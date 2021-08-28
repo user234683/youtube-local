@@ -411,10 +411,10 @@ function addEvent(obj, eventName, func) {
 }
 
 function reportWarning(...args){
-    console.log(...args);
+    console.warn(...args);
 }
 function reportError(...args){
-    console.log(...args);
+    console.error(...args);
 }
 function reportDebug(...args){
     console.log(...args);
