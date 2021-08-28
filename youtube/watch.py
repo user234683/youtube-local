@@ -577,7 +577,7 @@ def get_watch_page(video_id=None):
                                             'quality')
     uni_quality = yt_data_extract.deep_get(uni_sources, uni_idx, 'quality')
     using_pair_sources = (
-        pair_sources and (not uni_sources or pair_quality != uni_quality)
+        bool(pair_sources) and (not uni_sources or pair_quality != uni_quality)
     )
 
     # 1 second per pixel, or the actual video width
