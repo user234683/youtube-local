@@ -127,6 +127,13 @@ AVMerge.prototype.printDebuggingInfo = function() {
     reportDebug('mediaSource.readyState:', this.mediaSource.readyState);
     reportDebug('videoEndOfStreamCalled', this.videoEndOfStreamCalled);
     reportDebug('audioEndOfStreamCalled', this.audioEndOfStreamCalled);
+    for (let obj of [this.videoStream, this.audioStream]) {
+        reportDebug(obj.streamType, 'stream buffered times:');
+        for (let i=0; i<obj.sourceBuffer.buffered.length; i++) {
+            reportDebug(String(obj.sourceBuffer.buffered.start(i)) + '-'
+                        + String(obj.sourceBuffer.buffered.end(i)));
+        }
+    }
 }
 
 function Stream(avMerge, source, startTime, avRatio) {
