@@ -85,7 +85,8 @@ AVMerge.prototype.close = function() {
     this.audioStream.close();
     this.timeUpdateEvt.remove();
     this.seekingEvt.remove();
-    this.mediaSource.endOfStream();
+    if (this.mediaSource.readyState == 'open')
+        this.mediaSource.endOfStream();
 }
 AVMerge.prototype.checkBothBuffers = function() {
     this.audioStream.checkBuffer();
@@ -201,9 +202,10 @@ Stream.prototype.close = function() {
     // Prevents appendSegment adding to buffer if request finishes
     // after closing
     this.closed = true;
-    this.sourceBuffer.abort();
-    this.updateendEvt.remove();
+    if (this.sourceBuffer.updating)
+        this.sourceBuffer.abort();
     this.mediaSource.removeSourceBuffer(this.sourceBuffer);
+    this.updateendEvt.remove();
 }
 Stream.prototype.appendSegment = function(segmentIdx, chunk) {
     if (this.closed)
