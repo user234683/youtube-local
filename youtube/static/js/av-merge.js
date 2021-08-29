@@ -251,6 +251,7 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
             if (entry.have) {
                 this.reportWarning('Deleting segment', i);
                 this.sourceBuffer.remove(start, end);
+                numDeleted++;
             }
         }
     }
