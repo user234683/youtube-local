@@ -318,7 +318,38 @@ Stream.prototype.segmentInBuffer = function(segmentIdx) {
     var entry = this.sidx.entries[segmentIdx];
     // allow for 0.01 second error
     var timeStart = entry.tickStart/this.sidx.timeScale + 0.01;
-    var timeEnd = (entry.tickEnd+1)/this.sidx.timeScale - 0.01;
+
+    /* Some of YouTube's mp4 fragments are malformed, with half-frame
+    playback gaps. In this video at 240p (timeScale = 90000 ticks/second)
+        https://www.youtube.com/watch?v=ZhOQCwJvwlo
+    segment 4 (starting at 0) is claimed in the sidx table to have
+    a duration of 388500 ticks, but closer examination of the file using
+    Bento4 mp4dump shows that the segment has 129 frames at 3000 ticks
+    per frame, which gives an actual duration of 38700 (1500 less than
+    claimed). The file is 30 fps, so this error is exactly half a frame.
+
+    Note that the base_media_decode_time exactly matches the tickStart,
+    so the media decoder is being given a time gap of half a frame.
+
+    The practical result of this is that sourceBuffer.buffered reports
+    a timeRange.end that is less than expected for that segment, resulting in
+    a false determination that the browser has deleted a segment.
+
+    Segment 5 has the opposite issue, where it has a 1500 tick surplus of video
+    data compared to the sidx length. Segments 6 and 7 also have this
+    deficit-surplus pattern.
+
+    This might have something to do with the fact that the video also
+    has 60 fps formats. In order to allow for adaptive streaming and seamless
+    quality switching, YouTube likely encodes their formats to line up nicely.
+    Either there is a bug in their encoder, or this is intentional. Allow for
+    up to 1 frame-time of error to work around this issue. */
+    if (this.streamType == 'video')
+        var endError = 1/(this.avMerge.videoSource.fps || 30);
+    else
+        var endError = 0.01
+    var timeEnd = (entry.tickEnd+1)/this.sidx.timeScale - endError;
+
     var timeRanges = this.sourceBuffer.buffered;
     for (var i=0; i < timeRanges.length; i++) {
         if (timeRanges.start(i) <= timeStart && timeEnd <= timeRanges.end(i)) {
