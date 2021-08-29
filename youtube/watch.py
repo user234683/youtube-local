@@ -23,7 +23,7 @@ except FileNotFoundError:
     decrypt_cache = {}
 
 
-def get_video_sources(info, tor_bypass=False):
+def get_video_sources(info, target_resolution):
     '''return dict with organized sources: {
         'uni_sources': [{}, ...],   # video and audio in one file
         'uni_idx': int,     # default unified source index
@@ -36,10 +36,6 @@ def get_video_sources(info, tor_bypass=False):
     uni_sources = []
     pair_sources = []
 
-    if (settings.route_tor == 2) or tor_bypass:
-        target_resolution = 240
-    else:
-        target_resolution = settings.default_resolution
 
     for fmt in info['formats']:
         if not all(fmt[attr] for attr in ('ext', 'url')):
@@ -561,7 +557,12 @@ def get_watch_page(video_id=None):
             'codecs': codecs_string,
         })
 
-    source_info = get_video_sources(info, tor_bypass=info['tor_bypass_used'])
+    if (settings.route_tor == 2) or info['tor_bypass_used']:
+        target_resolution = 240
+    else:
+        target_resolution = settings.default_resolution
+
+    source_info = get_video_sources(info, target_resolution)
     uni_sources = source_info['uni_sources']
     pair_sources = source_info['pair_sources']
     uni_idx, pair_idx = source_info['uni_idx'], source_info['pair_idx']
@@ -569,8 +570,19 @@ def get_watch_page(video_id=None):
     pair_quality = yt_data_extract.deep_get(pair_sources, pair_idx, 0,
                                             'quality')
     uni_quality = yt_data_extract.deep_get(uni_sources, uni_idx, 'quality')
+
+    pair_error = abs((pair_quality or 360) - target_resolution)
+    uni_error = abs((uni_quality or 360) - target_resolution)
+    if uni_error == pair_error:
+        # use settings.prefer_uni_sources as a tiebreaker
+        closer_to_target = 'uni' if settings.prefer_uni_sources else 'pair'
+    elif uni_error < pair_error:
+        closer_to_target = 'uni'
+    else:
+        closer_to_target = 'pair'
+
     using_pair_sources = (
-        bool(pair_sources) and (not uni_sources or pair_quality != uni_quality)
+        bool(pair_sources) and (not uni_sources or closer_to_target == 'pair')
     )
     if using_pair_sources:
         video_height = pair_sources[pair_idx][0]['height']

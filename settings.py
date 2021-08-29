@@ -154,6 +154,15 @@ For security reasons, enabling this is not recommended.''',
         'category': 'playback',
     }),
 
+    ('prefer_uni_sources', {
+        'label': 'Prefer integrated sources',
+        'type': bool,
+        'default': True,
+        'comment': '',
+        'category': 'playback',
+        'description': 'If enabled and the default resolution is set to 360p or 720p, uses the unified (integrated) video files which contain audio and video, with buffering managed by the browser. If disabled, always uses the separate audio and video files through custom buffer management in av-merge via MediaSource.',
+    }),
+
     ('use_video_hotkeys', {
         'label': 'Enable video hotkeys',
         'type': bool,
