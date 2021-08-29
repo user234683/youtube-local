@@ -23,30 +23,105 @@ except FileNotFoundError:
     decrypt_cache = {}
 
 
-def get_video_sources(info, tor_bypass=False):
-    video_sources = []
-    if (not settings.theater_mode) or (settings.route_tor == 2) or tor_bypass:
-        max_resolution = 360
-    else:
-        max_resolution = settings.default_resolution
+def get_video_sources(info, target_resolution):
+    '''return dict with organized sources: {
+        'uni_sources': [{}, ...],   # video and audio in one file
+        'uni_idx': int,     # default unified source index
+        'pair_sources': [({video}, {audio}), ...],
+        'pair_idx': int,    # default pair source index
+    }
+    '''
+    audio_sources = []
+    video_only_sources = []
+    uni_sources = []
+    pair_sources = []
+
+
     for fmt in info['formats']:
-        if not all(fmt[attr] for attr in ('quality', 'width', 'ext', 'url')):
+        if not all(fmt[attr] for attr in ('ext', 'url')):
             continue
-        if (fmt['acodec'] and fmt['vcodec']
-                and fmt['quality'] <= max_resolution):
-            video_sources.append({
-                'src': fmt['url'],
+        if fmt['ext'] != 'mp4': # temporary until webm support
+            continue
+
+        # unified source
+        if fmt['acodec'] and fmt['vcodec']:
+            source = {
                 'type': 'video/' + fmt['ext'],
-                'quality': fmt['quality'],
-                'height': fmt['height'],
-                'width': fmt['width'],
-            })
+                'quality_string': short_video_quality_string(fmt),
+            }
+            source['quality_string'] += ' (integrated)'
+            source.update(fmt)
+            uni_sources.append(source)
+            continue
 
-    #### order the videos sources so the preferred resolution is first ###
+        if not (fmt['init_range'] and fmt['index_range']):
+            continue
 
-    video_sources.sort(key=lambda source: source['quality'], reverse=True)
+        # audio source
+        if fmt['acodec'] and not fmt['vcodec'] and fmt['audio_bitrate']:
+            source = {
+                'type': 'audio/' + fmt['ext'],
+                'bitrate': fmt['audio_bitrate'],
+                'quality_string': audio_quality_string(fmt),
+            }
+            source.update(fmt)
+            source['mime_codec'] = (source['type'] + '; codecs="'
+                                    + source['acodec'] + '"')
+            audio_sources.append(source)
+        # video-only source, include audio source
+        elif all(fmt[attr] for attr in ('vcodec', 'quality', 'width')):
+            source = {
+                'type': 'video/' + fmt['ext'],
+                'quality_string': short_video_quality_string(fmt),
+            }
+            source.update(fmt)
+            source['mime_codec'] = (source['type'] + '; codecs="'
+                                    + source['vcodec'] + '"')
+            video_only_sources.append(source)
 
-    return video_sources
+    audio_sources.sort(key=lambda source: source['audio_bitrate'])
+    video_only_sources.sort(key=lambda src: src['quality'])
+    uni_sources.sort(key=lambda src: src['quality'])
+
+    for source in video_only_sources:
+        # choose an audio source to go with it
+        # 0.15 is semiarbitrary empirical constant to spread audio sources
+        # between 144p and 1080p. Use something better eventually.
+        target_audio_bitrate = source['quality']*source.get('fps', 30)/30*0.15
+        compat_audios = [a for a in audio_sources if a['ext'] == source['ext']]
+        if compat_audios:
+            closest_audio_source = compat_audios[0]
+            best_err = target_audio_bitrate - compat_audios[0]['audio_bitrate']
+            best_err = abs(best_err)
+            for audio_source in compat_audios[1:]:
+                err = abs(audio_source['audio_bitrate'] - target_audio_bitrate)
+                # once err gets worse we have passed the closest one
+                if err > best_err:
+                    break
+                best_err = err
+                closest_audio_source = audio_source
+            pair_sources.append((source, closest_audio_source))
+
+    uni_idx = 0 if uni_sources else None
+    for i, source in enumerate(uni_sources):
+        if source['quality'] > target_resolution:
+            break
+        uni_idx = i
+
+    pair_idx = 0 if pair_sources else None
+    for i, source_pair in enumerate(pair_sources):
+        if source_pair[0]['quality'] > target_resolution:
+            break
+        pair_idx = i
+
+    return {
+        'uni_sources': uni_sources,
+        'uni_idx': uni_idx,
+        'pair_sources': pair_sources,
+        'pair_idx': pair_idx,
+    }
+
+
 
 def make_caption_src(info, lang, auto=False, trans_lang=None):
     label = lang
@@ -338,16 +413,27 @@ def video_quality_string(format):
 
     return '?'
 
-def audio_quality_string(format):
-    if format['acodec']:
-        result = str(format['audio_bitrate'] or '?') + 'k'
-        if format['audio_sample_rate']:
-            result += ' ' + str(format['audio_sample_rate']) + ' Hz'
-        return result
-    elif format['vcodec']:
-        return 'video only'
 
+def short_video_quality_string(fmt):
+    result = str(fmt['quality'] or '?') + 'p'
+    if fmt['fps']:
+        result += ' ' + str(fmt['fps']) + 'fps'
+    return result
+
+
+def audio_quality_string(fmt):
+    if fmt['acodec']:
+        if fmt['audio_bitrate']:
+            result = '%d' % fmt['audio_bitrate'] + 'k'
+        else:
+            result = '?k'
+        if fmt['audio_sample_rate']:
+            result += ' ' + '%.3G' % (fmt['audio_sample_rate']/1000) + 'kHz'
+        return result
+    elif fmt['vcodec']:
+        return 'video only'
     return '?'
+
 
 # from https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/utils.py
 def format_bytes(bytes):
@@ -471,9 +557,46 @@ def get_watch_page(video_id=None):
             'codecs': codecs_string,
         })
 
-    video_sources = get_video_sources(info, tor_bypass=info['tor_bypass_used'])
-    video_height = yt_data_extract.deep_get(video_sources, 0, 'height', default=360)
-    video_width = yt_data_extract.deep_get(video_sources, 0, 'width', default=640)
+    if (settings.route_tor == 2) or info['tor_bypass_used']:
+        target_resolution = 240
+    else:
+        target_resolution = settings.default_resolution
+
+    source_info = get_video_sources(info, target_resolution)
+    uni_sources = source_info['uni_sources']
+    pair_sources = source_info['pair_sources']
+    uni_idx, pair_idx = source_info['uni_idx'], source_info['pair_idx']
+
+    pair_quality = yt_data_extract.deep_get(pair_sources, pair_idx, 0,
+                                            'quality')
+    uni_quality = yt_data_extract.deep_get(uni_sources, uni_idx, 'quality')
+
+    pair_error = abs((pair_quality or 360) - target_resolution)
+    uni_error = abs((uni_quality or 360) - target_resolution)
+    if uni_error == pair_error:
+        # use settings.prefer_uni_sources as a tiebreaker
+        closer_to_target = 'uni' if settings.prefer_uni_sources else 'pair'
+    elif uni_error < pair_error:
+        closer_to_target = 'uni'
+    else:
+        closer_to_target = 'pair'
+
+    using_pair_sources = (
+        bool(pair_sources) and (not uni_sources or closer_to_target == 'pair')
+    )
+    if using_pair_sources:
+        video_height = pair_sources[pair_idx][0]['height']
+        video_width = pair_sources[pair_idx][0]['width']
+    else:
+        video_height = yt_data_extract.deep_get(
+            uni_sources, uni_idx, 'height', default=360
+        )
+        video_width = yt_data_extract.deep_get(
+            uni_sources, uni_idx, 'width', default=640
+        )
+
+
+
     # 1 second per pixel, or the actual video width
     theater_video_target_width = max(640, info['duration'] or 0, video_width)
 
@@ -516,7 +639,6 @@ def get_watch_page(video_id=None):
         download_formats        = download_formats,
         other_downloads         = other_downloads,
         video_info              = json.dumps(video_info),
-        video_sources           = video_sources,
         hls_formats             = info['hls_formats'],
         subtitle_sources        = subtitle_sources,
         related                 = info['related_videos'],
@@ -546,14 +668,22 @@ def get_watch_page(video_id=None):
         invidious_reload_button = info['invidious_reload_button'],
         video_url = util.URL_ORIGIN + '/watch?v=' + video_id,
         video_id = video_id,
-        time_start = time_start,
 
         js_data = {
-            'video_id': video_info['id'],
+            'video_id': info['id'],
+            'video_duration': info['duration'],
             'settings': settings.current_settings_dict,
             'has_manual_captions': any(s.get('on') for s in subtitle_sources),
+            **source_info,
+            'using_pair_sources': using_pair_sources,
+            'time_start': time_start,
+            'playlist': info['playlist'],
+            'related': info['related_videos'],
+            'playability_error': info['playability_error'],
         },
         font_family = youtube.font_choices[settings.font], # for embed page
+        **source_info,
+        using_pair_sources = using_pair_sources,
     )
 
 
