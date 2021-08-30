@@ -134,5 +134,7 @@ player.once('playing', function(){this.started = true});
 
 // Hide the external quality selector
 window.addEventListener('DOMContentLoaded', function(){
-    document.querySelector('#quality-select').hidden = true;
+    var qs = document.querySelector('#quality-select');
+    if (qs)
+        qs.hidden = true;
 });

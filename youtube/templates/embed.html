@@ -89,9 +89,9 @@
             </ol>
         </div>
         <video controls autofocus class="video" height="{{ video_height }}px">
-            {% for video_source in video_sources %}
-                <source src="{{ video_source['src'] }}" type="{{ video_source['type'] }}" data-res="{{ video_source['quality'] }}">
-            {% endfor %}
+            {% if uni_sources %}
+                <source src="{{ uni_sources[uni_idx]['url'] }}" type="{{ uni_sources[uni_idx]['type'] }}" data-res="{{ uni_sources[uni_idx]['quality'] }}">
+            {% endif %}
 
             {% for source in subtitle_sources %}
                 {% if source['on'] %}
