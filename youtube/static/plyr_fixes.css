@@ -3,6 +3,14 @@ body{
 	--plyr-video-controls-background: rgba(0,0,0,0.8);
 }
 
+/* Scale captions with video height, not page width. Scale down to a minimum
+   of 10px so it does not become unreadable, rather than scaling
+   exactly proportional to video height */
+.plyr__captions {
+    font-size: calc(18px + 8px*(var(--video_height) - 720)/720) !important;
+}
+
+
 /* make buffered progress more visible */
 .plyr--video .plyr__progress__buffer{
     color: rgba(255,255,255,0.75) !important;
