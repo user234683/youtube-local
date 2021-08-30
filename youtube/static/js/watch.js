@@ -4,6 +4,10 @@ function setVideoDimensions(height, width){
     var body = document.querySelector('body');
     body.style.setProperty('--video_height', String(height));
     body.style.setProperty('--video_width', String(height));
+    if (height < 240)
+        body.style.setProperty('--plyr-control-spacing-num', '3');
+    else
+        body.style.setProperty('--plyr-control-spacing-num', '10');
     var theaterWidth = Math.max(640, data['video_duration'] || 0, width);
     body.style.setProperty('--theater_video_target_width', String(theaterWidth));
     function setVideoAspectRatio(){

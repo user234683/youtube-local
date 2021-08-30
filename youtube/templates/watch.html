@@ -7,6 +7,7 @@
         --theater_video_target_width: {{ theater_video_target_width }};
         --video_height: {{ video_height }};
         --video_width: {{ video_width }};
+        --plyr-control-spacing-num: {{ '3' if video_height < 240 else '10' }}
     }
     details > summary{
         background-color: var(--interface-color);

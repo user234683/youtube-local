@@ -1,4 +1,5 @@
 body{
+    --plyr-control-spacing: calc(var(--plyr-control-spacing-num)*1px);
 	--plyr-video-controls-background: rgba(0,0,0,0.8);
 }
 
@@ -49,5 +50,5 @@ button[data-plyr="play"]{
     overflow-y: scroll;
     /* Subtract margin between controls and menu, and controls height,
        and height of top menu button*/
-    max-height: calc(var(--video_height)*1px - 10px - 40px - 42px);
+    max-height: calc(var(--video_height)*1px - 10px - 40px - 42px*var(--plyr-control-spacing-num)/10);
 }
