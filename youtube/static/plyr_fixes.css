@@ -36,3 +36,18 @@ e.g. Firefox playback speed options */
 button[data-plyr="play"]{
     pointer-events: none;
 }
+
+/* For menus without a button above them - make them scroll if
+   they are too high for the player*/
+.plyr div[role="menu"]{
+    overflow-y: scroll;
+    max-height: calc(var(--video_height)*1px - 10px - 40px);
+}
+
+/* For menus with a button above them */
+.plyr button + div[role="menu"]{
+    overflow-y: scroll;
+    /* Subtract margin between controls and menu, and controls height,
+       and height of top menu button*/
+    max-height: calc(var(--video_height)*1px - 10px - 40px - 42px);
+}
