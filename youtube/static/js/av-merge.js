@@ -166,7 +166,7 @@ function Stream(avMerge, source, startTime, avRatio) {
     });
     this.updateendEvt = addEvent(this.sourceBuffer, 'updateend', (e) => {
         if (this.appendQueue.length != 0) {
-            this.appendSegment(...this.appendQueue.pop());
+            this.appendSegment(...this.appendQueue.shift());
         }
     });
 }
