@@ -74,7 +74,11 @@ def extract_channel_info(polymer_json, tab):
 
     if tab in ('videos', 'playlists', 'search'):
         items, ctoken = extract_items(response)
-        additional_info = {'author': info['channel_name'], 'author_url': info['channel_url']}
+        additional_info = {
+            'author': info['channel_name'],
+            'author_id': info['channel_id'],
+            'author_url': info['channel_url'],
+        }
         info['items'] = [extract_item_info(renderer, additional_info) for renderer in items]
         info['ctoken'] = ctoken
         if tab in ('search', 'playlists'):
