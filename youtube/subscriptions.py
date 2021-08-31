@@ -15,6 +15,8 @@ import math
 import secrets
 import collections
 import calendar # bullshit! https://bugs.python.org/issue6280
+import csv
+import re
 
 import flask
 from flask import request
@@ -709,8 +711,26 @@ def import_subscriptions():
 
         except (AssertionError, IndexError, defusedxml.ElementTree.ParseError) as e:
             return '400 Bad Request: Unable to read opml xml file, or the file is not the expected format', 400
+    elif mime_type == 'text/csv':
+        content = file.read().decode('utf-8')
+        reader = csv.reader(content.splitlines())
+        channels = []
+        for row in reader:
+            if not row or row[0].lower().strip() == 'channel id':
+                continue
+            elif len(row) > 1 and re.fullmatch(r'UC[-_\w]{22}',
+                                               row[0].strip()):
+                channels.append( (row[0], row[-1]) )
+            else:
+                print('WARNING: Unknown row format:', row)
     else:
-            return '400 Bad Request: Unsupported file format: ' + mime_type + '. Only subscription.json files (from Google Takeouts) and XML OPML files exported from Youtube\'s subscription manager page are supported', 400
+            error = 'Unsupported file format: ' + mime_type
+            error += (' . Only subscription.json, subscriptions.csv files'
+                      ' (from Google Takeouts)'
+                      ' and XML OPML files exported from Youtube\'s'
+                      ' subscription manager page are supported')
+            return (flask.render_template('error.html', error_message=error),
+                    400)
 
     _subscribe(channels)
 
