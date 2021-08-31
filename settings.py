@@ -154,6 +154,17 @@ For security reasons, enabling this is not recommended.''',
         'category': 'playback',
     }),
 
+    ('preferred_video_codec', {
+        'type': int,
+        'default': 0,
+        'comment': '',
+        'options': [
+            (0, 'h.264'),
+            (1, 'AV1'),
+        ],
+        'category': 'playback',
+    }),
+
     ('prefer_uni_sources', {
         'label': 'Prefer integrated sources',
         'type': bool,

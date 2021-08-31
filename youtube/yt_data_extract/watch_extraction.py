@@ -445,6 +445,14 @@ def _extract_formats(info, player_response):
         for key, value in hardcoded_itag_info.items():
             conservative_update(fmt, key, value) # prefer info from Youtube
         fmt['quality'] = hardcoded_itag_info.get('height')
+        conservative_update(
+            fmt, 'quality',
+            extract_int(yt_fmt.get('quality'), whole_word=False)
+        )
+        conservative_update(
+            fmt, 'quality',
+            extract_int(yt_fmt.get('qualityLabel'), whole_word=False)
+        )
 
         info['formats'].append(fmt)
 

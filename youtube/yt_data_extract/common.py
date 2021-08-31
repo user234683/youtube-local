@@ -166,14 +166,17 @@ def extract_formatted_text(node):
         return [{'text': node['simpleText']}]
     return []
 
-def extract_int(string, default=None):
+def extract_int(string, default=None, whole_word=True):
     if isinstance(string, int):
         return string
     if not isinstance(string, str):
         string = extract_str(string)
     if not string:
         return default
-    match = re.search(r'\b(\d+)\b', string.replace(',', ''))
+    if whole_word:
+        match = re.search(r'\b(\d+)\b', string.replace(',', ''))
+    else:
+        match = re.search(r'(\d+)', string.replace(',', ''))
     if match is None:
         return default
     try:

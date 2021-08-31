@@ -58,10 +58,12 @@ def get_video_sources(info, target_resolution):
             continue
 
         # audio source
-        if fmt['acodec'] and not fmt['vcodec'] and fmt['audio_bitrate']:
+        if fmt['acodec'] and not fmt['vcodec'] and (
+                fmt['audio_bitrate'] or fmt['bitrate']):
+            if fmt['bitrate']:  # prefer this one, more accurate right now
+                fmt['audio_bitrate'] = int(fmt['bitrate']/1000)
             source = {
                 'type': 'audio/' + fmt['ext'],
-                'bitrate': fmt['audio_bitrate'],
                 'quality_string': audio_quality_string(fmt),
             }
             source.update(fmt)
@@ -79,15 +81,51 @@ def get_video_sources(info, target_resolution):
                                     + source['vcodec'] + '"')
             video_only_sources.append(source)
 
+    # Remove alternative mp4 codecs from video sources
+    def codec_name(vcodec):
+        if vcodec.startswith('avc'):
+            return 'h.264'
+        elif vcodec.startswith('av01'):
+            return 'av1'
+        else:
+            return 'unknown'
+    quality_to_codecs = {}
+    for src in video_only_sources:
+        if src['quality'] in quality_to_codecs:
+            quality_to_codecs[src['quality']].add(codec_name(src['vcodec']))
+        else:
+            quality_to_codecs[src['quality']] = {codec_name(src['vcodec'])}
+    i = 0
+    while i < len(video_only_sources):
+        src = video_only_sources[i]
+        codecs_for_quality = quality_to_codecs[src['quality']]
+        have_both = ('h.264' in codecs_for_quality
+                     and 'av1' in codecs_for_quality)
+        have_one = ('h.264' in codecs_for_quality
+                    or 'av1' in codecs_for_quality)
+        name = codec_name(src['vcodec'])
+        if name == 'unknown' and have_one:
+            del video_only_sources[i]
+            continue
+        if not have_both:
+            i += 1
+            continue
+        if name == 'av1' and settings.preferred_video_codec == 0:
+            del video_only_sources[i]
+        elif name == 'h.264' and settings.preferred_video_codec == 1:
+            del video_only_sources[i]
+        else:
+            i += 1
+
     audio_sources.sort(key=lambda source: source['audio_bitrate'])
     video_only_sources.sort(key=lambda src: src['quality'])
     uni_sources.sort(key=lambda src: src['quality'])
 
     for source in video_only_sources:
         # choose an audio source to go with it
-        # 0.15 is semiarbitrary empirical constant to spread audio sources
+        # 0.5 is semiarbitrary empirical constant to spread audio sources
         # between 144p and 1080p. Use something better eventually.
-        target_audio_bitrate = source['quality']*source.get('fps', 30)/30*0.15
+        target_audio_bitrate = source['quality']*source.get('fps', 30)/30*0.5
         compat_audios = [a for a in audio_sources if a['ext'] == source['ext']]
         if compat_audios:
             closest_audio_source = compat_audios[0]
@@ -417,7 +455,13 @@ def video_quality_string(format):
 def short_video_quality_string(fmt):
     result = str(fmt['quality'] or '?') + 'p'
     if fmt['fps']:
-        result += ' ' + str(fmt['fps']) + 'fps'
+        result += str(fmt['fps'])
+    if fmt['vcodec'].startswith('av01'):
+        result += ' AV1'
+    elif fmt['vcodec'].startswith('avc'):
+        result += ' h264'
+    else:
+        result += ' ' + fmt['vcodec']
     return result
 
 
