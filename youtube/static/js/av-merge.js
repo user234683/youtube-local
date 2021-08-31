@@ -122,6 +122,8 @@ AVMerge.prototype.printDebuggingInfo = function() {
     reportDebug('audioSource:', this.videoSource);
     reportDebug('video sidx:', this.videoStream.sidx);
     reportDebug('audio sidx:', this.audioStream.sidx);
+    reportDebug('video updating', this.videoStream.sourceBuffer.updating);
+    reportDebug('audio updating', this.audioStream.sourceBuffer.updating);
     reportDebug('video duration:', this.video.duration);
     reportDebug('video current time:', this.video.currentTime);
     reportDebug('mediaSource.readyState:', this.mediaSource.readyState);
@@ -156,7 +158,7 @@ function Stream(avMerge, source, startTime, avRatio) {
     this.mediaSource = avMerge.mediaSource;
     this.sidx = null;
     this.appendRetries = 0;
-    this.appendQueue = []; // list of [segmentIdx, data]
+    this.appendQueue = []; // list of [segmentIdx, forSeek, data]
     this.sourceBuffer = this.mediaSource.addSourceBuffer(this.mimeCodec);
     this.sourceBuffer.mode = 'segments';
     this.sourceBuffer.addEventListener('error', (e) => {
@@ -179,7 +181,7 @@ Stream.prototype.setup = async function(){
                 var init_end = this.initRange.end - this.initRange.start + 1;
                 var index_start = this.indexRange.start - this.initRange.start;
                 var index_end = this.indexRange.end - this.initRange.start + 1;
-                this.appendSegment(null, buffer.slice(0, init_end));
+                this.appendSegment(null, false, buffer.slice(0, init_end));
                 this.setupSegments(buffer.slice(index_start, index_end));
             }
         )
@@ -189,7 +191,7 @@ Stream.prototype.setup = async function(){
             this.url,
             this.initRange.start,
             this.initRange.end,
-            this.appendSegment.bind(this, null),
+            this.appendSegment.bind(this, false, null),
         );
         // sidx (segment index) table
         fetchRange(
@@ -214,7 +216,7 @@ Stream.prototype.close = function() {
     this.mediaSource.removeSourceBuffer(this.sourceBuffer);
     this.updateendEvt.remove();
 }
-Stream.prototype.appendSegment = function(segmentIdx, chunk) {
+Stream.prototype.appendSegment = function(segmentIdx, forSeek, chunk) {
     if (this.closed)
         return;
 
@@ -223,7 +225,7 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
     // cannot append right now, schedule for updateend
     if (this.sourceBuffer.updating) {
         this.reportDebug('sourceBuffer updating, queueing for later');
-        this.appendQueue.push([segmentIdx, chunk]);
+        this.appendQueue.push([segmentIdx, forSeek, chunk]);
         if (this.appendQueue.length > 2){
             this.reportWarning('appendQueue length:', this.appendQueue.length);
         }
@@ -238,22 +240,80 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
         if (e.name !== 'QuotaExceededError') {
             throw e;
         }
-        // Delete 3 segments (arbitrary) from beginning of buffer, making sure
-        // not to delete current one
-        var currentSegment = this.getSegmentIdx(this.video.currentTime);
-        this.reportWarning('QuotaExceededError. Deleting segments.');
-        var numDeleted = 0;
-        var i = 0;
-        while (numDeleted < 3 && i < currentSegment) {
-            let entry = this.sidx.entries[i];
-            let start = entry.tickStart/this.sidx.timeScale;
-            let end = (entry.tickEnd+1)/this.sidx.timeScale;
-            if (entry.have) {
-                this.reportWarning('Deleting segment', i);
-                this.sourceBuffer.remove(start, end);
-                numDeleted++;
+        this.reportWarning('QuotaExceededError.');
+
+        // Count how many bytes are in buffer to update buffering target,
+        // updating .have as well for when we need to delete segments
+        var bytesInBuffer = 0;
+        for (var i = 0; i < this.sidx.entries.length; i++) {
+            if (this.segmentInBuffer(i))
+                bytesInBuffer += this.sidx.entries[i].referencedSize;
+            else if (this.sidx.entries[i].have) {
+                this.sidx.entries[i].have = false;
+                this.sidx.entries[i].requested = false;
             }
         }
+        bytesInBuffer = Math.floor(4/5*bytesInBuffer);
+        if (bytesInBuffer < this.bufferTarget) {
+            this.bufferTarget = bytesInBuffer;
+            this.reportDebug('New buffer target:', this.bufferTarget);
+        }
+
+        // Delete 3 segments (arbitrary) from buffer, making sure
+        // not to delete current one
+        var currentSegment = this.getSegmentIdx(this.video.currentTime);
+        var numDeleted = 0;
+        var i = 0;
+        var toDelete = []; // See below for why we have to schedule it
+        this.reportDebug('Deleting segments from beginning of buffer.');
+        while (numDeleted < 3 && i < currentSegment) {
+            if (this.sidx.entries[i].have) {
+                toDelete.push(i)
+                numDeleted++;
+            }
+            i++;
+        }
+        if (numDeleted < 3)
+            this.reportDebug('Deleting segments from end of buffer.');
+
+        i = this.sidx.entries.length - 1;
+        while (numDeleted < 3 && i > currentSegment) {
+            if (this.sidx.entries[i].have) {
+                toDelete.push(i)
+                numDeleted++;
+            }
+            i--;
+        }
+
+        // When calling .remove, the sourceBuffer will go into updating=true
+        // state, and remove cannot be called until it is done. So we have
+        // to delete on the updateend event for subsequent ones.
+        var removeFinishedEvent;
+        var deleteSegment = () => {
+            if (toDelete.length === 0) {
+                // If QuotaExceeded happened during seeking, retry the append
+                // Pass false as forSeek to avoid infinite looping if it
+                // doesn't work. Rescheduling will take care of updating=true
+                // problem.
+                removeFinishedEvent.remove();
+                if (forSeek) {
+                    this.appendSegment(segmentIdx, false, chunk);
+                }
+                return;
+            }
+            let idx = toDelete.shift();
+            let entry = this.sidx.entries[idx];
+            let start = entry.tickStart/this.sidx.timeScale;
+            let end = (entry.tickEnd+1)/this.sidx.timeScale;
+            this.reportDebug('Deleting segment', idx);
+            this.sourceBuffer.remove(start, end);
+            entry.have = false;
+            entry.requested = false;
+        }
+        removeFinishedEvent = addEvent(this.sourceBuffer, 'updateend',
+                                       deleteSegment);
+        if (!this.sourceBuffer.updating)
+            deleteSegment();
     }
 }
 Stream.prototype.getSegmentIdx = function(videoTime) {
@@ -372,7 +432,7 @@ Stream.prototype.fetchSegment = function(segmentIdx) {
         this.url,
         entry.start,
         entry.end,
-        this.appendSegment.bind(this, segmentIdx),
+        this.appendSegment.bind(this, segmentIdx, this.avMerge.seeking),
     );
 }
 Stream.prototype.fetchSegmentIfNeeded = function(segmentIdx) {
@@ -392,7 +452,7 @@ Stream.prototype.fetchSegmentIfNeeded = function(segmentIdx) {
 
     this.fetchSegment(segmentIdx);
 }
-Stream.prototype.handleSeek = async function() {
+Stream.prototype.handleSeek = function() {
     var segmentIdx = this.getSegmentIdx(this.video.currentTime);
     this.fetchSegmentIfNeeded(segmentIdx);
 }
