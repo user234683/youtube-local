@@ -42,9 +42,6 @@ e.g. Firefox playback speed options */
     pointer-events: none;
 }
 
-button[data-plyr="play"]{
-    pointer-events: none;
-}
 
 /* For menus without a button above them - make them scroll if
    they are too high for the player*/
