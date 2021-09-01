@@ -41,16 +41,26 @@ function AVMerge(video, srcPair, startTime){
     this.setup();
 }
 AVMerge.prototype.setup = function() {
-    if ('MediaSource' in window
-            && MediaSource.isTypeSupported(this.audioSource['mime_codec'])
-            && MediaSource.isTypeSupported(this.videoSource['mime_codec'])) {
+    if (!('MediaSource' in window)) {
+        reportError('MediaSource not supported.');
+        return;
+    }
+    var audioSupported = MediaSource.isTypeSupported(
+        this.audioSource['mime_codec']
+    )
+    var videoSupported = MediaSource.isTypeSupported(
+        this.videoSource['mime_codec']
+    )
+    if (!audioSupported)
+        reportError('Unsupported MIME type or codec: ',
+                    this.audioSource['mime_codec']);
+    if (!videoSupported)
+        reportError('Unsupported MIME type or codec: ',
+                    this.videoSource['mime_codec']);
+    if (audioSupported && videoSupported) {
         this.mediaSource = new MediaSource();
         this.video.src = URL.createObjectURL(this.mediaSource);
         this.mediaSource.onsourceopen = this.sourceOpen.bind(this);
-    } else {
-        reportError('Unsupported MIME type or codec: ',
-                    this.audioSource['mime_codec'],
-                    this.videoSource['mime_codec']);
     }
 }
 
