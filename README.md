@@ -129,8 +129,8 @@ In general, Tor video routing will be slower (for instance, moving around in the
 3. Click on "All data included", then on "Deselect all", then select only "subscriptions" and click "OK".
 4. Click on "Next step" and then on "Create export".
 5. Click on the "Download" button after it appears.
-6. From the downloaded takeout zip extract the .json file. It is usually located under `YouTube and YouTube Music/subscriptions/subscriptions.json`
-7. Go to the subscriptions manager in youtube-local. In the import area, select your .json file, then press import.
+6. From the downloaded takeout zip extract the .csv file. It is usually located under `YouTube and YouTube Music/subscriptions/subscriptions.csv`
+7. Go to the subscriptions manager in youtube-local. In the import area, select your .csv file, then press import.
 
 Supported subscriptions import formats:
 - NewPipe subscriptions export JSON
