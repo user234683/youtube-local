@@ -168,7 +168,7 @@ function Stream(avMerge, source, startTime, avRatio) {
     this.mediaSource = avMerge.mediaSource;
     this.sidx = null;
     this.appendRetries = 0;
-    this.appendQueue = []; // list of [segmentIdx, forSeek, data]
+    this.appendQueue = []; // list of [segmentIdx, data]
     this.sourceBuffer = this.mediaSource.addSourceBuffer(this.mimeCodec);
     this.sourceBuffer.mode = 'segments';
     this.sourceBuffer.addEventListener('error', (e) => {
@@ -191,7 +191,7 @@ Stream.prototype.setup = async function(){
                 var init_end = this.initRange.end - this.initRange.start + 1;
                 var index_start = this.indexRange.start - this.initRange.start;
                 var index_end = this.indexRange.end - this.initRange.start + 1;
-                this.appendSegment(null, false, buffer.slice(0, init_end));
+                this.appendSegment(null, buffer.slice(0, init_end));
                 this.setupSegments(buffer.slice(index_start, index_end));
             }
         )
@@ -201,7 +201,7 @@ Stream.prototype.setup = async function(){
             this.url,
             this.initRange.start,
             this.initRange.end,
-            this.appendSegment.bind(this, false, null),
+            this.appendSegment.bind(this, null),
         );
         // sidx (segment index) table
         fetchRange(
@@ -226,7 +226,7 @@ Stream.prototype.close = function() {
     this.mediaSource.removeSourceBuffer(this.sourceBuffer);
     this.updateendEvt.remove();
 }
-Stream.prototype.appendSegment = function(segmentIdx, forSeek, chunk) {
+Stream.prototype.appendSegment = function(segmentIdx, chunk) {
     if (this.closed)
         return;
 
@@ -235,7 +235,7 @@ Stream.prototype.appendSegment = function(segmentIdx, forSeek, chunk) {
     // cannot append right now, schedule for updateend
     if (this.sourceBuffer.updating) {
         this.reportDebug('sourceBuffer updating, queueing for later');
-        this.appendQueue.push([segmentIdx, forSeek, chunk]);
+        this.appendQueue.push([segmentIdx, chunk]);
         if (this.appendQueue.length > 2){
             this.reportWarning('appendQueue length:', this.appendQueue.length);
         }
@@ -269,25 +269,26 @@ Stream.prototype.appendSegment = function(segmentIdx, forSeek, chunk) {
             this.reportDebug('New buffer target:', this.bufferTarget);
         }
 
-        // Delete 3 segments (arbitrary) from buffer, making sure
+        // Delete 10 segments (arbitrary) from buffer, making sure
         // not to delete current one
         var currentSegment = this.getSegmentIdx(this.video.currentTime);
         var numDeleted = 0;
         var i = 0;
+        const DELETION_TARGET = 10;
         var toDelete = []; // See below for why we have to schedule it
         this.reportDebug('Deleting segments from beginning of buffer.');
-        while (numDeleted < 3 && i < currentSegment) {
+        while (numDeleted < DELETION_TARGET && i < currentSegment) {
             if (this.sidx.entries[i].have) {
                 toDelete.push(i)
                 numDeleted++;
             }
             i++;
         }
-        if (numDeleted < 3)
+        if (numDeleted < DELETION_TARGET)
             this.reportDebug('Deleting segments from end of buffer.');
 
         i = this.sidx.entries.length - 1;
-        while (numDeleted < 3 && i > currentSegment) {
+        while (numDeleted < DELETION_TARGET && i > currentSegment) {
             if (this.sidx.entries[i].have) {
                 toDelete.push(i)
                 numDeleted++;
@@ -299,15 +300,21 @@ Stream.prototype.appendSegment = function(segmentIdx, forSeek, chunk) {
         // state, and remove cannot be called until it is done. So we have
         // to delete on the updateend event for subsequent ones.
         var removeFinishedEvent;
+        var deletedStuff = (toDelete.length !== 0)
         var deleteSegment = () => {
             if (toDelete.length === 0) {
-                // If QuotaExceeded happened during seeking, retry the append
-                // Pass false as forSeek to avoid infinite looping if it
-                // doesn't work. Rescheduling will take care of updating=true
-                // problem.
                 removeFinishedEvent.remove();
-                if (forSeek) {
-                    this.appendSegment(segmentIdx, false, chunk);
+                // If QuotaExceeded happened for current segment, retry the
+                // append
+                // Rescheduling will take care of updating=true problem.
+                // Also check that we found segments to delete, to avoid
+                // infinite looping if we can't delete anything
+                if (segmentIdx === currentSegment && deletedStuff) {
+                    this.reportDebug('Retrying appendSegment for', segmentIdx);
+                    this.appendSegment(segmentIdx, chunk);
+                } else {
+                    this.reportDebug('Not retrying segment', segmentIdx);
+                    this.sidx.entries[segmentIdx].requested = false;
                 }
                 return;
             }
@@ -442,7 +449,7 @@ Stream.prototype.fetchSegment = function(segmentIdx) {
         this.url,
         entry.start,
         entry.end,
-        this.appendSegment.bind(this, segmentIdx, this.avMerge.seeking),
+        this.appendSegment.bind(this, segmentIdx),
     );
 }
 Stream.prototype.fetchSegmentIfNeeded = function(segmentIdx) {
