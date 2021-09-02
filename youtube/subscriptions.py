@@ -662,7 +662,7 @@ def check_specific_channels(channel_ids):
     check_channels_if_necessary(channel_ids)
 
 
-
+CHANNEL_ID_RE = re.compile(r'UC[-_\w]{22}')
 @yt_app.route('/import_subscriptions', methods=['POST'])
 def import_subscriptions():
 
@@ -681,15 +681,36 @@ def import_subscriptions():
     mime_type = file.mimetype
 
     if mime_type == 'application/json':
-        file = file.read().decode('utf-8')
+        info = file.read().decode('utf-8')
+        if info == '':
+            return '400 Bad Request: File is empty', 400
         try:
-            file = json.loads(file)
+            info = json.loads(info)
         except json.decoder.JSONDecodeError:
             traceback.print_exc()
             return '400 Bad Request: Invalid json file', 400
 
+        channels = []
         try:
-            channels = ( (item['snippet']['resourceId']['channelId'], item['snippet']['title']) for item in file)
+            if 'app_version_int' in info:   # NewPipe Format
+                for item in info['subscriptions']:
+                    # Other service, such as SoundCloud
+                    if item.get('service_id', 0) != 0:
+                        continue
+                    channel_url = item['url']
+                    channel_id_match = CHANNEL_ID_RE.search(channel_url)
+                    if channel_id_match:
+                        channel_id = channel_id_match.group(0)
+                    else:
+                        print('WARNING: Could not find channel id in url',
+                              channel_url)
+                        continue
+                    channels.append((channel_id, item['name']))
+            else:   # Old Google Takeout format
+                for item in info:
+                    snippet = item['snippet']
+                    channel_id = snippet['resourceId']['channelId']
+                    channels.append((channel_id, snippet['title']))
         except (KeyError, IndexError):
             traceback.print_exc()
             return '400 Bad Request: Unknown json structure', 400
@@ -718,8 +739,7 @@ def import_subscriptions():
         for row in reader:
             if not row or row[0].lower().strip() == 'channel id':
                 continue
-            elif len(row) > 1 and re.fullmatch(r'UC[-_\w]{22}',
-                                               row[0].strip()):
+            elif len(row) > 1 and CHANNEL_ID_RE.fullmatch(row[0].strip()):
                 channels.append( (row[0], row[-1]) )
             else:
                 print('WARNING: Unknown row format:', row)
@@ -747,7 +767,7 @@ def export_subscriptions():
                     _get_subscribed_channels(cursor)):
                 if muted and not include_muted:
                     continue
-                if request.values['export_format'] == 'json':
+                if request.values['export_format'] == 'json_google_takeout':
                     sub_list.append({
                         'kind': 'youtube#subscription',
                         'snippet': {
@@ -760,21 +780,38 @@ def export_subscriptions():
                             'title': channel_name,
                         },
                     })
+                elif request.values['export_format'] == 'json_newpipe':
+                    sub_list.append({
+                        'service_id': 0,
+                        'url': 'https://www.youtube.com/channel/' + channel_id,
+                        'name': channel_name,
+                    })
                 elif request.values['export_format'] == 'opml':
                     sub_list.append({
                         'channel_name': channel_name,
                         'channel_id': channel_id,
                     })
-    if request.values['export_format'] == 'json':
+    date_time = time.strftime('%Y%m%d%H%M', time.localtime())
+    if request.values['export_format'] == 'json_google_takeout':
         r = flask.Response(json.dumps(sub_list), mimetype='text/json')
-        cd = 'attachment; filename="subscriptions.json"'
+        cd = 'attachment; filename="subscriptions_%s.json"' % date_time
+        r.headers['Content-Disposition'] = cd
+        return r
+    elif request.values['export_format'] == 'json_newpipe':
+        r = flask.Response(json.dumps({
+            'app_version': '0.21.9',
+            'app_version_int': 975,
+            'subscriptions': sub_list,
+        }), mimetype='text/json')
+        file_name = 'newpipe_subscriptions_%s_youtube-local.json' % date_time
+        cd = 'attachment; filename="%s"' % file_name
         r.headers['Content-Disposition'] = cd
         return r
     elif request.values['export_format'] == 'opml':
         r = flask.Response(
             flask.render_template('subscriptions.xml', sub_list=sub_list),
             mimetype='text/xml')
-        cd = 'attachment; filename="subscriptions.xml"'
+        cd = 'attachment; filename="subscriptions_%s.xml"' % date_time
         r.headers['Content-Disposition'] = cd
         return r
     else:

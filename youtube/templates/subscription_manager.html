@@ -12,7 +12,7 @@
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            max-width: 400px;
+            max-width: 600px;
             padding:10px;
             margin-left: 10px;
             margin-bottom: 10px;
@@ -111,7 +111,8 @@
             <h2>Export subscriptions</h2>
             <div>
                 <select id="export-type" name="export_format" title="Export format">
-                    <option value="json">JSON</option>
+                    <option value="json_newpipe">JSON (NewPipe)</option>
+                    <option value="json_google_takeout">JSON (Old Google Takeout Format)</option>
                     <option value="opml">OPML (RSS, no tags)</option>
                 </select>
                 <label for="include-muted">Include muted</label>
