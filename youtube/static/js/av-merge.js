@@ -152,6 +152,8 @@ function Stream(avMerge, source, startTime, avRatio) {
     this.avMerge = avMerge;
     this.video = avMerge.video;
     this.url = source['url'];
+    this.ext = source['ext'];
+    this.fileSize = source['file_size'];
     this.closed = false;
     this.mimeCodec = source['mime_codec']
     this.streamType = source['acodec'] ? 'audio' : 'video';
@@ -191,8 +193,8 @@ Stream.prototype.setup = async function(){
                 var init_end = this.initRange.end - this.initRange.start + 1;
                 var index_start = this.indexRange.start - this.initRange.start;
                 var index_end = this.indexRange.end - this.initRange.start + 1;
-                this.appendSegment(null, buffer.slice(0, init_end));
-                this.setupSegments(buffer.slice(index_start, index_end));
+                this.setupInitSegment(buffer.slice(0, init_end));
+                this.setupSegmentIndex(buffer.slice(index_start, index_end));
             }
         )
     } else {
@@ -201,20 +203,38 @@ Stream.prototype.setup = async function(){
             this.url,
             this.initRange.start,
             this.initRange.end,
-            this.appendSegment.bind(this, null),
+            this.setupInitSegment.bind(this),
         );
         // sidx (segment index) table
         fetchRange(
             this.url,
             this.indexRange.start,
             this.indexRange.end,
-            this.setupSegments.bind(this)
+            this.setupSegmentIndex.bind(this)
         );
     }
 }
-Stream.prototype.setupSegments = async function(sidxBox){
-    var box = unbox(sidxBox);
-    this.sidx = sidx_parse(box.data, this.indexRange.end+1);
+Stream.prototype.setupInitSegment = function(initSegment) {
+    if (this.ext == 'webm')
+        this.sidx = extractWebmInitializationInfo(initSegment);
+    this.appendSegment(null, initSegment);
+}
+Stream.prototype.setupSegmentIndex = async function(indexSegment){
+    if (this.ext == 'webm') {
+        this.sidx.entries = parseWebmCues(indexSegment, this.sidx);
+        if (this.fileSize) {
+            let lastIdx = this.sidx.entries.length - 1;
+            this.sidx.entries[lastIdx].end = this.fileSize - 1;
+        }
+        for (let entry of this.sidx.entries) {
+            entry.subSegmentDuration = entry.tickEnd - entry.tickStart + 1;
+            if (entry.end)
+                entry.referencedSize = entry.end - entry.start + 1;
+        }
+    } else {
+        var box = unbox(indexSegment);
+        this.sidx = sidx_parse(box.data, this.indexRange.end+1);
+    }
     this.fetchSegmentIfNeeded(this.getSegmentIdx(this.startTime));
 }
 Stream.prototype.close = function() {
@@ -552,6 +572,13 @@ function byteArrayToIntegerLittleEndian(unsignedByteArray){
     }
     return result;
 }
+function byteArrayToFloat(byteArray) {
+    var view = new DataView(byteArray.buffer);
+    if (byteArray.length == 4)
+        return view.getFloat32(byteArray.byteOffset);
+    else
+        return view.getFloat64(byteArray.byteOffset);
+}
 function ByteParser(data){
     this.curIndex = 0;
     this.data = new Uint8Array(data);
@@ -667,3 +694,238 @@ function unbox(buf) {
     };
 }
 // END unbox.js
+
+
+function extractWebmInitializationInfo(initializationSegment) {
+    var result = {
+        timeScale: null,
+        cuesOffset: null,
+        duration: null,
+    };
+    (new EbmlDecoder()).readTags(initializationSegment, (tagType, tag) => {
+        if (tag.name == 'TimecodeScale')
+            result.timeScale = byteArrayToIntegerLittleEndian(tag.data);
+        else if (tag.name == 'Duration')
+            // Integer represented as a float (why??); units of TimecodeScale
+            result.duration = byteArrayToFloat(tag.data);
+        // https://lists.matroska.org/pipermail/matroska-devel/2013-July/004549.html
+        // "CueClusterPosition in turn is relative to the segment's data start
+        // position" (the data start is the position after the bytes
+        // used to represent the tag ID and entry size)
+        else if (tagType == 'start' && tag.name == 'Segment')
+            result.cuesOffset = tag.dataStart;
+    });
+    if (result.timeScale === null) {
+        result.timeScale = 1000000;
+    }
+
+    // webm timecodeScale is the number of nanoseconds in a tick
+    // Convert it to number of ticks per second to match mp4 convention
+    result.timeScale = 10**9/result.timeScale;
+    return result;
+}
+function parseWebmCues(indexSegment, initInfo) {
+    var entries = [];
+    var currentEntry = {};
+    var cuesOffset = initInfo.cuesOffset;
+    (new EbmlDecoder()).readTags(indexSegment, (tagType, tag) => {
+        if (tag.name == 'CueTime') {
+            const tickStart = byteArrayToIntegerLittleEndian(tag.data);
+            currentEntry.tickStart = tickStart;
+            if (entries.length !== 0)
+                entries[entries.length - 1].tickEnd = tickStart - 1;
+        } else if (tag.name == 'CueClusterPosition') {
+            const byteStart = byteArrayToIntegerLittleEndian(tag.data);
+            currentEntry.start = cuesOffset + byteStart;
+            if (entries.length !== 0)
+                entries[entries.length - 1].end = cuesOffset + byteStart - 1;
+        } else if (tagType == 'end' && tag.name == 'CuePoint') {
+            entries.push(currentEntry);
+            currentEntry = {};
+        }
+    });
+    if (initInfo.duration)
+        entries[entries.length - 1].tickEnd = initInfo.duration - 1;
+    return entries;
+}
+
+// BEGIN node-ebml (modified) for parsing WEBM cues table
+// https://github.com/node-ebml/node-ebml
+
+/* Copyright (c) 2013-2018 Mark Schmale and contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.*/
+
+const schema = new Map([
+    [0x18538067, ['Segment', 'm']],
+    [0x1c53bb6b, ['Cues', 'm']],
+    [0xbb, ['CuePoint', 'm']],
+    [0xb3, ['CueTime', 'u']],
+    [0xb7, ['CueTrackPositions', 'm']],
+    [0xf7, ['CueTrack', 'u']],
+    [0xf1, ['CueClusterPosition', 'u']],
+    [0x1549a966, ['Info', 'm']],
+    [0x2ad7b1, ['TimecodeScale', 'u']],
+    [0x4489, ['Duration', 'f']],
+]);
+
+
+function EbmlDecoder() {
+    this.buffer = null;
+    this.emit = null;
+    this.tagStack = [];
+    this.cursor = 0;
+}
+EbmlDecoder.prototype.readTags = function(chunk, onParsedTag) {
+    this.buffer = new Uint8Array(chunk);
+    this.emit = onParsedTag;
+
+    while (this.cursor < this.buffer.length) {
+        if (!this.readTag() || !this.readSize() || !this.readContent()) {
+            break;
+        }
+    }
+}
+EbmlDecoder.prototype.getSchemaInfo = function(tag) {
+    if (Number.isInteger(tag) && schema.has(tag)) {
+        var name, type;
+        [name, type] = schema.get(tag);
+        return {name, type};
+    }
+    return {
+        type: null,
+        name: 'unknown',
+    };
+}
+EbmlDecoder.prototype.readTag = function() {
+    if (this.cursor >= this.buffer.length) {
+        return false;
+    }
+
+    const tag = readVint(this.buffer, this.cursor);
+    if (tag == null) {
+        return false;
+    }
+
+    const tagObj = {
+        tag: tag.value,
+        ...this.getSchemaInfo(tag.valueWithLeading1),
+        start: this.cursor,
+        end: this.cursor + tag.length,  // exclusive; also overwritten below
+    };
+    this.tagStack.push(tagObj);
+
+    this.cursor += tag.length;
+    return true;
+}
+EbmlDecoder.prototype.readSize = function() {
+    const tagObj = this.tagStack[this.tagStack.length - 1];
+
+    if (this.cursor >= this.buffer.length) {
+        return false;
+    }
+
+    const size = readVint(this.buffer, this.cursor);
+    if (size == null) {
+        return false;
+    }
+
+    tagObj.dataSize = size.value;
+
+    // unknown size
+    if (size.value === -1) {
+        tagObj.end = -1;
+    } else {
+        tagObj.end += size.value + size.length;
+    }
+
+    this.cursor += size.length;
+    tagObj.dataStart = this.cursor;
+    return true;
+}
+EbmlDecoder.prototype.readContent = function() {
+    const { type, dataSize, ...rest } = this.tagStack[
+        this.tagStack.length - 1
+    ];
+
+    if (type === 'm') {
+        this.emit('start', { type, dataSize, ...rest });
+        return true;
+    }
+
+    if (this.buffer.length < this.cursor + dataSize) {
+        return false;
+    }
+
+    const data = this.buffer.subarray(this.cursor, this.cursor + dataSize);
+    this.cursor += dataSize;
+
+    this.tagStack.pop(); // remove the object from the stack
+
+    this.emit('tag', { type, dataSize, data, ...rest });
+
+    while (this.tagStack.length > 0) {
+        const topEle = this.tagStack[this.tagStack.length - 1];
+        if (this.cursor < topEle.end) {
+            break;
+        }
+        this.emit('end', topEle);
+        this.tagStack.pop();
+    }
+    return true;
+}
+
+
+// user234683 notes: The matroska variable integer format is as follows:
+// The first byte is where the length of the integer in bytes is determined.
+// The number of bytes for the integer is equal to the number of leading
+// zeroes in that first byte PLUS 1. Then there is a single 1 bit separator,
+// and the rest of the bits in the first byte and the rest of the bits in
+// the subsequent bytes are the value of the number. Note the 1-bit separator
+// is not part of the value, but by convention IS included in the value for the
+// EBML Tag IDs in the schema table above
+// The byte-length includes the first byte. So one could also say the number
+// of leading zeros is the number of subsequent bytes to include.
+function readVint(buffer, start = 0) {
+    const length = 8 - Math.floor(Math.log2(buffer[start]));
+
+    if (start + length > buffer.length) {
+        return null;
+    }
+
+    let value = buffer[start] & ((1 << (8 - length)) - 1);
+    let valueWithLeading1 = buffer[start] & ((1 << (8 - length + 1)) - 1);
+    for (let i = 1; i < length; i += 1) {
+        // user234683 notes: Bails out with -1 (unknown) if the value would
+        // exceed 53 bits, which is the limit since JavaScript stores all
+        // numbers as floating points. See
+        // https://github.com/node-ebml/node-ebml/issues/49
+        if (i === 7) {
+            if (value >= 2 ** 8 && buffer[start + 7] > 0) {
+                return { length, value: -1, valueWithLeading1: -1 };
+            }
+        }
+        value *= 2 ** 8;
+        value += buffer[start + i];
+        valueWithLeading1 *= 2 ** 8;
+        valueWithLeading1 += buffer[start + i];
+    }
+
+    return { length, value, valueWithLeading1 };
+}
+// END node-ebml
