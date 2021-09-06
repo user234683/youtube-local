@@ -3,7 +3,7 @@ var video = document.querySelector('video');
 function setVideoDimensions(height, width){
     var body = document.querySelector('body');
     body.style.setProperty('--video_height', String(height));
-    body.style.setProperty('--video_width', String(height));
+    body.style.setProperty('--video_width', String(width));
     if (height < 240)
         body.style.setProperty('--plyr-control-spacing-num', '3');
     else
