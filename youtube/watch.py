@@ -505,6 +505,8 @@ time_table = {'h': 3600, 'm': 60, 's': 1}
 @yt_app.route('/watch')
 @yt_app.route('/embed')
 @yt_app.route('/embed/<video_id>')
+@yt_app.route('/shorts')
+@yt_app.route('/shorts/<video_id>')
 def get_watch_page(video_id=None):
     video_id = request.args.get('v') or video_id
     if not video_id:
