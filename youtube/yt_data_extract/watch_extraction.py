@@ -420,7 +420,7 @@ def _extract_formats(info, player_response):
         fmt['vcodec'] = None
         fmt['width'] = yt_fmt.get('width')
         fmt['height'] = yt_fmt.get('height')
-        fmt['file_size'] = yt_fmt.get('contentLength')
+        fmt['file_size'] = extract_int(yt_fmt.get('contentLength'))
         fmt['audio_sample_rate'] = extract_int(yt_fmt.get('audioSampleRate'))
         fmt['duration_ms'] = yt_fmt.get('approxDurationMs')
         fmt['fps'] = yt_fmt.get('fps')

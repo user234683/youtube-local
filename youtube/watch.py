@@ -23,24 +23,33 @@ except FileNotFoundError:
     decrypt_cache = {}
 
 
+def codec_name(vcodec):
+    if vcodec.startswith('avc'):
+        return 'h264'
+    elif vcodec.startswith('av01'):
+        return 'av1'
+    elif vcodec.startswith('vp'):
+        return 'vp'
+    else:
+        return 'unknown'
+
+
 def get_video_sources(info, target_resolution):
     '''return dict with organized sources: {
         'uni_sources': [{}, ...],   # video and audio in one file
         'uni_idx': int,     # default unified source index
-        'pair_sources': [({video}, {audio}), ...],
+        'pair_sources': [{video: {}, audio: {}, quality: ..., ...}, ...],
         'pair_idx': int,    # default pair source index
     }
     '''
     audio_sources = []
-    video_only_sources = []
+    video_only_sources = {}
     uni_sources = []
     pair_sources = []
 
 
     for fmt in info['formats']:
-        if not all(fmt[attr] for attr in ('ext', 'url')):
-            continue
-        if fmt['ext'] != 'mp4': # temporary until webm support
+        if not all(fmt[attr] for attr in ('ext', 'url', 'itag')):
             continue
 
         # unified source
@@ -70,8 +79,11 @@ def get_video_sources(info, target_resolution):
             source['mime_codec'] = (source['type'] + '; codecs="'
                                     + source['acodec'] + '"')
             audio_sources.append(source)
-        # video-only source, include audio source
-        elif all(fmt[attr] for attr in ('vcodec', 'quality', 'width')):
+        # video-only source
+        elif all(fmt[attr] for attr in ('vcodec', 'quality', 'width', 'fps',
+                                        'file_size')):
+            if codec_name(fmt['vcodec']) == 'unknown':
+                continue
             source = {
                 'type': 'video/' + fmt['ext'],
                 'quality_string': short_video_quality_string(fmt),
@@ -79,66 +91,61 @@ def get_video_sources(info, target_resolution):
             source.update(fmt)
             source['mime_codec'] = (source['type'] + '; codecs="'
                                     + source['vcodec'] + '"')
-            video_only_sources.append(source)
-
-    # Remove alternative mp4 codecs from video sources
-    def codec_name(vcodec):
-        if vcodec.startswith('avc'):
-            return 'h.264'
-        elif vcodec.startswith('av01'):
-            return 'av1'
-        else:
-            return 'unknown'
-    quality_to_codecs = {}
-    for src in video_only_sources:
-        if src['quality'] in quality_to_codecs:
-            quality_to_codecs[src['quality']].add(codec_name(src['vcodec']))
-        else:
-            quality_to_codecs[src['quality']] = {codec_name(src['vcodec'])}
-    i = 0
-    while i < len(video_only_sources):
-        src = video_only_sources[i]
-        codecs_for_quality = quality_to_codecs[src['quality']]
-        have_both = ('h.264' in codecs_for_quality
-                     and 'av1' in codecs_for_quality)
-        have_one = ('h.264' in codecs_for_quality
-                    or 'av1' in codecs_for_quality)
-        name = codec_name(src['vcodec'])
-        if name == 'unknown' and have_one:
-            del video_only_sources[i]
-            continue
-        if not have_both:
-            i += 1
-            continue
-        if name == 'av1' and settings.preferred_video_codec == 0:
-            del video_only_sources[i]
-        elif name == 'h.264' and settings.preferred_video_codec == 1:
-            del video_only_sources[i]
-        else:
-            i += 1
+            quality = str(fmt['quality']) + 'p' + str(fmt['fps'])
+            if quality in video_only_sources:
+                video_only_sources[quality].append(source)
+            else:
+                video_only_sources[quality] = [source]
 
     audio_sources.sort(key=lambda source: source['audio_bitrate'])
-    video_only_sources.sort(key=lambda src: src['quality'])
     uni_sources.sort(key=lambda src: src['quality'])
 
-    for source in video_only_sources:
+    webm_audios = [a for a in audio_sources if a['ext'] == 'webm']
+    mp4_audios = [a for a in audio_sources if a['ext'] == 'mp4']
+
+    for quality_string, sources in video_only_sources.items():
         # choose an audio source to go with it
         # 0.5 is semiarbitrary empirical constant to spread audio sources
         # between 144p and 1080p. Use something better eventually.
-        target_audio_bitrate = source['quality']*source.get('fps', 30)/30*0.5
-        compat_audios = [a for a in audio_sources if a['ext'] == source['ext']]
-        if compat_audios:
-            closest_audio_source = compat_audios[0]
-            best_err = target_audio_bitrate - compat_audios[0]['audio_bitrate']
+        quality, fps = map(int, quality_string.split('p'))
+        target_audio_bitrate = quality*fps/30*0.5
+        pair_info = {
+            'quality_string': quality_string,
+            'quality': quality,
+            'height': sources[0]['height'],
+            'width': sources[0]['width'],
+            'fps': fps,
+            'videos': sources,
+            'audios': [],
+        }
+        for audio_choices in (webm_audios, mp4_audios):
+            if not audio_choices:
+                continue
+            closest_audio_source = audio_choices[0]
+            best_err = target_audio_bitrate - audio_choices[0]['audio_bitrate']
             best_err = abs(best_err)
-            for audio_source in compat_audios[1:]:
+            for audio_source in audio_choices[1:]:
                 err = abs(audio_source['audio_bitrate'] - target_audio_bitrate)
                 # once err gets worse we have passed the closest one
                 if err > best_err:
                     break
                 best_err = err
                 closest_audio_source = audio_source
-            pair_sources.append((source, closest_audio_source))
+            pair_info['audios'].append(closest_audio_source)
+
+        if not pair_info['audios']:
+            continue
+
+        def video_rank(src):
+            ''' Sort by settings preference. Use file size as tiebreaker '''
+            setting_name = 'codec_rank_' + codec_name(src['vcodec'])
+            return (settings.current_settings_dict[setting_name],
+                    src['file_size'])
+        pair_info['videos'].sort(key=video_rank)
+
+        pair_sources.append(pair_info)
+
+    pair_sources.sort(key=lambda src: src['quality'])
 
     uni_idx = 0 if uni_sources else None
     for i, source in enumerate(uni_sources):
@@ -147,8 +154,8 @@ def get_video_sources(info, target_resolution):
         uni_idx = i
 
     pair_idx = 0 if pair_sources else None
-    for i, source_pair in enumerate(pair_sources):
-        if source_pair[0]['quality'] > target_resolution:
+    for i, pair_info in enumerate(pair_sources):
+        if pair_info['quality'] > target_resolution:
             break
         pair_idx = i
 
@@ -611,8 +618,7 @@ def get_watch_page(video_id=None):
     pair_sources = source_info['pair_sources']
     uni_idx, pair_idx = source_info['uni_idx'], source_info['pair_idx']
 
-    pair_quality = yt_data_extract.deep_get(pair_sources, pair_idx, 0,
-                                            'quality')
+    pair_quality = yt_data_extract.deep_get(pair_sources, pair_idx, 'quality')
     uni_quality = yt_data_extract.deep_get(uni_sources, uni_idx, 'quality')
 
     pair_error = abs((pair_quality or 360) - target_resolution)
@@ -629,8 +635,8 @@ def get_watch_page(video_id=None):
         bool(pair_sources) and (not uni_sources or closer_to_target == 'pair')
     )
     if using_pair_sources:
-        video_height = pair_sources[pair_idx][0]['height']
-        video_width = pair_sources[pair_idx][0]['width']
+        video_height = pair_sources[pair_idx]['height']
+        video_width = pair_sources[pair_idx]['width']
     else:
         video_height = yt_data_extract.deep_get(
             uni_sources, uni_idx, 'height', default=360

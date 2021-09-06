@@ -12,10 +12,10 @@ for (var src of data['uni_sources']) {
     qualityOptions.push(src.quality_string)
 }
 for (var src of data['pair_sources']) {
-    qualityOptions.push(src[0].quality_string)
+    qualityOptions.push(src.quality_string)
 }
 if (data['using_pair_sources'])
-    qualityDefault = data['pair_sources'][data['pair_idx']][0].quality_string;
+    qualityDefault = data['pair_sources'][data['pair_idx']].quality_string;
 else if (data['uni_sources'].length != 0)
     qualityDefault = data['uni_sources'][data['uni_idx']].quality_string;
 else
@@ -108,7 +108,7 @@ const player = new Plyr(document.querySelector('video'), {
                 }
             } else {
                 for (var i=0; i < data['pair_sources'].length; i++) {
-                    if (data['pair_sources'][i][0].quality_string == quality) {
+                    if (data['pair_sources'][i].quality_string == quality) {
                         changeQuality({'type': 'pair', 'index': i});
                         return;
                     }

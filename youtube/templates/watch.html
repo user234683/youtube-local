@@ -517,7 +517,7 @@ Reload without invidious (for usage of new identity button).</a>
                     <option value='{"type": "uni", "index": {{ loop.index0 }}}' {{ 'selected' if loop.index0 == uni_idx and not using_pair_sources else '' }} >{{ src['quality_string'] }}</option>
                 {% endfor %}
                 {% for src_pair in pair_sources %}
-                    <option value='{"type": "pair", "index": {{ loop.index0}}}' {{ 'selected' if loop.index0 == pair_idx and using_pair_sources else '' }} >{{ src_pair[0]['quality_string'] }}, {{ src_pair[1]['quality_string'] }}</option>
+                    <option value='{"type": "pair", "index": {{ loop.index0}}}' {{ 'selected' if loop.index0 == pair_idx and using_pair_sources else '' }} >{{ src_pair['quality_string'] }}</option>
                 {% endfor %}
             </select>
         </div>

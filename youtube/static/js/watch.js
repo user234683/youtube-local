@@ -30,18 +30,17 @@ function changeQuality(selection) {
     var currentVideoTime = video.currentTime;
     var videoPaused = video.paused;
     var videoSpeed = video.playbackRate;
-    var videoSource;
+    var srcInfo;
     if (avMerge)
         avMerge.close();
     if (selection.type == 'uni'){
-        videoSource = data['uni_sources'][selection.index];
-        video.src = videoSource.url;
+        srcInfo = data['uni_sources'][selection.index];
+        video.src = srcInfo.url;
     } else {
-        let srcPair = data['pair_sources'][selection.index];
-        videoSource = srcPair[0];
-        avMerge = new AVMerge(video, srcPair, currentVideoTime);
+        srcInfo = data['pair_sources'][selection.index];
+        avMerge = new AVMerge(video, srcInfo, currentVideoTime);
     }
-    setVideoDimensions(videoSource.height, videoSource.width);
+    setVideoDimensions(srcInfo.height, srcInfo.width);
     video.currentTime = currentVideoTime;
     if (!videoPaused){
         video.play();
@@ -53,7 +52,6 @@ function changeQuality(selection) {
 var avMerge;
 if (data.using_pair_sources) {
     var srcPair = data['pair_sources'][data['pair_idx']];
-    var videoSource = srcPair[0];
     avMerge = new AVMerge(video, srcPair, 0);
 }
 

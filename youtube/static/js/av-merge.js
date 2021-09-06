@@ -21,13 +21,10 @@
 
 
 
-function AVMerge(video, srcPair, startTime){
-    this.videoSource = srcPair[0];
-    this.audioSource = srcPair[1];
-    if (this.videoSource.bitrate && this.audioSource.bitrate)
-        this.avRatio = this.audioSource.bitrate/this.videoSource.bitrate;
-    else
-        this.avRatio = 1/10;
+function AVMerge(video, srcInfo, startTime){
+    this.audioSource = null;
+    this.videoSource = null;
+    this.avRatio = null;
     this.videoStream = null;
     this.audioStream = null;
     this.seeking = false;
@@ -38,30 +35,48 @@ function AVMerge(video, srcPair, startTime){
     this.opened = false;
     this.audioEndOfStreamCalled = false;
     this.videoEndOfStreamCalled = false;
-    this.setup();
-}
-AVMerge.prototype.setup = function() {
     if (!('MediaSource' in window)) {
         reportError('MediaSource not supported.');
         return;
     }
-    var audioSupported = MediaSource.isTypeSupported(
-        this.audioSource['mime_codec']
-    )
-    var videoSupported = MediaSource.isTypeSupported(
-        this.videoSource['mime_codec']
-    )
-    if (!audioSupported)
-        reportError('Unsupported MIME type or codec: ',
-                    this.audioSource['mime_codec']);
-    if (!videoSupported)
-        reportError('Unsupported MIME type or codec: ',
-                    this.videoSource['mime_codec']);
-    if (audioSupported && videoSupported) {
-        this.mediaSource = new MediaSource();
-        this.video.src = URL.createObjectURL(this.mediaSource);
-        this.mediaSource.onsourceopen = this.sourceOpen.bind(this);
+
+    // Find supported video and audio sources
+    for (var src of srcInfo['videos']) {
+        if (MediaSource.isTypeSupported(src['mime_codec'])) {
+            reportDebug('Using video source', src['mime_codec'],
+                        src['quality_string'], 'itag', src['itag']);
+            this.videoSource = src;
+            break;
+        }
     }
+    for (var src of srcInfo['audios']) {
+        if (MediaSource.isTypeSupported(src['mime_codec'])) {
+            reportDebug('Using audio source', src['mime_codec'],
+                        src['quality_string'], 'itag', src['itag']);
+            this.audioSource = src;
+            break;
+        }
+    }
+    if (this.videoSource === null)
+        reportError('No supported video MIME type or codec found: ',
+                    srcInfo['videos'].map(s => s.mime_codec).join(', '));
+    if (this.audioSource === null)
+        reportError('No supported audio MIME type or codec found: ',
+                    srcInfo['audios'].map(s => s.mime_codec).join(', '));
+    if (this.videoSource === null || this.audioSource === null)
+        return;
+
+    if (this.videoSource.bitrate && this.audioSource.bitrate)
+        this.avRatio = this.audioSource.bitrate/this.videoSource.bitrate;
+    else
+        this.avRatio = 1/10;
+
+    this.setup();
+}
+AVMerge.prototype.setup = function() {
+    this.mediaSource = new MediaSource();
+    this.video.src = URL.createObjectURL(this.mediaSource);
+    this.mediaSource.onsourceopen = this.sourceOpen.bind(this);
 }
 
 AVMerge.prototype.sourceOpen = function(_) {
