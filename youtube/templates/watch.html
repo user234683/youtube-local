@@ -113,8 +113,12 @@
             grid-column: 2;
         }
         #video-container, #video-container-inner, video{
-            height: 360px !important;
+            height: calc(640px*var(--video_height)/var(--video_width)) !important;
             width: 640px !important;
+        }
+        .plyr {
+            height: 100%;
+            width: 100%;
         }
         .side-videos{
             grid-row: 1 /span 4;
