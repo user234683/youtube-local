@@ -23,8 +23,10 @@ function setVideoDimensions(height, width){
             videoContainerInner.style.height = '';
         }
     }
-    setVideoAspectRatio();
-    window.onresize = function(event) { setVideoAspectRatio() };
+    if (data.settings.theater_mode) {
+        setVideoAspectRatio();
+        window.onresize = function(event) { setVideoAspectRatio() };
+    }
 }
 function changeQuality(selection) {
     var currentVideoTime = video.currentTime;
