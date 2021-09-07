@@ -154,6 +154,7 @@ Permission is hereby granted to the youtube-dl project at [https://github.com/yt
 
 - Bitcoin: bc1qnxfm8mk2gdcdr56308794a4f97dd7wu6qawguw
 - Monero: 469tczUEVTX6Y7bMEgTyrUJ2K7R8qVNjn5eh5VVHKvi4QsbMD7vrFW8RaCqM1jmZMR9GM87yByvPKZb8gsSxUzrdGCM1yXv
+- Ethereum: 0x04828FFa6fa8F68535A22153300e50AfCDC342C4
 
 ## Similar projects
 - [invidious](https://github.com/iv-org/invidious) Similar to this project, but also allows it to be hosted as a server to serve many users
