@@ -37,5 +37,31 @@ a:not([href]){
     color: #10547f;
 }
 
+.button,
+input,
+input[type="file"]::file-selector-button,
+select,
+button[type=submit]{
+    color: var(--text-color);
+    background-color: #444444;
+    border: 1px solid var(--text-color);
+    border-radius: 3px;
+    padding: 2px 3px;
+}
+
+.button:hover,
+input:hover,
+input[type="file"]::file-selector-button:hover,
+select:hover,
+button[type=submit]:hover{
+    background-color: #222222;
+}
+
+input[type="checkbox"]{
+    filter: invert(85%) hue-rotate(18deg) brightness(1.7);
+}
+input[type="checkbox"]:checked{
+    filter: none;
+}
 
 
