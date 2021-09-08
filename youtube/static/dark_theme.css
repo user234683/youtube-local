@@ -37,16 +37,8 @@ a:not([href]){
     color: #10547f;
 }
 
-input[type="file"]::-webkit-file-upload-button{
-    color: var(--text-color);
-    background-color: #444444;
-    border: 1px solid var(--text-color);
-    border-radius: 3px;
-    padding: 2px 3px;
-}
 .button,
 input,
-input[type="file"]::file-selector-button,
 select,
 button[type=submit]{
     color: var(--text-color);
@@ -55,13 +47,8 @@ button[type=submit]{
     border-radius: 3px;
     padding: 2px 3px;
 }
-
-input[type="file"]::-webkit-file-upload-button:hover{
-    background-color: #222222;
-}
 .button:hover,
 input:hover,
-input[type="file"]::file-selector-button:hover,
 select:hover,
 button[type=submit]:hover{
     background-color: #222222;
