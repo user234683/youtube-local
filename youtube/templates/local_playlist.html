@@ -27,7 +27,7 @@
 
     #video-remove-container{
         display: flex;
-        justify-content: end;
+        justify-content: space-between;
         margin: 0px auto 15px auto;
     }
         #playlist-remove-button{
@@ -56,7 +56,9 @@
             </form>
         </div>
     </div>
+    <form id="playlist-remove" action="/youtube.com/edit_playlist" method="post" target="_self"></form>
     <div id="video-remove-container">
+        <button type="submit" name="action" value="remove_playlist" form="playlist-remove" formaction="" onclick="return confirm('You are about to permanently delete {{ playlist_name }}\n\nOnce a playlist is permanently deleted, it cannot be recovered.');">Remove playlist</button>
         <input type="hidden" name="playlist_page" value="{{ playlist_name }}" form="playlist-edit">
         <button type="submit" id="playlist-remove-button" name="action" value="remove" form="playlist-edit" formaction="">Remove from playlist</button>
     </div>

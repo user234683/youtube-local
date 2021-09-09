@@ -150,6 +150,12 @@ def path_edit_playlist(playlist_name):
         number_of_videos_remaining = remove_from_playlist(playlist_name, videos_to_remove)
         redirect_page_number = min(int(request.values.get('page', 1)), math.ceil(number_of_videos_remaining/50))
         return flask.redirect(util.URL_ORIGIN + request.path + '?page=' + str(redirect_page_number))
+    elif request.values['action'] == 'remove_playlist':
+        try:
+            os.remove(os.path.join(playlists_directory, playlist_name + ".txt"))
+        except OSError:
+            pass
+        return flask.redirect(util.URL_ORIGIN + '/playlists')
     elif request.values['action'] == 'export':
         videos = read_playlist(playlist_name)
         fmt = request.values['export_format']
