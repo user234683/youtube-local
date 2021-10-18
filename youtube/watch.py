@@ -349,45 +349,45 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     watch_page = watch_page.decode('utf-8')
     info = yt_data_extract.extract_watch_info_from_html(watch_page)
 
-    # request player urls if it's missing
-    # see https://github.com/user234683/youtube-local/issues/22#issuecomment-706395160
+    context = {
+        'client': {
+            'clientName': 'ANDROID',
+            'clientVersion': '16.20',
+            'gl': 'US',
+            'hl': 'en',
+        },
+        # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
+        'thirdParty': {
+            'embedUrl': 'https://google.com',  # Can be any valid URL
+        }
+    }
     if info['age_restricted'] or info['player_urls_missing']:
         if info['age_restricted']:
             print('Age restricted video. Fetching /youtubei/v1/player page')
         else:
             print('Missing player. Fetching /youtubei/v1/player page')
+        context['client']['clientScreen'] = 'EMBED'
+    else:
+        print('Fetching /youtubei/v1/player page')
 
-        # https://github.com/yt-dlp/yt-dlp/issues/574#issuecomment-887171136
-        # ANDROID is used instead because its urls don't require decryption
-        # The URLs returned with WEB for videos requiring decryption
-        # couldn't be decrypted with the base.js from the web page for some
-        # reason
-        url ='https://youtubei.googleapis.com/youtubei/v1/player'
-        url += '?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
-        data = {
-            'videoId': video_id,
-            'context': {
-                'client': {
-                    'clientName': 'ANDROID',
-                    'clientVersion': '16.20',
-                    'clientScreen': 'EMBED',
-                    'gl': 'US',
-                    'hl': 'en',
-                },
-                # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
-                'thirdParty': {
-                    'embedUrl': 'https://google.com',  # Can be any valid URL
-                }
-            }
-        }
-        data = json.dumps(data)
-        content_header = (('Content-Type', 'application/json'),)
-        player_response = util.fetch_url(
-            url, data=data, headers=util.mobile_ua + content_header,
-            debug_name='youtubei_player',
-            report_text='Fetched youtubei player page').decode('utf-8')
-        yt_data_extract.update_with_age_restricted_info(info,
-                                                            player_response)
+    # https://github.com/yt-dlp/yt-dlp/issues/574#issuecomment-887171136
+    # ANDROID is used instead because its urls don't require decryption
+    # The URLs returned with WEB for videos requiring decryption
+    # couldn't be decrypted with the base.js from the web page for some
+    # reason
+    url ='https://youtubei.googleapis.com/youtubei/v1/player'
+    url += '?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
+    data = {
+        'videoId': video_id,
+        'context': context,
+    }
+    data = json.dumps(data)
+    content_header = (('Content-Type', 'application/json'),)
+    player_response = util.fetch_url(
+        url, data=data, headers=util.mobile_ua + content_header,
+        debug_name='youtubei_player',
+        report_text='Fetched youtubei player page').decode('utf-8')
+    yt_data_extract.update_with_age_restricted_info(info, player_response)
 
     # signature decryption
     decryption_error = decrypt_signatures(info, video_id)
