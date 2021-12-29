@@ -732,7 +732,7 @@ def import_subscriptions():
 
         except (AssertionError, IndexError, defusedxml.ElementTree.ParseError) as e:
             return '400 Bad Request: Unable to read opml xml file, or the file is not the expected format', 400
-    elif mime_type == 'text/csv':
+    elif mime_type in ('text/csv', 'application/vnd.ms-excel'):
         content = file.read().decode('utf-8')
         reader = csv.reader(content.splitlines())
         channels = []
