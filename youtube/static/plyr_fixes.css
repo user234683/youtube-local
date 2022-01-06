@@ -32,11 +32,23 @@ e.g. Firefox playback speed options */
     display: none !important;
 }
 
-/* Get rid of obnoxiously high padding on controls bar */
-.plyr__controls{
-    padding-top: 4px !important;
-    padding-bottom: 4px !important;
+
+/* Extend hitbox of progressbar to bottom */
+.plyr__progress input[type=range] {
+    height: 100%;
 }
+.plyr__controls .plyr__controls__item.plyr__time {
+    display: flex;
+    align-items: center;
+}
+.plyr__controls {
+	align-items: stretch;
+	padding: 0 !important;
+}
+.plyr__progress {
+	height: 100%;
+}
+
 
 .plyr__captions{
     pointer-events: none;
