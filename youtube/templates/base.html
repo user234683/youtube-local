@@ -29,7 +29,7 @@
                 <form id="site-search" action="/youtube.com/results">
                     <a href="/youtube.com" id="home-link">Home</a>
                     <input type="search" name="search_query" class="search-box" value="{{ search_box_value }}"
-                        {{ "autofocus" if request.path == "/" else "" }} placeholder="Type to search...">
+                        {{ "autofocus" if (request.path in ("/", "/results") or error_message) else "" }} placeholder="Type to search...">
                     <button type="submit" value="Search" class="button search-button">Search</button>
                     <label for="filter-dropdown-toggle-cbox" class="filter-dropdown-toggle-button button">Filter</label>
                     <input id="filter-dropdown-toggle-cbox" type="checkbox" hidden>
