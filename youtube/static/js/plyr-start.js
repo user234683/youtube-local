@@ -116,6 +116,10 @@ const player = new Plyr(document.querySelector('video'), {
             }
         },
     },
+    previewThumbnails: {
+        enabled: true,
+        src: [storyboard_url],
+    },
     settings: ['captions', 'quality', 'speed', 'loop'],
 });
 

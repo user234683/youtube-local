@@ -651,6 +651,8 @@ def extract_watch_info(polymer_json):
 
     # other stuff
     info['author_url'] = 'https://www.youtube.com/channel/' + info['author_id'] if info['author_id'] else None
+    info['storyboard_spec_url'] = player_response['storyboards']['playerStoryboardSpecRenderer']['spec']
+
     return info
 
 single_char_codes = {
