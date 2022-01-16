@@ -117,7 +117,7 @@ const player = new Plyr(document.querySelector('video'), {
         },
     },
     previewThumbnails: {
-        enabled: true,
+        enabled: storyboard_url != null,
         src: [storyboard_url],
     },
     settings: ['captions', 'quality', 'speed', 'loop'],

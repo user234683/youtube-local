@@ -782,7 +782,8 @@ def get_watch_page(video_id=None):
         video_url = util.URL_ORIGIN + '/watch?v=' + video_id,
         video_id = video_id,
         storyboard_url = (util.URL_ORIGIN + '/ytl-api/storyboard.vtt?' +
-            urlencode([('spec_url', info['storyboard_spec_url'])])),
+            urlencode([('spec_url', info['storyboard_spec_url'])])
+            if info['storyboard_spec_url'] else None),
 
         js_data = {
             'video_id': info['id'],
