@@ -338,7 +338,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
             ip = ip.group(1).decode('ascii') if ip else None
             if not ip:
                 ip = re.search(r'IP=((?:\d+\.)+\d+)',
-                               response.getheader('Set-Cookie'))
+                               response.getheader('Set-Cookie') or '')
                 ip = ip.group(1) if ip else None
 
             # don't get new identity if we're not using Tor
