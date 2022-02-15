@@ -262,14 +262,15 @@ def fetch_url_response(url, headers=(), timeout=15, data=None,
         # According to the documentation for urlopen, a redirect counts as a
         # retry. So there are 3 redirects max by default.
         if max_redirects:
-            retries = urllib3.Retry(3+max_redirects, redirect=max_redirects)
+            retries = urllib3.Retry(3+max_redirects, redirect=max_redirects, raise_on_redirect=False)
         else:
-            retries = urllib3.Retry(3)
+            retries = urllib3.Retry(3, raise_on_redirect=False)
         pool = get_pool(use_tor and settings.route_tor)
         try:
             response = pool.request(method, url, headers=headers, body=data,
                                     timeout=timeout, preload_content=False,
                                     decode_content=False, retries=retries)
+            response.retries = retries
         except urllib3.exceptions.MaxRetryError as e:
             exception_cause = e.__context__.__context__
             if (isinstance(exception_cause, socks.ProxyConnectionError)
@@ -322,11 +323,23 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
             with open(os.path.join(save_dir, debug_name), 'wb') as f:
                 f.write(content)
 
-        if response.status == 429:
+        if response.status == 429 or (
+            response.status == 302 and (response.getheader('Location') == url
+                or response.getheader('Location').startswith(
+                       'https://www.google.com/sorry/index'
+                   )
+            )
+        ):
+            print(response.status, response.reason, response.retries.history,
+                  response.getheaders())
             ip = re.search(
                 br'IP address: ((?:[\da-f]*:)+[\da-f]+|(?:\d+\.)+\d+)',
                 content)
             ip = ip.group(1).decode('ascii') if ip else None
+            if not ip:
+                ip = re.search(r'IP=((?:\d+\.)+\d+)',
+                               response.getheader('Set-Cookie'))
+                ip = ip.group(1) if ip else None
 
             # don't get new identity if we're not using Tor
             if not use_tor:
