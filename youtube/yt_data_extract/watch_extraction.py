@@ -730,10 +730,15 @@ def extract_watch_info_from_html(watch_html):
     return extract_watch_info(fake_polymer_json)
 
 
+def captions_available(info):
+    return bool(info['_captions_base_url'])
+
 
 def get_caption_url(info, language, format, automatic=False, translation_language=None):
     '''Gets the url for captions with the given language and format. If automatic is True, get the automatic captions for that language. If translation_language is given, translate the captions from `language` to `translation_language`. If automatic is true and translation_language is given, the automatic captions will be translated.'''
     url = info['_captions_base_url']
+    if not url:
+        return None
     url += '&lang=' + language
     url += '&fmt=' + format
     if automatic:

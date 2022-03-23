@@ -175,7 +175,7 @@ def make_caption_src(info, lang, auto=False, trans_lang=None):
     if trans_lang:
         label += ' -> ' + trans_lang
     return {
-        'url': '/' + yt_data_extract.get_caption_url(info, lang, 'vtt', auto, trans_lang),
+        'url': util.prefix_url(yt_data_extract.get_caption_url(info, lang, 'vtt', auto, trans_lang)),
         'label': label,
         'srclang': trans_lang[0:2] if trans_lang else lang[0:2],
         'on': False,
@@ -215,6 +215,8 @@ def get_subtitle_sources(info):
     pref_lang (Automatic)
     pref_lang (Manual)'''
     sources = []
+    if not yt_data_extract.captions_available(info):
+        return []
     pref_lang = settings.subtitles_language
     native_video_lang = None
     if info['automatic_caption_languages']:

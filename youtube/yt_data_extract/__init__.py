@@ -10,4 +10,4 @@ from .watch_extraction import (extract_watch_info, get_caption_url,
     update_with_age_restricted_info, requires_decryption,
     extract_decryption_function, decrypt_signatures, _formats,
     update_format_with_type_info, extract_hls_formats,
-    extract_watch_info_from_html)
+    extract_watch_info_from_html, captions_available)
