@@ -562,6 +562,25 @@ def extract_watch_info(polymer_json):
     info['translation_languages'] = []
     captions_info = player_response.get('captions', {})
     info['_captions_base_url'] = normalize_url(deep_get(captions_info, 'playerCaptionsRenderer', 'baseUrl'))
+    # Sometimes the above playerCaptionsRender is randomly missing
+    # Extract base_url from one of the captions by removing lang specifiers
+    if not info['_captions_base_url']:
+        base_url = normalize_url(deep_get(
+            captions_info,
+            'playerCaptionsTracklistRenderer',
+            'captionTracks',
+            0,
+            'baseUrl'
+        ))
+        if base_url:
+            url_parts = urllib.parse.urlparse(base_url)
+            qs = urllib.parse.parse_qs(url_parts.query)
+            for key in ('tlang', 'lang', 'name', 'kind', 'fmt'):
+                if key in qs:
+                    del qs[key]
+            base_url = urllib.parse.urlunparse(url_parts._replace(
+                query=urllib.parse.urlencode(qs, doseq=True)))
+            info['_captions_base_url'] = base_url
     for caption_track in deep_get(captions_info, 'playerCaptionsTracklistRenderer', 'captionTracks', default=()):
         lang_code = caption_track.get('languageCode')
         if not lang_code:
