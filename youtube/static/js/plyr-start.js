@@ -132,9 +132,3 @@ player.eventListeners.forEach(function(eventListener) {
 player.started = false;
 player.once('playing', function(){this.started = true});
 
-// Hide the external quality selector
-window.addEventListener('DOMContentLoaded', function(){
-    var qs = document.querySelector('#quality-select');
-    if (qs)
-        qs.hidden = true;
-});

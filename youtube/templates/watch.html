@@ -515,15 +515,16 @@ Reload without invidious (for usage of new identity button).</a>
 
         <div class="external-player-controls">
             <input id="speed-control" type="text" title="Video speed" placeholder="Speed">
-
-            <select id="quality-select" autocomplete="off">
-                {% for src in uni_sources %}
-                    <option value='{"type": "uni", "index": {{ loop.index0 }}}' {{ 'selected' if loop.index0 == uni_idx and not using_pair_sources else '' }} >{{ src['quality_string'] }}</option>
-                {% endfor %}
-                {% for src_pair in pair_sources %}
-                    <option value='{"type": "pair", "index": {{ loop.index0}}}' {{ 'selected' if loop.index0 == pair_idx and using_pair_sources else '' }} >{{ src_pair['quality_string'] }}</option>
-                {% endfor %}
-            </select>
+            {% if settings.video_player == 0 %}
+                <select id="quality-select" autocomplete="off">
+                    {% for src in uni_sources %}
+                        <option value='{"type": "uni", "index": {{ loop.index0 }}}' {{ 'selected' if loop.index0 == uni_idx and not using_pair_sources else '' }} >{{ src['quality_string'] }}</option>
+                    {% endfor %}
+                    {% for src_pair in pair_sources %}
+                        <option value='{"type": "pair", "index": {{ loop.index0}}}' {{ 'selected' if loop.index0 == pair_idx and using_pair_sources else '' }} >{{ src_pair['quality_string'] }}</option>
+                    {% endfor %}
+                </select>
+            {% endif %}
         </div>
         <input class="checkbox" name="video_info_list" value="{{ video_info }}" form="playlist-edit" type="checkbox">
 

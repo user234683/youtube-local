@@ -58,11 +58,13 @@ if (data.using_pair_sources) {
 }
 
 // Quality selector
-document.querySelector('#quality-select').addEventListener(
-    'change', function(e) {
-        changeQuality(JSON.parse(this.value))
-    }
-);
+var qualitySelector = document.querySelector('#quality-select')
+if (qualitySelector)
+    qualitySelector.addEventListener(
+        'change', function(e) {
+            changeQuality(JSON.parse(this.value))
+        }
+    );
 
 // Set up video start time from &t parameter
 if (data.time_start != 0 && video)
