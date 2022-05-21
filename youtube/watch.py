@@ -512,19 +512,19 @@ def get_storyboard_vtt():
     """
 
     spec_url = request.args.get('spec_url')
-    url, *l = spec_url.split('|')
-    url1, q = url.split('?')
-    q = parse_qs(q)
+    url, *boards = spec_url.split('|')
+    base_url, q = url.split('?')
+    q = parse_qs(q)  # for url query
 
     storyboard = None
     wanted_height = 90
 
-    for i, board in enumerate(l):
+    for i, board in enumerate(boards):
         *t, _, sigh = board.split("#")
         width, height, count, width_cnt, height_cnt, interval = map(int, t)
         if height != wanted_height: continue
         q['sigh'] = [sigh]
-        url = f"{url1}?{urlencode(q, doseq=True)}"
+        url = f"{base_url}?{urlencode(q, doseq=True)}"
         storyboard = SimpleNamespace(
             url               = url.replace("$L", str(i)).replace("$N", "M$M"),
             width             = width,
@@ -544,8 +544,8 @@ def get_storyboard_vtt():
         m, s = divmod(s, 60)
         return f"{h:02}:{m:02}:{s:02}.{ms:03}"
 
-    r = "WEBVTT"
-    ts = 0
+    r = "WEBVTT"  # result
+    ts = 0  # current timestamp
 
     for i in range(storyboard.storyboard_count):
         url = '/' + storyboard.url.replace("$M", str(i))
