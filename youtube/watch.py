@@ -168,7 +168,7 @@ def get_video_sources(info, target_resolution):
 
 
 
-def make_caption_src(info, lang, auto=False, trans_lang=None):
+def make_caption_src(info, lang, score, auto=False, trans_lang=None):
     label = lang
     if auto:
         label += ' (Automatic)'
@@ -179,6 +179,9 @@ def make_caption_src(info, lang, auto=False, trans_lang=None):
         'label': label,
         'srclang': trans_lang[0:2] if trans_lang else lang[0:2],
         'on': False,
+        'score': score,
+        'lang': lang,
+        'auto': auto,
     }
 
 def lang_in(lang, sequence):
@@ -195,83 +198,65 @@ def lang_eq(lang1, lang2):
         return False
     return lang1[0:2] == lang2[0:2]
 
-def equiv_lang_in(lang, sequence):
-    '''Extracts a language in sequence which is equivalent to lang.
-    e.g. if lang is en, extracts en-GB from sequence.
-    Necessary because if only a specific variant like en-GB is available, can't ask Youtube for simply en. Need to get the available variant.'''
-    lang = lang[0:2]
-    for l in sequence:
-        if l[0:2] == lang:
-            return l
-    return None
-
 def get_subtitle_sources(info):
     '''Returns these sources, ordered from least to most intelligible:
     native_video_lang (Automatic)
     foreign_langs (Manual)
+
     native_video_lang (Automatic) -> pref_lang
     foreign_langs (Manual) -> pref_lang
     native_video_lang (Manual) -> pref_lang
+
     pref_lang (Automatic)
     pref_lang (Manual)'''
     sources = []
     if not yt_data_extract.captions_available(info):
         return []
-    pref_lang = settings.subtitles_language
+
+    user_langs = settings.subtitles_language.split(',')
     native_video_lang = None
     if info['automatic_caption_languages']:
         native_video_lang = info['automatic_caption_languages'][0]
 
-    highest_fidelity_is_manual = False
+    kManual, kNativeVideoLang, kUserSpeaksIt = 1, 2, 4
+    def score_lang(lang):
+        score = 0
+        if lang_in(lang, user_langs):
+            score |= kUserSpeaksIt
+        if lang_eq(lang, native_video_lang):
+            score |= kNativeVideoLang
+        return score
 
-    # Sources are added in very specific order outlined above
-    # More intelligible sources are put further down to avoid browser bug when there are too many languages
-    # (in firefox, it is impossible to select a language near the top of the list because it is cut off)
-
-    # native_video_lang (Automatic)
-    if native_video_lang and not lang_eq(native_video_lang, pref_lang):
-        sources.append(make_caption_src(info, native_video_lang, auto=True))
-
-    # foreign_langs (Manual)
     for lang in info['manual_caption_languages']:
-        if not lang_eq(lang, pref_lang):
-            sources.append(make_caption_src(info, lang))
+        score = score_lang(lang) | kManual
+        sources.append(make_caption_src(info, lang, score))
 
-    if (lang_in(pref_lang, info['translation_languages'])
-            and not lang_in(pref_lang, info['automatic_caption_languages'])
-            and not lang_in(pref_lang, info['manual_caption_languages'])):
-        # native_video_lang (Automatic) -> pref_lang
-        if native_video_lang and not lang_eq(pref_lang, native_video_lang):
-            sources.append(make_caption_src(info, native_video_lang, auto=True, trans_lang=pref_lang))
+    for lang in info['automatic_caption_languages']:
+        score = score_lang(lang)
+        if score:
+            sources.append(make_caption_src(info, lang, score, auto=True))
 
-        # foreign_langs (Manual) -> pref_lang
-        for lang in info['manual_caption_languages']:
-            if not lang_eq(lang, native_video_lang) and not lang_eq(lang, pref_lang):
-                sources.append(make_caption_src(info, lang, trans_lang=pref_lang))
+    if not any(s['score'] & kUserSpeaksIt for s in sources):
+        for user_lang in user_langs:
+            if not lang in info['translation_languages']:
+                continue
 
-        # native_video_lang (Manual) -> pref_lang
-        if lang_in(native_video_lang, info['manual_caption_languages']):
-            sources.append(make_caption_src(info, native_video_lang, trans_lang=pref_lang))
+            for s in sources[:]:
+                lang, score, auto = s['lang'], s['score'] | kUserSpeaksIt, s['auto']
+                sources.append(make_caption_src(info, lang, score, auto=auto, trans_lang=user_lang))
 
-    # pref_lang (Automatic)
-    if lang_in(pref_lang, info['automatic_caption_languages']):
-        sources.append(make_caption_src(info, equiv_lang_in(pref_lang, info['automatic_caption_languages']), auto=True))
-
-    # pref_lang (Manual)
-    if lang_in(pref_lang, info['manual_caption_languages']):
-        sources.append(make_caption_src(info, equiv_lang_in(pref_lang, info['manual_caption_languages'])))
-        highest_fidelity_is_manual = True
-
-    if sources and sources[-1]['srclang'] == pref_lang:
-        # set as on by default since it's manual a default-on subtitles mode is in settings
-        if highest_fidelity_is_manual and settings.subtitles_mode > 0:
-            sources[-1]['on'] = True
-        # set as on by default since settings indicate to set it as such even if it's not manual
-        elif settings.subtitles_mode == 2:
-            sources[-1]['on'] = True
+    sources = sorted(sources, key=lambda x: x['score'])
 
     if len(sources) == 0:
         assert len(info['automatic_caption_languages']) == 0 and len(info['manual_caption_languages']) == 0
+
+    if sources and settings.subtitles_mode > 0 and sources[-1]['score'] & kUserSpeaksIt:
+        if sources[-1]['score'] & kManual:
+            # set as on by default since it's manual a default-on subtitles mode is in settings
+            sources[-1]['on'] = True
+        elif settings.subtitles_mode == 2:
+            # set as on by default since settings indicate to set it as such even if it's not manual
+            sources[-1]['on'] = True
 
     return sources
 
