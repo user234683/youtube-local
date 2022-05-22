@@ -258,6 +258,9 @@ def get_subtitle_sources(info):
             # set as on by default since settings indicate to set it as such even if it's not manual
             sources[-1]['on'] = True
 
+    if settings.video_player == 1:  # Plyr
+        sources[-1]['on'] = True
+
     return sources
 
 
