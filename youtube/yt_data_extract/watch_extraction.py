@@ -651,8 +651,7 @@ def extract_watch_info(polymer_json):
 
     # other stuff
     info['author_url'] = 'https://www.youtube.com/channel/' + info['author_id'] if info['author_id'] else None
-    sb = player_response.get('storyboards')
-    info['storyboard_spec_url'] = sb['playerStoryboardSpecRenderer']['spec'] if sb else None
+    info['storyboard_spec_url'] = deep_get(player_response, 'storyboards', 'playerStoryboardSpecRenderer', 'spec')
 
     return info
 
