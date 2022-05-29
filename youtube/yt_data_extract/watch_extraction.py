@@ -3,7 +3,7 @@ from .common import (get, multi_get, deep_get, multi_deep_get,
     extract_str, extract_formatted_text, extract_int, extract_approx_int,
     extract_date, check_missing_keys, extract_item_info, extract_items,
     extract_response, concat_or_none, liberal_dict_update,
-    conservative_dict_update)
+    conservative_dict_update, dbg_assert)
 
 import json
 import urllib.parse
@@ -752,6 +752,27 @@ def extract_watch_info_from_html(watch_html):
 def captions_available(info):
     return bool(info['_captions_base_url'])
 
+def parse_endcard(card):
+    """
+    parses a single endcard into a format that's easier to handle.
+    from: https://git.gir.st/subscriptionfeed.git/blob/737a2f6f:/app/common/innertube.py#l301
+    """
+    card = card.get('endscreenElementRenderer', card) #only sometimes nested
+    ctype = card['style'].lower()
+    if ctype == "video":
+        if not 'endpoint' in card: return None # title == "This video is unavailable."
+        video_id = card['endpoint']['watchEndpoint']['videoId']
+        return {'type': ctype,
+            'video_id': video_id,
+            'title': extract_str(card['title']),
+            'approx_view_count': extract_str(card['metadata']),
+            'thumbnail': f"/https://i.ytimg.com/vi/{video_id}/default.jpg",
+            'duration': extract_str(card["thumbnailOverlays"][0]["thumbnailOverlayTimeStatusRenderer"]["text"])
+            # XXX: no channel name
+        }
+    else:
+        dbg_assert(False, f"unknown ctype: {ctype}")
+
 
 def get_caption_url(info, language, format, automatic=False, translation_language=None):
     '''Gets the url for captions with the given language and format. If automatic is True, get the automatic captions for that language. If translation_language is given, translate the captions from `language` to `translation_language`. If automatic is true and translation_language is given, the automatic captions will be translated.'''
@@ -779,6 +800,13 @@ def update_with_age_restricted_info(info, player_response):
         traceback.print_exc()
         info['playability_error'] = ERROR_PREFIX + 'Failed to parse json response'
         return
+
+    info['endcard'] = []
+    for e in deep_get(player_response, "endscreen", "endscreenRenderer", "elements", default=[]):
+        e = parse_endcard(e["endscreenElementRenderer"])
+        if not e: continue
+        info['endcard'].append(e)
+        print(info['endcard'][-1])
 
     _extract_formats(info, player_response)
     _extract_playability_error(info, player_response, error_prefix=ERROR_PREFIX)

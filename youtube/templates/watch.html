@@ -150,6 +150,7 @@
                 "external-player-controls v-checkbox"
                 "v-direct-link            v-direct-link"
                 "v-download               v-download"
+                "v-endcard                v-endcard"
                 "v-description            v-description"
                 "v-music-list             v-music-list"
                 "v-more-info              v-more-info";
@@ -216,6 +217,13 @@
             }
             .video-info > .download-dropdown{
                 grid-area: v-download;
+            }
+            .video-info > .endcard-dropdown{
+                margin-top: 2px;
+                grid-area: v-endcard;
+            }
+            .video-info > .endcard-dropdown .item-box {
+                width: 100%;
             }
             .video-info > .description{
                 background-color:var(--interface-color);
@@ -343,7 +351,7 @@
                     width: 120px !important;
                 }
 
-    .download-dropdown-content{
+    .dropdown-content {
         background-color: var(--interface-color);
         padding: 10px;
         list-style: none;
@@ -428,6 +436,7 @@
                 "external-player-controls v-checkbox"
                 "v-direct-link            v-direct-link"
                 "v-download               v-download"
+                "v-endcard                v-endcard"
                 "v-description            v-description"
                 "v-music-list             v-music-list"
                 "v-more-info              v-more-info";
@@ -532,7 +541,7 @@ Reload without invidious (for usage of new identity button).</a>
 
         <details class="download-dropdown">
             <summary class="download-dropdown-label">Download</summary>
-            <ul class="download-dropdown-content">
+            <ul class="dropdown-content">
                 {% for format in download_formats %}
                     <li class="download-format">
                         <a class="download-link" href="{{ format['url'] }}">
@@ -559,6 +568,17 @@ Reload without invidious (for usage of new identity button).</a>
             </ul>
         </details>
 
+        {% if endcard %}
+        <details class="endcard-dropdown">
+            <summary>Endcard</summary>
+            <div class="dropdown-content">
+                {% for e in endcard %}
+                {{ common_elements.item(e) }}
+                <!-- {{ e }} -->
+                {% endfor %}
+            </div>
+        </details>
+        {% endif %}
 
         <span class="description">{{ common_elements.text_runs(description)|escape|urlize|timestamps|safe }}</span>
         <div class="music-list">
