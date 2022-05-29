@@ -570,3 +570,12 @@ def extract_items(response, item_types=_item_types,
             ctoken = new_ctoken
 
     return items, ctoken
+
+def dbg_assert(val, msg):
+    import os
+    if val: return
+
+    if os.getenv('YT_EXTR_DBG'):
+        raise AssertionError(msg)
+    else:
+        print(f"W: {msg}")
