@@ -74,6 +74,7 @@
 
         {% if settings.video_player == 1 %}
             <!-- plyr -->
+            <script>var storyboard_url = {{ storyboard_url | tojson }}</script>
             <link href="/youtube.com/static/modules/plyr/plyr.css" rel="stylesheet"/>
             <link href="/youtube.com/static/plyr_fixes.css" rel="stylesheet"/>
             <!--/ plyr -->

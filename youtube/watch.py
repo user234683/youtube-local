@@ -15,6 +15,9 @@ import traceback
 import urllib
 import re
 import urllib3.exceptions
+from urllib.parse import parse_qs, urlencode
+from types import SimpleNamespace
+from math import ceil
 
 try:
     with open(os.path.join(settings.data_dir, 'decrypt_function_cache.json'), 'r') as f:
@@ -502,6 +505,64 @@ def format_bytes(bytes):
     converted = float(bytes) / float(1024 ** exponent)
     return '%.2f%s' % (converted, suffix)
 
+@yt_app.route('/ytl-api/storyboard.vtt')
+def get_storyboard_vtt():
+    """
+    See:
+        https://github.com/iv-org/invidious/blob/9a8b81fcbe49ff8d88f197b7f731d6bf79fc8087/src/invidious.cr#L3603
+        https://github.com/iv-org/invidious/blob/3bb7fbb2f119790ee6675076b31cd990f75f64bb/src/invidious/videos.cr#L623
+    """
+
+    spec_url = request.args.get('spec_url')
+    url, *boards = spec_url.split('|')
+    base_url, q = url.split('?')
+    q = parse_qs(q)  # for url query
+
+    storyboard = None
+    wanted_height = 90
+
+    for i, board in enumerate(boards):
+        *t, _, sigh = board.split("#")
+        width, height, count, width_cnt, height_cnt, interval = map(int, t)
+        if height != wanted_height: continue
+        q['sigh'] = [sigh]
+        url = f"{base_url}?{urlencode(q, doseq=True)}"
+        storyboard = SimpleNamespace(
+            url               = url.replace("$L", str(i)).replace("$N", "M$M"),
+            width             = width,
+            height            = height,
+            interval          = interval,
+            width_cnt         = width_cnt,
+            height_cnt        = height_cnt,
+            storyboard_count  = ceil(count / (width_cnt * height_cnt))
+        )
+
+    if not storyboard:
+        flask.abort(404)
+
+    def to_ts(ms):
+        s, ms = divmod(ms, 1000)
+        h, s = divmod(s, 3600)
+        m, s = divmod(s, 60)
+        return f"{h:02}:{m:02}:{s:02}.{ms:03}"
+
+    r = "WEBVTT"  # result
+    ts = 0  # current timestamp
+
+    for i in range(storyboard.storyboard_count):
+        url = '/' + storyboard.url.replace("$M", str(i))
+        interval = storyboard.interval
+        w, h = storyboard.width, storyboard.height
+        w_cnt, h_cnt = storyboard.width_cnt, storyboard.height_cnt
+
+        for j in range(h_cnt):
+            for k in range(w_cnt):
+                r += f"{to_ts(ts)} --> {to_ts(ts+interval)}\n"
+                r += f"{url}#xywh={w * k},{h * j},{w},{h}\n\n"
+                ts += interval
+
+    return flask.Response(r, mimetype='text/vtt')
+
 
 time_table = {'h': 3600, 'm': 60, 's': 1}
 @yt_app.route('/watch')
@@ -722,6 +783,9 @@ def get_watch_page(video_id=None):
         invidious_reload_button = info['invidious_reload_button'],
         video_url = util.URL_ORIGIN + '/watch?v=' + video_id,
         video_id = video_id,
+        storyboard_url = (util.URL_ORIGIN + '/ytl-api/storyboard.vtt?' +
+            urlencode([('spec_url', info['storyboard_spec_url'])])
+            if info['storyboard_spec_url'] else None),
 
         js_data = {
             'video_id': info['id'],

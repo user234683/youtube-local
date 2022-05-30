@@ -679,6 +679,7 @@ Reload without invidious (for usage of new identity button).</a>
     <script src="/youtube.com/static/js/watch.js"></script>
     {% if settings.video_player == 1 %}
         <!-- plyr -->
+        <script>var storyboard_url = {{ storyboard_url | tojson }}</script>
         <script src="/youtube.com/static/modules/plyr/plyr.js"></script>
         <script src="/youtube.com/static/js/plyr-start.js"></script>
         <!-- /plyr -->
