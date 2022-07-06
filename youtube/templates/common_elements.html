@@ -32,36 +32,37 @@
                         </div>
                     {% endif %}
                 </a>
+                <div class="item-metadata">
+                    <div class="title"><a class="title" href="{{ info['url'] }}" title="{{ info['title'] }}">{{ info['title'] }}</a></div>
 
-                <div class="title"><a class="title" href="{{ info['url'] }}" title="{{ info['title'] }}">{{ info['title'] }}</a></div>
-
-                {% if include_author %}
-                    {% if info.get('author_url') %}
-                        <address title="{{ info['author'] }}">By <a href="{{ info['author_url'] }}">{{ info['author'] }}</a></address>
-                    {% else %}
-                        <address title="{{ info['author'] }}"><b>{{ info['author'] }}</b></address>
-                    {% endif %}
-                {% endif %}
-                <ul class="stats {{'horizontal-stats' if horizontal else 'vertical-stats'}}">
-                    {% if info['type'] == 'channel' %}
-                        <li><span>{{ info['approx_subscriber_count'] }} subscribers</span></li>
-                        <li><span>{{ info['video_count']|commatize }} videos</span></li>
-                    {% else %}
-                        {% if info.get('approx_view_count') %}
-                            <li><span class="views">{{ info['approx_view_count'] }} views</span></li>
-                        {% endif %}
-                        {% if info.get('time_published') %}
-                            <li><time>{{ info['time_published'] }}</time></li>
+                    {% if include_author %}
+                        {% if info.get('author_url') %}
+                            <address title="{{ info['author'] }}">By <a href="{{ info['author_url'] }}">{{ info['author'] }}</a></address>
+                        {% else %}
+                            <address title="{{ info['author'] }}"><b>{{ info['author'] }}</b></address>
                         {% endif %}
                     {% endif %}
-                </ul>
+                    <ul class="stats {{'horizontal-stats' if horizontal else 'vertical-stats'}}">
+                        {% if info['type'] == 'channel' %}
+                            <li><span>{{ info['approx_subscriber_count'] }} subscribers</span></li>
+                            <li><span>{{ info['video_count']|commatize }} videos</span></li>
+                        {% else %}
+                            {% if info.get('approx_view_count') %}
+                                <li><span class="views">{{ info['approx_view_count'] }} views</span></li>
+                            {% endif %}
+                            {% if info.get('time_published') %}
+                                <li><time>{{ info['time_published'] }}</time></li>
+                            {% endif %}
+                        {% endif %}
+                    </ul>
 
-                {% if description %}
-                    <span class="description">{{ text_runs(info.get('description', '')) }}</span>
-                {% endif %}
-                {% if include_badges %}
-                    <span class="badges">{{ info['badges']|join(' | ') }}</span>
-                {% endif %}
+                    {% if description %}
+                        <span class="description">{{ text_runs(info.get('description', '')) }}</span>
+                    {% endif %}
+                    {% if include_badges %}
+                        <span class="badges">{{ info['badges']|join(' | ') }}</span>
+                    {% endif %}
+                </div>
             </div>
             {% if info['type'] == 'video' %}
                 <input class="item-checkbox" type="checkbox" name="video_info_list" value="{{ info['video_info'] }}" form="playlist-edit">

@@ -212,7 +212,6 @@ body{
         display: grid;
         align-content: start;
         grid-template-columns: auto 1fr;
-        grid-template-rows: auto auto auto auto 1fr;
         /* prevent overflow due to long titles with no spaces:
         https://stackoverflow.com/a/43312314 */
         min-width: 0;
@@ -226,7 +225,6 @@ body{
             display: block;
         }
         .horizontal-item-box  .thumbnail-box{
-            grid-row: 1 / span 5;
             margin-right: 4px;
         }
         .no-description .thumbnail-box{
@@ -273,7 +271,9 @@ body{
                 .horizontal-item-box .thumbnail-img{
                     height: 100%;
                 }
-
+        .item-metadata{
+            overflow: hidden;
+        }
         .item .title{
             min-width: 0;
             line-height:1.25em;
