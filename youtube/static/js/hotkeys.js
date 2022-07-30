@@ -3,6 +3,7 @@ function onKeyDown(e) {
 
     // console.log(e);
     let v = Q("video");
+    if (!e.isTrusted) return;  // plyr CustomEvent
     let c = e.key.toLowerCase();
     if (e.ctrlKey) return;
     else if (c == "k") {
