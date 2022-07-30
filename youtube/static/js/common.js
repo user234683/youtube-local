@@ -91,7 +91,8 @@ function copyTextToClipboard(text) {
 
   textArea.value = text;
 
-  document.body.appendChild(textArea);
+  let parent_el = video.parentElement;
+  parent_el.appendChild(textArea);
   textArea.focus();
   textArea.select();
 
@@ -103,7 +104,7 @@ function copyTextToClipboard(text) {
     console.log('Oops, unable to copy');
   }
 
-  document.body.removeChild(textArea);
+  parent_el.removeChild(textArea);
 }
 
 
