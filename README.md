@@ -75,6 +75,8 @@ Download the zip file under the Releases page. Unzip it anywhere you choose.
 
 ### Linux/MacOS
 
+Arch users can use the [AUR package](https://aur.archlinux.org/packages/youtube-local-git) maintained by @ByJumperX4
+
 Download the tarball under the Releases page and extract it. `cd` into the directory and run
 ```
 pip3 install -r requirements.txt
