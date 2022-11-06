@@ -167,7 +167,6 @@ def _extract_likes_dislikes(renderer_content):
             elif 'isDislike' in button_renderer:
                 info['dislike_count'] = count
         elif 'slimMetadataButtonRenderer' in button:
-            print(button)
             button_renderer = button['slimMetadataButtonRenderer']
             liberal_update(info, 'like_count', extract_button_count(deep_get(
                 button_renderer, 'button',
