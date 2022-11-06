@@ -133,32 +133,52 @@ def _extract_from_video_information_renderer(renderer_content):
     return info
 
 def _extract_likes_dislikes(renderer_content):
-    info = {
-        'like_count': None,
-        'dislike_count': None,
-    }
-    for button in renderer_content.get('buttons', ()):
-        button_renderer = button.get('slimMetadataToggleButtonRenderer', {})
-
+    def extract_button_count(toggle_button_renderer):
         # all the digits can be found in the accessibility data
-        count = extract_int(deep_get(
-                    button_renderer,
-                    'button', 'toggleButtonRenderer', 'defaultText',
-                    'accessibility', 'accessibilityData', 'label'))
+        count = extract_int(multi_deep_get(
+            toggle_button_renderer,
+            ['defaultText', 'accessibility', 'accessibilityData', 'label'],
+            ['accessibility', 'label'],
+            ['accessibilityData', 'accessibilityData', 'label'],
+        ))
 
         # this count doesn't have all the digits, it's like 53K for instance
         dumb_count = extract_int(extract_str(deep_get(
-            button_renderer, 'button', 'toggleButtonRenderer', 'defaultText')))
+            toggle_button_renderer, 'defaultText')))
 
         # The accessibility text will be "No likes" or "No dislikes" or
         # something like that, but dumb count will be 0
         if dumb_count == 0:
             count = 0
+        return count
 
-        if 'isLike' in button_renderer:
-            info['like_count'] = count
-        elif 'isDislike' in button_renderer:
-            info['dislike_count'] = count
+    info = {
+        'like_count': None,
+        'dislike_count': None,
+    }
+    for button in renderer_content.get('buttons', ()):
+        if 'slimMetadataToggleButtonRenderer' in button:
+            button_renderer = button['slimMetadataToggleButtonRenderer']
+            count = extract_button_count(deep_get(button_renderer,
+                                                  'button',
+                                                  'toggleButtonRenderer'))
+            if 'isLike' in button_renderer:
+                info['like_count'] = count
+            elif 'isDislike' in button_renderer:
+                info['dislike_count'] = count
+        elif 'slimMetadataButtonRenderer' in button:
+            print(button)
+            button_renderer = button['slimMetadataButtonRenderer']
+            liberal_update(info, 'like_count', extract_button_count(deep_get(
+                button_renderer, 'button',
+                'segmentedLikeDislikeButtonRenderer',
+                'likeButton', 'toggleButtonRenderer'
+            )))
+            liberal_update(info, 'dislike_count',extract_button_count(deep_get(
+                button_renderer, 'button',
+                'segmentedLikeDislikeButtonRenderer',
+                'dislikeButton', 'toggleButtonRenderer'
+            )))
     return info
 
 def _extract_from_owner_renderer(renderer_content):
