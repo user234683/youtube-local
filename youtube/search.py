@@ -64,6 +64,8 @@ def get_search_page():
     query = request.args.get('search_query') or request.args.get('query')
     if query is None:
         return flask.render_template('base.html', title='Search')
+    elif query.startswith('https://www.youtube.com') or query.startswith('https://www.youtu.be'):
+         return flask.redirect(f'/{query}')
 
     page = request.args.get("page", "1")
     autocorrect = int(request.args.get("autocorrect", "1"))
