@@ -473,7 +473,7 @@ Reload without invidious (for usage of new identity button).</a>
     {% else %}
         <div id="video-container">
             <div id="video-container-inner">
-                <video controls autofocus class="video" height="{{ video_height }}px">
+                <video controls autofocus class="video" id="cuurent-vid" height="{{ video_height }}px">
                     {% if uni_sources %}
                         <source src="{{ uni_sources[uni_idx]['url'] }}" type="{{ uni_sources[uni_idx]['type'] }}" data-res="{{ uni_sources[uni_idx]['quality'] }}">
                     {% endif %}
@@ -678,6 +678,20 @@ Reload without invidious (for usage of new identity button).</a>
 
     <script src="/youtube.com/static/js/av-merge.js"></script>
     <script src="/youtube.com/static/js/watch.js"></script>
+    <script>
+    var vido = document.getElementById('cuurent-vid'),
+    frameTime = 1 / 30;
+window.addEventListener('keypress', function (evt) {
+        if (evt.keyCode === 46) { //left arrow
+            //one frame back
+            vido.currentTime = Math.max(0, vido.currentTime - frameTime);
+        } else if (evt.keyCode === 44) { //right arrow
+            //one frame forward
+            //Don't go past the end, otherwise you may get an error
+            vido.currentTime = Math.min(vido.duration, vido.currentTime + frameTime);
+        }
+});
+    </script>
     {% if settings.video_player == 1 %}
         <!-- plyr -->
         <script>var storyboard_url = {{ storyboard_url | tojson }}</script>
