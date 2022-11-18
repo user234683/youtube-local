@@ -680,7 +680,14 @@ Reload without invidious (for usage of new identity button).</a>
     <script src="/youtube.com/static/js/watch.js"></script>
     <script>
 	var video = document.querySelector('video.video'),
-	frameTime = 1 / 30;
+	fps_selector = document.querySelector('#quality-select'),
+	fps_int = parseInt(fps_selector.options[fps_selector.selectedIndex].text.split("p")[1].slice(0,2)),
+	frameTime = 1 / fps_int;
+	fps_selector.onchange=function(){
+		fps_int = parseInt(fps_selector.options[fps_selector.selectedIndex].text.split("p")[1].slice(0,2)),
+		frameTime = 1 / fps_int;
+		window.alert(fps_int);
+	}
 	window.addEventListener('keypress', function (evt) {
 		if (evt.keyCode === 44) {
 			video.currentTime = Math.max(0, video.currentTime - frameTime);
