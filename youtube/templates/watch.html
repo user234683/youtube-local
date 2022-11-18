@@ -679,18 +679,15 @@ Reload without invidious (for usage of new identity button).</a>
     <script src="/youtube.com/static/js/av-merge.js"></script>
     <script src="/youtube.com/static/js/watch.js"></script>
     <script>
-    var vido = document.getElementById('cuurent-vid'),
-    frameTime = 1 / 30;
-window.addEventListener('keypress', function (evt) {
-        if (evt.keyCode === 46) { //left arrow
-            //one frame back
-            vido.currentTime = Math.max(0, vido.currentTime - frameTime);
-        } else if (evt.keyCode === 44) { //right arrow
-            //one frame forward
-            //Don't go past the end, otherwise you may get an error
-            vido.currentTime = Math.min(vido.duration, vido.currentTime + frameTime);
-        }
-});
+	var video = document.querySelector('video.video'),
+	frameTime = 1 / 30;
+	window.addEventListener('keypress', function (evt) {
+		if (evt.keyCode === 44) {
+			video.currentTime = Math.max(0, video.currentTime - frameTime);
+        	} else if (evt.keyCode === 46) { 
+			video.currentTime = Math.min(video.duration, video.currentTime + frameTime);
+		}
+	});
     </script>
     {% if settings.video_player == 1 %}
         <!-- plyr -->
