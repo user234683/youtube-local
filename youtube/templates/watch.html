@@ -473,7 +473,7 @@ Reload without invidious (for usage of new identity button).</a>
     {% else %}
         <div id="video-container">
             <div id="video-container-inner">
-                <video controls autofocus class="video" id="cuurent-vid" height="{{ video_height }}px">
+                <video controls autofocus class="video" height="{{ video_height }}px">
                     {% if uni_sources %}
                         <source src="{{ uni_sources[uni_idx]['url'] }}" type="{{ uni_sources[uni_idx]['type'] }}" data-res="{{ uni_sources[uni_idx]['quality'] }}">
                     {% endif %}
