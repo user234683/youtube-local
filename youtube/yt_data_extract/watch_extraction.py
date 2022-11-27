@@ -400,14 +400,16 @@ def update_format_with_codec_info(fmt, codec):
         print('Warning: unrecognized codec: ' + codec)
 
 fmt_type_re = re.compile(
-    r'(text|audio|video)/([\w0-9]+); codecs="([\w0-9\.]+(?:, [\w0-9\.]+)*)"')
+    r'(text|audio|video)/([\w0-9]+); codecs="([^"]+)"')
 def update_format_with_type_info(fmt, yt_fmt):
     # 'type' for invidious api format
     mime_type = multi_get(yt_fmt, 'mimeType', 'type')
     if mime_type is None:
         return
     match = re.fullmatch(fmt_type_re, mime_type)
-
+    if match is None:
+        print('Warning: Could not read mimetype', mime_type)
+        return
     type, fmt['ext'], codecs = match.groups()
     codecs = codecs.split(', ')
     for codec in codecs:
