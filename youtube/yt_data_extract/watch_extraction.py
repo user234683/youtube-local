@@ -388,13 +388,13 @@ def _extract_watch_info_desktop(top_level):
     return info
 
 def update_format_with_codec_info(fmt, codec):
-    if (codec.startswith('av')
-            or codec in ('vp9', 'vp8', 'vp8.0', 'h263', 'h264', 'mp4v')):
+    if any(codec.startswith(c) for c in ('av', 'vp', 'h263', 'h264', 'mp4v')):
         if codec == 'vp8.0':
             codec = 'vp8'
         conservative_update(fmt, 'vcodec', codec)
     elif (codec.startswith('mp4a')
-            or codec in ('opus', 'mp3', 'aac', 'dtse', 'ec-3', 'vorbis')):
+            or codec in ('opus', 'mp3', 'aac', 'dtse', 'ec-3', 'vorbis',
+                        'ac-3')):
         conservative_update(fmt, 'acodec', codec)
     else:
         print('Warning: unrecognized codec: ' + codec)
