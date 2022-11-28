@@ -75,14 +75,15 @@ Download the zip file under the Releases page. Unzip it anywhere you choose.
 
 ### Linux/MacOS
 
-Arch users can use the [AUR package](https://aur.archlinux.org/packages/youtube-local-git) maintained by @ByJumperX4
-
 Download the tarball under the Releases page and extract it. `cd` into the directory and run
 ```
 pip3 install -r requirements.txt
 ```
 
 **Note**: If pip isn't installed, first try installing it from your package manager. Make sure you install pip for python 3. For example, the package you need on debian is python3-pip rather than python-pip. If your package manager doesn't provide it, try to install it according to [this answer](https://unix.stackexchange.com/a/182467), but make sure you run `python3 get-pip.py` instead of `python get-pip.py`
+
+- Arch users can use the [AUR package](https://aur.archlinux.org/packages/youtube-local-git) maintained by @ByJumperX4
+- RPM-based distros such as Fedora/OpenSUSE/RHEL/CentOS can use the [COPR package](https://copr.fedorainfracloud.org/coprs/anarcoco/youtube-local) maintained by @ByJumperX4
 
 ## Usage
 
