@@ -155,7 +155,10 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1,
     message = 'Got channel tab' if print_status else None
 
     if not ctoken:
-        ctoken = channel_ctoken_v4(channel_id, page, sort, tab, view)
+        if tab == 'videos':
+            ctoken = channel_ctoken_v4(channel_id, page, sort, tab, view)
+        else:
+            ctoken = channel_ctoken_v3(channel_id, page, sort, tab, view)
         ctoken = ctoken.replace('=', '%3D')
 
     # Not sure what the purpose of the key is or whether it will change
