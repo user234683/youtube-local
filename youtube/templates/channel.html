@@ -1,7 +1,7 @@
 {% if current_tab == 'search' %}
     {% set page_title = search_box_value + ' - Page ' + page_number|string %}
 {% else %}
-    {% set page_title = channel_name + ' - Channel' %}
+    {% set page_title = channel_name|string + ' - Channel' %}
 {% endif %}
 
 {% extends "base.html" %}

@@ -31,6 +31,47 @@ headers_mobile = (
 real_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=8XihrAcN1l4'),)
 generic_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=ST1Ti53r4fU'),)
 
+# https://github.com/user234683/youtube-local/issues/151
+def channel_ctoken_v4(channel_id, page, sort, tab, view=1):
+    new_sort = (2 if sort == 1 else 1)
+    offset = str(30*(int(page) - 1))
+    pointless_nest = proto.string(80226972,
+        proto.string(2, channel_id)
+        + proto.string(3,
+            proto.percent_b64encode(
+                proto.string(110,
+                    proto.string(3,
+                        proto.string(15,
+                            proto.string(1,
+                                proto.string(1,
+                                    proto.unpadded_b64encode(
+                                        proto.string(1,
+                                            proto.unpadded_b64encode(
+                                                proto.string(2,
+                                                    b"ST:"
+                                                    + proto.unpadded_b64encode(
+                                                        proto.string(2, offset)
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                                 # targetId, just needs to be present but
+                                 # doesn't need to be correct
+                                + proto.string(2, "63faaff0-0000-23fe-80f0-582429d11c38")
+                            )
+                            # 1 - newest, 2 - popular
+                            + proto.uint(3, new_sort)
+                        )
+                    )
+                )
+            )
+        )
+    )
+
+    return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
+
 # SORT:
 # videos:
 #    Popular - 1
@@ -114,7 +155,7 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1,
     message = 'Got channel tab' if print_status else None
 
     if not ctoken:
-        ctoken = channel_ctoken_v3(channel_id, page, sort, tab, view)
+        ctoken = channel_ctoken_v4(channel_id, page, sort, tab, view)
         ctoken = ctoken.replace('=', '%3D')
 
     # Not sure what the purpose of the key is or whether it will change
@@ -248,6 +289,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     query = request.args.get('query', '')
     ctoken = request.args.get('ctoken', '')
     default_params = (page_number == 1 and sort == '3' and view == '1')
+    continuation = bool(ctoken) # whether or not we're using a continuation
 
     if tab == 'videos' and channel_id and not default_params:
         tasks = (
@@ -258,6 +300,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         gevent.joinall(tasks)
         util.check_gevent_exceptions(*tasks)
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
+        continuation = True
     elif tab == 'videos':
         if channel_id:
             num_videos_call = (get_number_of_videos_channel, channel_id)
@@ -277,6 +320,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     elif tab == 'playlists':
         polymer_json = get_channel_tab(channel_id, page_number, sort,
                                        'playlists', view)
+        continuation = True
     elif tab == 'search' and channel_id:
         polymer_json = get_channel_search_json(channel_id, query, page_number)
     elif tab == 'search':
@@ -286,7 +330,8 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         flask.abort(404, 'Unknown channel tab: ' + tab)
 
 
-    info = yt_data_extract.extract_channel_info(json.loads(polymer_json), tab)
+    info = yt_data_extract.extract_channel_info(json.loads(polymer_json), tab,
+                                                continuation=continuation)
     if info['error'] is not None:
         return flask.render_template('error.html', error_message = info['error'])
 
@@ -297,6 +342,8 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         info['header_playlist_names'] = local_playlist.get_playlist_names()
     if tab in ('videos', 'playlists'):
         info['current_sort'] = sort
+        info['channel_url'] = 'https://www.youtube.com/channel/' + channel_id
+        info['channel_id'] = channel_id
     elif tab == 'search':
         info['search_box_value'] = query
         info['header_playlist_names'] = local_playlist.get_playlist_names()

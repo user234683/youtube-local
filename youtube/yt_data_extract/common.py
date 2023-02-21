@@ -542,8 +542,12 @@ def extract_items(response, item_types=_item_types,
                     item_types=item_types)
                 if items:
                     break
-    elif 'onResponseReceivedEndpoints' in response:
-        for endpoint in response.get('onResponseReceivedEndpoints', []):
+    elif ('onResponseReceivedEndpoints' in response
+          or 'onResponseReceivedActions' in response):
+        for endpoint in multi_get(response,
+                                  'onResponseReceivedEndpoints',
+                                  'onResponseReceivedActions',
+                                  []):
             items, ctoken = extract_items_from_renderer_list(
                 multi_deep_get(
                     endpoint,

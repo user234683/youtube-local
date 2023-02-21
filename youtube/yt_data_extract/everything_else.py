@@ -9,7 +9,7 @@ import re
 import urllib
 from math import ceil
 
-def extract_channel_info(polymer_json, tab):
+def extract_channel_info(polymer_json, tab, continuation=False):
     response, err = extract_response(polymer_json)
     if err:
         return {'error': err}
@@ -23,7 +23,8 @@ def extract_channel_info(polymer_json, tab):
 
     # channel doesn't exist or was terminated
     # example terminated channel: https://www.youtube.com/channel/UCnKJeK_r90jDdIuzHXC0Org
-    if not metadata:
+    # metadata and microformat are not present for continuation requests
+    if not metadata and not continuation:
         if response.get('alerts'):
             error_string = ' '.join(
                 extract_str(deep_get(alert, 'alertRenderer', 'text'), default='')
@@ -44,7 +45,7 @@ def extract_channel_info(polymer_json, tab):
     info['approx_subscriber_count'] = extract_approx_int(deep_get(response,
         'header', 'c4TabbedHeaderRenderer', 'subscriberCountText'))
 
-    # stuff from microformat (info given by youtube for every page on channel)
+    # stuff from microformat (info given by youtube for first page on channel)
     info['short_description'] = metadata.get('description')
     if info['short_description'] and len(info['short_description']) > 730:
         info['short_description'] = info['short_description'][0:730] + '...'
@@ -69,8 +70,8 @@ def extract_channel_info(polymer_json, tab):
     info['ctoken'] = None
 
     # empty channel
-    if 'contents' not in response and 'continuationContents' not in response:
-        return info
+    #if 'contents' not in response and 'continuationContents' not in response:
+    #    return info
 
     if tab in ('videos', 'playlists', 'search'):
         items, ctoken = extract_items(response)
