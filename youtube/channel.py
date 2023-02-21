@@ -33,7 +33,7 @@ generic_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=ST1Ti53r4fU'),)
 
 # https://github.com/user234683/youtube-local/issues/151
 def channel_ctoken_v4(channel_id, page, sort, tab, view=1):
-    new_sort = (2 if sort == 1 else 1)
+    new_sort = (2 if int(sort) == 1 else 1)
     offset = str(30*(int(page) - 1))
     pointless_nest = proto.string(80226972,
         proto.string(2, channel_id)
@@ -335,7 +335,6 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     if info['error'] is not None:
         return flask.render_template('error.html', error_message = info['error'])
 
-    post_process_channel_info(info)
     if tab == 'videos':
         info['number_of_videos'] = number_of_videos
         info['number_of_pages'] = math.ceil(number_of_videos/30)
@@ -350,6 +349,8 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     if tab in ('search', 'playlists'):
         info['page_number'] = page_number
     info['subscribed'] = subscriptions.is_subscribed(info['channel_id'])
+
+    post_process_channel_info(info)
 
     return flask.render_template('channel.html',
         parameters_dictionary = request.args,
