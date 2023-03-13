@@ -344,8 +344,10 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         info['header_playlist_names'] = local_playlist.get_playlist_names()
     if tab in ('videos', 'playlists'):
         info['current_sort'] = sort
-        info['channel_url'] = 'https://www.youtube.com/channel/' + channel_id
-        info['channel_id'] = channel_id
+        if channel_id:
+            info['channel_url'] = ('https://www.youtube.com/channel/'
+                                   + channel_id)
+            info['channel_id'] = channel_id
     elif tab == 'search':
         info['search_box_value'] = query
         info['header_playlist_names'] = local_playlist.get_playlist_names()
