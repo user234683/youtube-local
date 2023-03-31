@@ -31,6 +31,49 @@ headers_mobile = (
 real_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=8XihrAcN1l4'),)
 generic_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=ST1Ti53r4fU'),)
 
+# added an extra nesting under the 2nd base64 compared to v4
+def channel_ctoken_v5(channel_id, page, sort, tab, view=1):
+    new_sort = (2 if int(sort) == 1 else 1)
+    offset = str(30*(int(page) - 1))
+    pointless_nest = proto.string(80226972,
+        proto.string(2, channel_id)
+        + proto.string(3,
+            proto.percent_b64encode(
+                proto.string(110,
+                    proto.string(3,
+                        proto.string(15,
+                            proto.string(1,
+                                proto.string(1,
+                                    proto.unpadded_b64encode(
+                                        proto.string(1,
+                                        proto.string(1,
+                                            proto.unpadded_b64encode(
+                                                proto.string(2,
+                                                    b"ST:"
+                                                    + proto.unpadded_b64encode(
+                                                        proto.string(2, offset)
+                                                    )
+                                                )
+                                            )
+                                        )
+                                        )
+                                    )
+                                )
+                                 # targetId, just needs to be present but
+                                 # doesn't need to be correct
+                                + proto.string(2, "63faaff0-0000-23fe-80f0-582429d11c38")
+                            )
+                            # 1 - newest, 2 - popular
+                            + proto.uint(3, new_sort)
+                        )
+                    )
+                )
+            )
+        )
+    )
+
+    return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
+
 # https://github.com/user234683/youtube-local/issues/151
 def channel_ctoken_v4(channel_id, page, sort, tab, view=1):
     new_sort = (2 if int(sort) == 1 else 1)
@@ -156,7 +199,7 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1,
 
     if not ctoken:
         if tab == 'videos':
-            ctoken = channel_ctoken_v4(channel_id, page, sort, tab, view)
+            ctoken = channel_ctoken_v5(channel_id, page, sort, tab, view)
         else:
             ctoken = channel_ctoken_v3(channel_id, page, sort, tab, view)
         ctoken = ctoken.replace('=', '%3D')
