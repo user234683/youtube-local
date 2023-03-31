@@ -269,6 +269,30 @@ def get_channel_id(base_url):
         return match.group(1)
     return None
 
+metadata_cache = cachetools.LRUCache(128)
+@cachetools.cached(metadata_cache)
+def get_metadata(channel_id):
+    base_url = 'https://www.youtube.com/channel/' + channel_id
+    polymer_json = util.fetch_url(base_url + '/about?pbj=1',
+                                  headers_desktop,
+                                  debug_name='gen_channel_about',
+                                  report_text='Retrieved channel metadata')
+    info = yt_data_extract.extract_channel_info(json.loads(polymer_json),
+                                                'about',
+                                                continuation=False)
+    return extract_metadata_for_caching(info)
+def set_cached_metadata(channel_id, metadata):
+    @cachetools.cached(metadata_cache)
+    def dummy_func_using_same_cache(channel_id):
+        return metadata
+    dummy_func_using_same_cache(channel_id)
+def extract_metadata_for_caching(channel_info):
+    metadata = {}
+    for key in ('approx_subscriber_count', 'short_description', 'channel_name',
+                'avatar'):
+        metadata[key] = channel_info[key]
+    return metadata
+
 def get_number_of_videos_general(base_url):
     return get_number_of_videos_channel(get_channel_id(base_url))
 
@@ -378,6 +402,30 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
 
     info = yt_data_extract.extract_channel_info(json.loads(polymer_json), tab,
                                                 continuation=continuation)
+    if channel_id:
+        info['channel_url'] = 'https://www.youtube.com/channel/' + channel_id
+        info['channel_id'] = channel_id
+    else:
+        channel_id = info['channel_id']
+
+    # Will have microformat present, cache metadata while we have it
+    if channel_id and default_params:
+        metadata = extract_metadata_for_caching(info)
+        set_cached_metadata(channel_id, metadata)
+    # Otherwise, populate with our (hopefully cached) metadata
+    elif channel_id and info['channel_name'] is None:
+        metadata = get_metadata(channel_id)
+        for key, value in metadata.items():
+            yt_data_extract.conservative_update(info, key, value)
+        # need to add this metadata to the videos/playlists
+        additional_info = {
+            'author': info['channel_name'],
+            'author_id': info['channel_id'],
+            'author_url': info['channel_url'],
+        }
+        for item in info['items']:
+            item.update(additional_info)
+
     if info['error'] is not None:
         return flask.render_template('error.html', error_message = info['error'])
 
@@ -387,10 +435,6 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         info['header_playlist_names'] = local_playlist.get_playlist_names()
     if tab in ('videos', 'playlists'):
         info['current_sort'] = sort
-        if channel_id:
-            info['channel_url'] = ('https://www.youtube.com/channel/'
-                                   + channel_id)
-            info['channel_id'] = channel_id
     elif tab == 'search':
         info['search_box_value'] = query
         info['header_playlist_names'] = local_playlist.get_playlist_names()
