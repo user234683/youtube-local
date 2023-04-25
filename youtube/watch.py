@@ -357,7 +357,8 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     context = {
         'client': {
             'clientName': 'ANDROID',
-            'clientVersion': '16.20',
+            'clientVersion': '17.29.35',
+            'androidSdkVersion': '31',
             'gl': 'US',
             'hl': 'en',
         },
