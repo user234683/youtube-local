@@ -792,7 +792,7 @@ def get_caption_url(info, language, format, automatic=False, translation_languag
         url += '&tlang=' + translation_language
     return url
 
-def update_with_age_restricted_info(info, player_response):
+def update_with_new_urls(info, player_response):
     '''Inserts urls from player_response json'''
     ERROR_PREFIX = 'Error getting missing player or bypassing age-restriction: '
 

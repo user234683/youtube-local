@@ -19,6 +19,46 @@ from urllib.parse import parse_qs, urlencode
 from types import SimpleNamespace
 from math import ceil
 
+# https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/youtube.py#L72
+INNERTUBE_CLIENTS = {
+    'android': {
+        'INNERTUBE_API_KEY': 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w',
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'ANDROID',
+                'clientVersion': '17.31.35',
+                'androidSdkVersion': 31,
+                'userAgent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11) gzip'
+            },
+            # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
+            'thirdParty': {
+                'embedUrl': 'https://google.com',  # Can be any valid URL
+            }
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 3,
+        'REQUIRE_JS_PLAYER': False,
+    },
+
+    # This client can access age restricted videos (unless the uploader has disabled the 'allow embedding' option)
+    # See: https://github.com/zerodytrash/YouTube-Internal-Clients
+    'tv_embedded': {
+        'INNERTUBE_API_KEY': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'TVHTML5_SIMPLY_EMBEDDED_PLAYER',
+                'clientVersion': '2.0',
+            },
+            # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
+            'thirdParty': {
+                'embedUrl': 'https://google.com',  # Can be any valid URL
+            }
+
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 85,
+        'REQUIRE_JS_PLAYER': True,
+    },
+}
+
 try:
     with open(os.path.join(settings.data_dir, 'decrypt_function_cache.json'), 'r') as f:
         decrypt_cache = json.loads(f.read())['decrypt_cache']
@@ -304,13 +344,6 @@ def save_decrypt_cache():
     f.write(json.dumps({'version': 1, 'decrypt_cache':decrypt_cache}, indent=4, sort_keys=True))
     f.close()
 
-watch_headers = (
-    ('Accept', '*/*'),
-    ('Accept-Language', 'en-US,en;q=0.5'),
-    ('X-YouTube-Client-Name', '2'),
-    ('X-YouTube-Client-Version', '2.20180830'),
-) + util.mobile_ua
-
 def decrypt_signatures(info, video_id):
     '''return error string, or False if no errors'''
     if not yt_data_extract.requires_decryption(info):
@@ -340,8 +373,28 @@ def _add_to_error(info, key, additional_message):
     else:
         info[key] = additional_message
 
+def fetch_player_response(client, video_id):
+    client_params = INNERTUBE_CLIENTS[client]
+    context = client_params['INNERTUBE_CONTEXT']
+    key = client_params['INNERTUBE_API_KEY']
+    host = client_params.get('INNERTUBE_HOST') or 'youtubei.googleapis.com'
+    user_agent = context['client'].get('userAgent') or util.mobile_user_agent
 
-def extract_info(video_id, use_invidious, playlist_id=None, index=None):
+    url = 'https://' + host + '/youtubei/v1/player?key=' + key
+    data = {
+        'videoId': video_id,
+        'context': context,
+    }
+    data = json.dumps(data)
+    headers = (('Content-Type', 'application/json'),('User-Agent', user_agent))
+    player_response = util.fetch_url(
+        url, data=data, headers=headers,
+        debug_name='youtubei_player_' + client,
+        report_text='Fetched ' + client + ' youtubei player'
+    ).decode('utf-8')
+    return player_response
+
+def fetch_watch_page_info(video_id, playlist_id, index):
     # bpctr=9999999999 will bypass are-you-sure dialogs for controversial
     # videos
     url = 'https://m.youtube.com/embed/' + video_id + '?bpctr=9999999999'
@@ -349,51 +402,46 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
         url += '&list=' + playlist_id
     if index:
         url += '&index=' + index
-    watch_page = util.fetch_url(url, headers=watch_headers,
+
+    headers = (
+        ('Accept', '*/*'),
+        ('Accept-Language', 'en-US,en;q=0.5'),
+        ('X-YouTube-Client-Name', '2'),
+        ('X-YouTube-Client-Version', '2.20180830'),
+    ) + util.mobile_ua
+
+    watch_page = util.fetch_url(url, headers=headers,
                                 debug_name='watch')
     watch_page = watch_page.decode('utf-8')
-    info = yt_data_extract.extract_watch_info_from_html(watch_page)
+    return yt_data_extract.extract_watch_info_from_html(watch_page)
 
-    context = {
-        'client': {
-            'clientName': 'ANDROID',
-            'clientVersion': '17.29.35',
-            'androidSdkVersion': '31',
-            'gl': 'US',
-            'hl': 'en',
-        },
-        # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
-        'thirdParty': {
-            'embedUrl': 'https://google.com',  # Can be any valid URL
-        }
-    }
+def extract_info(video_id, use_invidious, playlist_id=None, index=None):
+    tasks = (
+        # Get video metadata from here
+        gevent.spawn(fetch_watch_page_info, video_id, playlist_id, index),
+
+        # Get video URLs by spoofing as android client because its urls don't
+        # require decryption
+        # The URLs returned with WEB for videos requiring decryption
+        # couldn't be decrypted with the base.js from the web page for some
+        # reason
+        # https://github.com/yt-dlp/yt-dlp/issues/574#issuecomment-887171136
+        gevent.spawn(fetch_player_response, 'android', video_id)
+    )
+    gevent.joinall(tasks)
+    util.check_gevent_exceptions(*tasks)
+    info, player_response = tasks[0].value, tasks[1].value
+
+    yt_data_extract.update_with_new_urls(info, player_response)
+
+    # Age restricted video, retry
     if info['age_restricted'] or info['player_urls_missing']:
         if info['age_restricted']:
-            print('Age restricted video. Fetching /youtubei/v1/player page')
+            print('Age restricted video, retrying')
         else:
-            print('Missing player. Fetching /youtubei/v1/player page')
-        context['client']['clientScreen'] = 'EMBED'
-    else:
-        print('Fetching /youtubei/v1/player page')
-
-    # https://github.com/yt-dlp/yt-dlp/issues/574#issuecomment-887171136
-    # ANDROID is used instead because its urls don't require decryption
-    # The URLs returned with WEB for videos requiring decryption
-    # couldn't be decrypted with the base.js from the web page for some
-    # reason
-    url ='https://youtubei.googleapis.com/youtubei/v1/player'
-    url += '?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
-    data = {
-        'videoId': video_id,
-        'context': context,
-    }
-    data = json.dumps(data)
-    content_header = (('Content-Type', 'application/json'),)
-    player_response = util.fetch_url(
-        url, data=data, headers=util.mobile_ua + content_header,
-        debug_name='youtubei_player',
-        report_text='Fetched youtubei player page').decode('utf-8')
-    yt_data_extract.update_with_age_restricted_info(info, player_response)
+            print('Player urls missing, retrying')
+        player_response = fetch_player_response('tv_embedded', video_id)
+        yt_data_extract.update_with_new_urls(info, player_response)
 
     # signature decryption
     decryption_error = decrypt_signatures(info, video_id)
