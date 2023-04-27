@@ -426,13 +426,18 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
         # couldn't be decrypted with the base.js from the web page for some
         # reason
         # https://github.com/yt-dlp/yt-dlp/issues/574#issuecomment-887171136
+
+        # Update 4/26/23, these URLs will randomly start returning 403
+        # mid-playback and I'm not sure why
         gevent.spawn(fetch_player_response, 'android', video_id)
     )
     gevent.joinall(tasks)
     util.check_gevent_exceptions(*tasks)
     info, player_response = tasks[0].value, tasks[1].value
 
-    yt_data_extract.update_with_new_urls(info, player_response)
+    if yt_data_extract.requires_decryption(info):
+        print('Encrypted. Replacing with URLs from Android client')
+        yt_data_extract.update_with_new_urls(info, player_response)
 
     # Age restricted video, retry
     if info['age_restricted'] or info['player_urls_missing']:
