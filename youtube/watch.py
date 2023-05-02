@@ -25,15 +25,19 @@ INNERTUBE_CLIENTS = {
         'INNERTUBE_API_KEY': 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w',
         'INNERTUBE_CONTEXT': {
             'client': {
+                'hl': 'en',
+                'gl': 'US',
                 'clientName': 'ANDROID',
                 'clientVersion': '17.31.35',
+                'osName': 'Android',
+                'osVersion': '12',
                 'androidSdkVersion': 31,
-                'userAgent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 11) gzip'
+                'userAgent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 12) gzip'
             },
             # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
-            'thirdParty': {
-                'embedUrl': 'https://google.com',  # Can be any valid URL
-            }
+            #'thirdParty': {
+            #    'embedUrl': 'https://google.com',  # Can be any valid URL
+            #}
         },
         'INNERTUBE_CONTEXT_CLIENT_NAME': 3,
         'REQUIRE_JS_PLAYER': False,
@@ -45,6 +49,8 @@ INNERTUBE_CLIENTS = {
         'INNERTUBE_API_KEY': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
         'INNERTUBE_CONTEXT': {
             'client': {
+                'hl': 'en',
+                'gl': 'US',
                 'clientName': 'TVHTML5_SIMPLY_EMBEDDED_PLAYER',
                 'clientVersion': '2.0',
             },
@@ -377,13 +383,14 @@ def fetch_player_response(client, video_id):
     client_params = INNERTUBE_CLIENTS[client]
     context = client_params['INNERTUBE_CONTEXT']
     key = client_params['INNERTUBE_API_KEY']
-    host = client_params.get('INNERTUBE_HOST') or 'youtubei.googleapis.com'
+    host = client_params.get('INNERTUBE_HOST') or 'www.youtube.com'
     user_agent = context['client'].get('userAgent') or util.mobile_user_agent
 
     url = 'https://' + host + '/youtubei/v1/player?key=' + key
     data = {
         'videoId': video_id,
         'context': context,
+        'params': '8AEB',
     }
     data = json.dumps(data)
     headers = (('Content-Type', 'application/json'),('User-Agent', user_agent))
@@ -435,9 +442,7 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     util.check_gevent_exceptions(*tasks)
     info, player_response = tasks[0].value, tasks[1].value
 
-    if yt_data_extract.requires_decryption(info):
-        print('Encrypted. Replacing with URLs from Android client')
-        yt_data_extract.update_with_new_urls(info, player_response)
+    yt_data_extract.update_with_new_urls(info, player_response)
 
     # Age restricted video, retry
     if info['age_restricted'] or info['player_urls_missing']:
