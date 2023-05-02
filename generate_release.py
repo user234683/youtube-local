@@ -1,7 +1,8 @@
 # Generate a windows release and a generated embedded distribution of python
-# Latest python version is the argument of the script
+# Latest python version is the argument of the script (or oldwin for
+# vista, 7 and 32-bit versions)
 # Requirements: 7z, git
-# wine 32-bit is required in order to build on Linux
+# wine is required in order to build on Linux
 
 import sys
 import urllib
@@ -12,6 +13,17 @@ import os
 import hashlib
 
 latest_version = sys.argv[1]
+if len(sys.argv) > 2:
+    bitness = sys.argv[2]
+else:
+    bitness = '64'
+
+if latest_version = 'oldwin':
+    bitness = '32'
+    latest_version = '3.7.9'
+    suffix = 'windows-vista-7-only'
+else:
+    suffix = 'windows'
 
 def check(code):
     if code != 0:
@@ -89,17 +101,30 @@ if len(os.listdir('./youtube-local')) == 0:
 # ----------- Generate embedded python distribution -----------
 os.environ['PYTHONDONTWRITEBYTECODE'] = '1'     # *.pyc files double the size of the distribution
 get_pip_url = 'https://bootstrap.pypa.io/get-pip.py'
-latest_dist_url = 'https://www.python.org/ftp/python/' + latest_version + '/python-' + latest_version + '-embed-win32.zip'
+latest_dist_url = 'https://www.python.org/ftp/python/' + latest_version + '/python-' + latest_version
+if bitness == '32':
+    latest_dist_url += '-embed-win32.zip'
+else:
+    latest_dist_url += '-embed-amd64.zip'
 
 # I've verified that all the dlls in the following are signed by Microsoft.
 # Using this because Microsoft only provides installers whose files can't be
 # extracted without a special tool.
-visual_c_runtime_url = 'https://github.com/yuempek/vc-archive/raw/master/archives/vc15_(14.10.25017.0)_2017_x86.7z'
-visual_c_runtime_sha256 = '2549eb4d2ce4cf3a87425ea01940f74368bf1cda378ef8a8a1f1a12ed59f1547'
+if bitness == '32':
+    visual_c_runtime_url = 'https://github.com/yuempek/vc-archive/raw/master/archives/vc15_(14.10.25017.0)_2017_x86.7z'
+    visual_c_runtime_sha256 = '2549eb4d2ce4cf3a87425ea01940f74368bf1cda378ef8a8a1f1a12ed59f1547'
+    visual_c_name = 'vc15_(14.10.25017.0)_2017_x86.7z'
+else:
+    visual_c_runtime_url = 'https://github.com/yuempek/vc-archive/raw/master/archives/vc15_(14.10.25017.0)_2017_x64.7z'
+    visual_c_runtime_sha256 = '4f00b824c37e1017a93fccbd5775e6ee54f824b6786f5730d257a87a3d9ce921'
+    visual_c_name = 'vc15_(14.10.25017.0)_2017_x64.7z'
 
 download_if_not_exists('get-pip.py', get_pip_url)
-download_if_not_exists('python-dist-' + latest_version + '.zip', latest_dist_url)
-download_if_not_exists('vc15_(14.10.25017.0)_2017_x86.7z',
+
+python_dist_name = 'python-dist-' + latest_version + '-' + bitness + '.zip'
+
+download_if_not_exists(python_dist_name, latest_dist_url)
+download_if_not_exists(visual_c_name,
     visual_c_runtime_url, sha256=visual_c_runtime_sha256)
 
 if os.path.exists('./python'):
@@ -109,7 +134,7 @@ if os.path.exists('./python'):
 
 log('Extracting python distribution')
 
-check(os.system(r'7z -y x -opython python-dist-' + latest_version + '.zip'))
+check(os.system(r'7z -y x -opython ' + python_dist_name))
 
 log('Executing get-pip.py')
 wine_run(['./python/python.exe', '-I', 'get-pip.py'])
@@ -209,7 +234,7 @@ log('Copying python distribution into release folder')
 shutil.copytree(r'./python', r'./youtube-local/python')
 
 # ----------- Create release zip -----------
-output_filename = 'youtube-local-' + release_tag + '-windows.zip'
+output_filename = 'youtube-local-' + release_tag + '-' + suffix + '.zip'
 if os.path.exists('./' + output_filename):
     log('Removing previous zipped release')
     os.remove('./' + output_filename)
