@@ -296,6 +296,9 @@ def extract_item_info(item, additional_info={}):
 
     if primary_type == 'video':
         info['id'] = item.get('videoId')
+        if not info['id']:
+            info['id'] = deep_get(item,'navigationEndpoint', 'watchEndpoint',
+                                  'videoId')
         info['view_count'] = extract_int(item.get('viewCountText'))
 
         # dig into accessibility data to get view_count for videos marked as recommended, and to get time_published

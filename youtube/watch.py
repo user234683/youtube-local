@@ -680,6 +680,8 @@ def get_watch_page(video_id=None):
     for item in info['related_videos']:
         util.prefix_urls(item)
         util.add_extra_html_info(item)
+    for song in info['music_list']:
+        song['url'] = util.prefix_url(song['url'])
     if info['playlist']:
         playlist_id = info['playlist']['id']
         for item in info['playlist']['items']:

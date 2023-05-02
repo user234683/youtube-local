@@ -575,7 +575,11 @@ Reload without invidious (for usage of new identity button).</a>
                     {% for track in music_list %}
                         <tr>
                             {% for attribute in music_attributes %}
-                                <td>{{ track.get(attribute.lower(), '') }}</td>
+                                {% if attribute.lower() == 'title' and track['url'] is not none %}
+                                    <td><a href="{{ track['url'] }}">{{ track.get(attribute.lower(), '') }}</a></td>
+                                {% else %}
+                                    <td>{{ track.get(attribute.lower(), '') }}</td>
+                                {% endif %}
                             {% endfor %}
                         </tr>
                     {% endfor %}
