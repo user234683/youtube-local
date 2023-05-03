@@ -250,7 +250,9 @@ def _extract_from_music_renderer(renderer_content):
             row = row.get('infoRowRenderer', {})
             title = extract_str(row.get('title'))
             data = extract_str(row.get('defaultMetadata'))
-            if title == 'ARTIST':
+            if title == 'SONG':
+                song['title'] = data
+            elif title == 'ARTIST':
                 song['artist'] = data
             elif title == 'ALBUM':
                 song['album'] = data
