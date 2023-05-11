@@ -120,7 +120,7 @@
         </div>
     </div>
     <nav class="channel-tabs">
-        {% for tab_name in ('Videos', 'Playlists', 'About') %}
+        {% for tab_name in ('Videos', 'Shorts', 'Streams', 'Playlists', 'About') %}
             {% if tab_name.lower() == current_tab %}
                 <a class="tab page-button">{{ tab_name }}</a>
             {% else %}
@@ -159,7 +159,7 @@
     {% else %}
         <div class="content {{ current_tab + '-content'}}">
             <div id="links-metadata">
-                {% if current_tab == 'videos' %}
+                {% if current_tab in ('videos', 'shorts', 'streams') %}
                     {% set sorts = [('1', 'views'), ('2', 'oldest'), ('3', 'newest')] %}
                     <div id="number-of-results">{{ number_of_videos }} videos</div>
                 {% elif current_tab == 'playlists' %}
@@ -194,11 +194,11 @@
                 {% endfor %}
             </nav>
 
-            {% if current_tab == 'videos' and current_sort.__str__() == '2' %}
+            {% if (current_tab in ('videos', 'shorts', 'streams')) and current_sort.__str__() == '2' %}
                 <nav class="next-previous-button-row">
                     {{ common_elements.next_previous_ctoken_buttons(None, ctoken, channel_url + '/' + current_tab, parameters_dictionary) }}
                 </nav>
-            {% elif current_tab == 'videos' %}
+            {% elif current_tab in ('videos', 'shorts', 'streams') %}
                 <nav class="page-button-row">
                     {{ common_elements.page_buttons(number_of_pages, channel_url + '/' + current_tab, parameters_dictionary, include_ends=(current_sort.__str__() == '3')) }}
                 </nav>

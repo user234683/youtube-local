@@ -249,6 +249,9 @@ def extract_item_info(item, additional_info={}):
     primary_type = type_parts[-2]
     if primary_type == 'video':
         info['type'] = 'video'
+    elif type_parts[0] == 'reel': # shorts
+        info['type'] = 'video'
+        primary_type = 'short'
     elif primary_type in ('playlist', 'radio', 'show'):
         info['type'] = 'playlist'
         info['playlist_type'] = primary_type
@@ -343,6 +346,48 @@ def extract_item_info(item, additional_info={}):
         else:
             info['index'] = None
 
+    elif primary_type == 'short':
+        info['id'] = item.get('videoId')
+        if not info['id']:
+            info['id'] = deep_get(item,'navigationEndpoint',
+                                  'reelWatchEndpoint', 'videoId')
+        info['approx_view_count'] = extract_approx_int(item.get('viewCountText'))
+
+        # handle case where it is "No views"
+        if not info['approx_view_count']:
+            if ('No views' in item.get('shortViewCountText', '')
+                    or 'no views' in accessibility_label.lower()):
+                info['view_count'] = 0
+                info['approx_view_count'] = '0'
+
+        # dig into accessibility data to get duration for shorts
+        accessibility_label = multi_deep_get(item,
+            ['accessibility', 'accessibilityData', 'label'],
+            default='')
+
+        duration = re.search(r'(\d+) (second|seconds|minute) - play video',
+                             accessibility_label)
+        if duration.group(2) == 'minute':
+            info['duration'] = "1:00"
+        else:
+            info['duration'] = "0:" + duration.group(1).zfill(2)
+
+        # if it's an item in a playlist, get its index
+        if 'index' in item: # url has wrong index on playlist page
+            info['index'] = extract_int(item.get('index'))
+        elif 'indexText' in item:
+            # Current item in playlist has ▶ instead of the actual index, must
+            # dig into url
+            match = re.search(r'index=(\d+)', deep_get(item,
+                'navigationEndpoint', 'commandMetadata', 'webCommandMetadata',
+                'url', default=''))
+            if match is None:   # worth a try then
+                info['index'] = extract_int(item.get('indexText'))
+            else:
+                info['index'] = int(match.group(1))
+        else:
+            info['index'] = None
+
     elif primary_type in ('playlist', 'radio'):
         info['id'] = item.get('playlistId')
         info['video_count'] = extract_int(item.get('videoCount'))
@@ -397,6 +442,8 @@ _item_types = {
     'videoWithContextRenderer',
     'gridVideoRenderer',
     'playlistVideoRenderer',
+
+    'reelItemRenderer',
 
     'playlistRenderer',
     'compactPlaylistRenderer',

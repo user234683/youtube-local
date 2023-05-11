@@ -32,16 +32,23 @@ real_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=8XihrAcN1l4'),)
 generic_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=ST1Ti53r4fU'),)
 
 # added an extra nesting under the 2nd base64 compared to v4
+# added tab support
 def channel_ctoken_v5(channel_id, page, sort, tab, view=1):
     new_sort = (2 if int(sort) == 1 else 1)
     offset = str(30*(int(page) - 1))
+    if tab == 'videos':
+        tab = 15
+    elif tab == 'shorts':
+        tab = 10
+    elif tab == 'streams':
+        tab = 14
     pointless_nest = proto.string(80226972,
         proto.string(2, channel_id)
         + proto.string(3,
             proto.percent_b64encode(
                 proto.string(110,
                     proto.string(3,
-                        proto.string(15,
+                        proto.string(tab,
                             proto.string(1,
                                 proto.string(1,
                                     proto.unpadded_b64encode(
@@ -198,7 +205,7 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1,
     message = 'Got channel tab' if print_status else None
 
     if not ctoken:
-        if tab == 'videos':
+        if tab in ('videos', 'shorts', 'streams'):
             ctoken = channel_ctoken_v5(channel_id, page, sort, tab, view)
         else:
             ctoken = channel_ctoken_v3(channel_id, page, sort, tab, view)
@@ -338,11 +345,11 @@ def post_process_channel_info(info):
                 info['links'][i] = (text, util.prefix_url(url))
 
 
-def get_channel_first_page(base_url=None, channel_id=None):
+def get_channel_first_page(base_url=None, channel_id=None, tab='videos'):
     if channel_id:
         base_url = 'https://www.youtube.com/channel/' + channel_id
-    return util.fetch_url(base_url + '/videos?pbj=1&view=0', headers_desktop,
-                          debug_name='gen_channel_videos')
+    return util.fetch_url(base_url + '/' + tab + '?pbj=1&view=0',
+                          headers_desktop, debug_name='gen_channel_' + tab)
 
 
 playlist_sort_codes = {'2': "da", '3': "dd", '4': "lad"}
@@ -361,24 +368,25 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     default_params = (page_number == 1 and sort == '3' and view == '1')
     continuation = bool(ctoken) # whether or not we're using a continuation
 
-    if tab == 'videos' and channel_id and not default_params:
+    if (tab in ('videos', 'shorts', 'streams') and channel_id and
+        not default_params):
         tasks = (
             gevent.spawn(get_number_of_videos_channel, channel_id),
             gevent.spawn(get_channel_tab, channel_id, page_number, sort,
-                         'videos', view, ctoken)
+                         tab, view, ctoken)
         )
         gevent.joinall(tasks)
         util.check_gevent_exceptions(*tasks)
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
         continuation = True
-    elif tab == 'videos':
+    elif tab in ('videos', 'shorts', 'streams'):
         if channel_id:
             num_videos_call = (get_number_of_videos_channel, channel_id)
         else:
             num_videos_call = (get_number_of_videos_general, base_url)
         tasks = (
             gevent.spawn(*num_videos_call),
-            gevent.spawn(get_channel_first_page, base_url=base_url),
+            gevent.spawn(get_channel_first_page, base_url=base_url, tab=tab),
         )
         gevent.joinall(tasks)
         util.check_gevent_exceptions(*tasks)
@@ -429,11 +437,11 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     if info['error'] is not None:
         return flask.render_template('error.html', error_message = info['error'])
 
-    if tab == 'videos':
+    if tab in ('videos', 'shorts', 'streams'):
         info['number_of_videos'] = number_of_videos
         info['number_of_pages'] = math.ceil(number_of_videos/30)
         info['header_playlist_names'] = local_playlist.get_playlist_names()
-    if tab in ('videos', 'playlists'):
+    if tab in ('videos', 'shorts', 'streams', 'playlists'):
         info['current_sort'] = sort
     elif tab == 'search':
         info['search_box_value'] = query
