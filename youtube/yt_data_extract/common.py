@@ -298,10 +298,11 @@ def extract_item_info(item, additional_info={}):
             info['time_published'] = timestamp.group(1)
 
     if primary_type == 'video':
-        info['id'] = item.get('videoId')
-        if not info['id']:
-            info['id'] = deep_get(item,'navigationEndpoint', 'watchEndpoint',
-                                  'videoId')
+        info['id'] = multi_deep_get(item,
+            ['videoId'],
+            ['navigationEndpoint', 'watchEndpoint', 'videoId'],
+            ['navigationEndpoint', 'reelWatchEndpoint', 'videoId'], # shorts
+            )
         info['view_count'] = extract_int(item.get('viewCountText'))
 
         # dig into accessibility data to get view_count for videos marked as recommended, and to get time_published
@@ -319,40 +320,34 @@ def extract_item_info(item, additional_info={}):
         if info['view_count']:
             info['approx_view_count'] = '{:,}'.format(info['view_count'])
         else:
-            info['approx_view_count'] = extract_approx_int(item.get('shortViewCountText'))
+            info['approx_view_count'] = extract_approx_int(multi_get(item,
+                'shortViewCountText',
+                'viewCountText') # shorts
+                )
 
         # handle case where it is "No views"
         if not info['approx_view_count']:
             if ('No views' in item.get('shortViewCountText', '')
-                    or 'no views' in accessibility_label.lower()):
+                    or 'no views' in accessibility_label.lower()
+                    or 'No views' in extract_str(item.get('viewCountText', '')) # shorts
+                    ):
                 info['view_count'] = 0
                 info['approx_view_count'] = '0'
 
         info['duration'] = extract_str(item.get('lengthText'))
 
-        if info['duration'] is None: # shorts
-            if not info['id']:
-                info['id'] = deep_get(item,'navigationEndpoint',
-                                    'reelWatchEndpoint', 'videoId')
-            info['approx_view_count'] = extract_approx_int(item.get('viewCountText'))
-
-            # handle case where it is "No views"
-            if not info['approx_view_count']:
-                if ('No views' in extract_str(item.get('viewCountText', ''))):
-                    info['view_count'] = 0
-                    info['approx_view_count'] = '0'
-
-            # dig into accessibility data to get duration for shorts
-            accessibility_label = multi_deep_get(item,
-                ['accessibility', 'accessibilityData', 'label'],
-                default='')
-            duration = re.search(r'(\d+) (second|seconds|minute) - play video$',
-                                accessibility_label)
-            if duration:
-                if duration.group(2) == 'minute':
-                    info['duration'] = '1:00'
-                else:
-                    info['duration'] = '0:' + duration.group(1).zfill(2)
+        # dig into accessibility data to get duration for shorts
+        accessibility_label = deep_get(item,
+            'accessibility', 'accessibilityData', 'label',
+            default='')
+        duration = re.search(r'(\d+) (second|seconds|minute) - play video$',
+                            accessibility_label)
+        if duration:
+            if duration.group(2) == 'minute':
+                conservative_update(info, 'duration', '1:00')
+            else:
+                conservative_update(info,
+                    'duration', '0:' + duration.group(1).zfill(2))
 
         # if it's an item in a playlist, get its index
         if 'index' in item: # url has wrong index on playlist page
