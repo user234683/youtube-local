@@ -251,7 +251,7 @@ def extract_item_info(item, additional_info={}):
         info['type'] = 'video'
     elif type_parts[0] == 'reel': # shorts
         info['type'] = 'video'
-        primary_type = 'short'
+        primary_type = 'video'
     elif primary_type in ('playlist', 'radio', 'show'):
         info['type'] = 'playlist'
         info['playlist_type'] = primary_type
@@ -330,46 +330,29 @@ def extract_item_info(item, additional_info={}):
 
         info['duration'] = extract_str(item.get('lengthText'))
 
-        # if it's an item in a playlist, get its index
-        if 'index' in item: # url has wrong index on playlist page
-            info['index'] = extract_int(item.get('index'))
-        elif 'indexText' in item:
-            # Current item in playlist has ▶ instead of the actual index, must
-            # dig into url
-            match = re.search(r'index=(\d+)', deep_get(item,
-                'navigationEndpoint', 'commandMetadata', 'webCommandMetadata',
-                'url', default=''))
-            if match is None:   # worth a try then
-                info['index'] = extract_int(item.get('indexText'))
-            else:
-                info['index'] = int(match.group(1))
-        else:
-            info['index'] = None
+        if info['duration'] is None: # shorts
+            if not info['id']:
+                info['id'] = deep_get(item,'navigationEndpoint',
+                                    'reelWatchEndpoint', 'videoId')
+            info['approx_view_count'] = extract_approx_int(item.get('viewCountText'))
 
-    elif primary_type == 'short':
-        info['id'] = item.get('videoId')
-        if not info['id']:
-            info['id'] = deep_get(item,'navigationEndpoint',
-                                  'reelWatchEndpoint', 'videoId')
-        info['approx_view_count'] = extract_approx_int(item.get('viewCountText'))
+            # handle case where it is "No views"
+            if not info['approx_view_count']:
+                if ('No views' in extract_str(item.get('viewCountText', ''))):
+                    info['view_count'] = 0
+                    info['approx_view_count'] = '0'
 
-        # handle case where it is "No views"
-        if not info['approx_view_count']:
-            if ('No views' in extract_str(item.get('viewCountText', ''))):
-                info['view_count'] = 0
-                info['approx_view_count'] = '0'
-
-        # dig into accessibility data to get duration for shorts
-        accessibility_label = multi_deep_get(item,
-            ['accessibility', 'accessibilityData', 'label'],
-            default='')
-        duration = re.search(r'(\d+) (second|seconds|minute) - play video$',
-                             accessibility_label)
-        if duration:
-            if duration.group(2) == 'minute':
-                info['duration'] = '1:00'
-            else:
-                info['duration'] = '0:' + duration.group(1).zfill(2)
+            # dig into accessibility data to get duration for shorts
+            accessibility_label = multi_deep_get(item,
+                ['accessibility', 'accessibilityData', 'label'],
+                default='')
+            duration = re.search(r'(\d+) (second|seconds|minute) - play video$',
+                                accessibility_label)
+            if duration:
+                if duration.group(2) == 'minute':
+                    info['duration'] = '1:00'
+                else:
+                    info['duration'] = '0:' + duration.group(1).zfill(2)
 
         # if it's an item in a playlist, get its index
         if 'index' in item: # url has wrong index on playlist page
