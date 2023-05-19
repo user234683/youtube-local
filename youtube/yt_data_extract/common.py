@@ -355,8 +355,7 @@ def extract_item_info(item, additional_info={}):
 
         # handle case where it is "No views"
         if not info['approx_view_count']:
-            if ('No views' in item.get('shortViewCountText', '')
-                    or 'no views' in accessibility_label.lower()):
+            if ('No views' in extract_str(item.get('viewCountText', ''))):
                 info['view_count'] = 0
                 info['approx_view_count'] = '0'
 
@@ -364,13 +363,13 @@ def extract_item_info(item, additional_info={}):
         accessibility_label = multi_deep_get(item,
             ['accessibility', 'accessibilityData', 'label'],
             default='')
-
-        duration = re.search(r'(\d+) (second|seconds|minute) - play video',
+        duration = re.search(r'(\d+) (second|seconds|minute) - play video$',
                              accessibility_label)
-        if duration.group(2) == 'minute':
-            info['duration'] = "1:00"
-        else:
-            info['duration'] = "0:" + duration.group(1).zfill(2)
+        if duration:
+            if duration.group(2) == 'minute':
+                info['duration'] = '1:00'
+            else:
+                info['duration'] = '0:' + duration.group(1).zfill(2)
 
         # if it's an item in a playlist, get its index
         if 'index' in item: # url has wrong index on playlist page
