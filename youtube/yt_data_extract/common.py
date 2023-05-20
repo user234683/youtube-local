@@ -301,8 +301,8 @@ def extract_item_info(item, additional_info={}):
         info['id'] = multi_deep_get(item,
             ['videoId'],
             ['navigationEndpoint', 'watchEndpoint', 'videoId'],
-            ['navigationEndpoint', 'reelWatchEndpoint', 'videoId'], # shorts
-            )
+            ['navigationEndpoint', 'reelWatchEndpoint', 'videoId'] # shorts
+        )
         info['view_count'] = extract_int(item.get('viewCountText'))
 
         # dig into accessibility data to get view_count for videos marked as recommended, and to get time_published
@@ -322,15 +322,15 @@ def extract_item_info(item, additional_info={}):
         else:
             info['approx_view_count'] = extract_approx_int(multi_get(item,
                 'shortViewCountText',
-                'viewCountText') # shorts
-                )
+                'viewCountText' # shorts
+            ))
 
         # handle case where it is "No views"
         if not info['approx_view_count']:
             if ('No views' in item.get('shortViewCountText', '')
                     or 'no views' in accessibility_label.lower()
                     or 'No views' in extract_str(item.get('viewCountText', '')) # shorts
-                    ):
+            ):
                 info['view_count'] = 0
                 info['approx_view_count'] = '0'
 
