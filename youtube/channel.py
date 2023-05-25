@@ -33,6 +33,7 @@ generic_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=ST1Ti53r4fU'),)
 
 # added an extra nesting under the 2nd base64 compared to v4
 # added tab support
+# changed offset field to uint id 1
 def channel_ctoken_v5(channel_id, page, sort, tab, view=1):
     new_sort = (2 if int(sort) == 1 else 1)
     offset = str(30*(int(page) - 1))
@@ -58,7 +59,7 @@ def channel_ctoken_v5(channel_id, page, sort, tab, view=1):
                                                 proto.string(2,
                                                     b"ST:"
                                                     + proto.unpadded_b64encode(
-                                                        proto.string(2, offset)
+                                                        proto.uint(1, offset)
                                                     )
                                                 )
                                             )
