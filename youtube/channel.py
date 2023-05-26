@@ -36,7 +36,7 @@ generic_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=ST1Ti53r4fU'),)
 # changed offset field to uint id 1
 def channel_ctoken_v5(channel_id, page, sort, tab, view=1):
     new_sort = (2 if int(sort) == 1 else 1)
-    offset = str(30*(int(page) - 1))
+    offset = 30*(int(page) - 1)
     if tab == 'videos':
         tab = 15
     elif tab == 'shorts':
