@@ -18,7 +18,7 @@ if len(sys.argv) > 2:
 else:
     bitness = '64'
 
-if latest_version = 'oldwin':
+if latest_version == 'oldwin':
     bitness = '32'
     latest_version = '3.7.9'
     suffix = 'windows-vista-7-only'
