@@ -390,7 +390,7 @@ def fetch_player_response(client, video_id):
     data = {
         'videoId': video_id,
         'context': context,
-        'params': '8AEB',
+        'params': 'CgIQBg',
     }
     data = json.dumps(data)
     headers = (('Content-Type', 'application/json'),('User-Agent', user_agent))
