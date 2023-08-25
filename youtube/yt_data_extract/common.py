@@ -569,13 +569,13 @@ def extract_items(response, item_types=_item_types,
                     item_types=item_types)
                 if items:
                     break
-    elif ('onResponseReceivedEndpoints' in response
+    if ('onResponseReceivedEndpoints' in response
           or 'onResponseReceivedActions' in response):
         for endpoint in multi_get(response,
                                   'onResponseReceivedEndpoints',
                                   'onResponseReceivedActions',
                                   []):
-            items, ctoken = extract_items_from_renderer_list(
+            new_items, new_ctoken = extract_items_from_renderer_list(
                 multi_deep_get(
                     endpoint,
                     ['reloadContinuationItemsCommand', 'continuationItems'],
@@ -584,13 +584,17 @@ def extract_items(response, item_types=_item_types,
                 ),
                 item_types=item_types,
             )
-            if items:
-                break
-    elif 'contents' in response:
+            items += new_items
+            if (not ctoken) or (new_ctoken and new_items):
+                ctoken = new_ctoken
+    if 'contents' in response:
         renderer = get(response, 'contents', {})
-        items, ctoken = extract_items_from_renderer(
+        new_items, new_ctoken = extract_items_from_renderer(
             renderer,
             item_types=item_types)
+        items += new_items
+        if (not ctoken) or (new_ctoken and new_items):
+            ctoken = new_ctoken
 
     if search_engagement_panels and 'engagementPanels' in response:
         new_items, new_ctoken = extract_items_from_renderer_list(
