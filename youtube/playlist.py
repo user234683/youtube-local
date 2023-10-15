@@ -47,23 +47,25 @@ def playlist_first_page(playlist_id, report_text="Retrieved playlist", use_mobil
     return content
 
 
-def get_videos(playlist_id, page, use_mobile=False):
+def get_videos(playlist_id, page, include_shorts=True, use_mobile=False):
     # mobile requests return 20 videos per page
     if use_mobile:
-        url = "https://m.youtube.com/playlist?ctoken="
-        url += playlist_ctoken(playlist_id, (int(page)-1)*20) + "&pbj=1"
-        content = util.fetch_url(
-            url, util.mobile_xhr_headers,
-            report_text="Retrieved playlist", debug_name='playlist_videos'
-        )
+        page_size = 20
+        headers = util.mobile_xhr_headers
     # desktop requests return 100 videos per page
     else:
-        url = "https://www.youtube.com/playlist?ctoken="
-        url += playlist_ctoken(playlist_id, (int(page)-1)*100) + "&pbj=1"
-        content = util.fetch_url(
-            url, util.desktop_xhr_headers,
-            report_text="Retrieved playlist", debug_name='playlist_videos'
-        )
+        page_size = 100
+        headers = util.desktop_xhr_headers
+
+    url = "https://m.youtube.com/playlist?ctoken="
+    url += playlist_ctoken(playlist_id, (int(page)-1)*page_size,
+                           include_shorts=include_shorts)
+    url += "&pbj=1"
+    content = util.fetch_url(
+        url, headers, report_text="Retrieved playlist",
+        debug_name='playlist_videos'
+    )
+
     info = json.loads(content.decode('utf-8'))
     return info
 

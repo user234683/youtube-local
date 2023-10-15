@@ -1,5 +1,6 @@
 import base64
-from youtube import util, yt_data_extract, local_playlist, subscriptions
+from youtube import (util, yt_data_extract, local_playlist, subscriptions,
+                     playlist)
 from youtube import yt_app
 
 import urllib
@@ -238,7 +239,8 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1,
     return content
 
 # cache entries expire after 30 minutes
-@cachetools.func.ttl_cache(maxsize=128, ttl=30*60)
+number_of_videos_cache = cachetools.TTLCache(128, 30*60)
+@cachetools.cached(number_of_videos_cache)
 def get_number_of_videos_channel(channel_id):
     if channel_id is None:
         return 1000
@@ -263,6 +265,12 @@ def get_number_of_videos_channel(channel_id):
         return int(match.group(1).replace(',',''))
     else:
         return 0
+def set_cached_number_of_videos(channel_id, num_videos):
+    @cachetools.cached(number_of_videos_cache)
+    def dummy_func_using_same_cache(channel_id):
+        return num_videos
+    dummy_func_using_same_cache(channel_id)
+
 
 channel_id_re = re.compile(r'videos\.xml\?channel_id=([a-zA-Z0-9_-]{24})"')
 @cachetools.func.lru_cache(maxsize=128)
@@ -276,6 +284,7 @@ def get_channel_id(base_url):
     if match:
         return match.group(1)
     return None
+
 
 metadata_cache = cachetools.LRUCache(128)
 @cachetools.cached(metadata_cache)
@@ -300,6 +309,7 @@ def extract_metadata_for_caching(channel_info):
                 'avatar'):
         metadata[key] = channel_info[key]
     return metadata
+
 
 def get_number_of_videos_general(base_url):
     return get_number_of_videos_channel(get_channel_id(base_url))
@@ -346,7 +356,7 @@ def post_process_channel_info(info):
                 info['links'][i] = (text, util.prefix_url(url))
 
 
-def get_channel_first_page(base_url=None, channel_id=None, tab='videos'):
+def get_channel_first_page(base_url=None, tab='videos', channel_id=None):
     if channel_id:
         base_url = 'https://www.youtube.com/channel/' + channel_id
     return util.fetch_url(base_url + '/' + tab + '?pbj=1&view=0',
@@ -366,32 +376,80 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     view = request.args.get('view', '1')
     query = request.args.get('query', '')
     ctoken = request.args.get('ctoken', '')
-    default_params = (page_number == 1 and sort == '3' and view == '1')
+    include_shorts = (sort != '2')
+    default_params = (page_number == 1 and sort in ('2', '3') and view == '1')
     continuation = bool(ctoken) # whether or not we're using a continuation
+    page_size = 30
 
-    if (tab in ('videos', 'shorts', 'streams') and channel_id and
-        not default_params):
-        tasks = (
-            gevent.spawn(get_number_of_videos_channel, channel_id),
-            gevent.spawn(get_channel_tab, channel_id, page_number, sort,
-                         tab, view, ctoken)
-        )
-        gevent.joinall(tasks)
-        util.check_gevent_exceptions(*tasks)
-        number_of_videos, polymer_json = tasks[0].value, tasks[1].value
-        continuation = True
-    elif tab in ('videos', 'shorts', 'streams'):
+    # Use the special UU playlist which contains all the channel's uploads
+    playlist_method_failed = False
+    if tab == 'videos':
+        if not channel_id:
+            channel_id = get_channel_id(base_url)
+        if page_number == 1 and include_shorts:
+            tasks = (
+                gevent.spawn(playlist.playlist_first_page,
+                             'UU' + channel_id[2:],
+                             report_text='Retrieved channel videos'),
+                gevent.spawn(get_metadata, channel_id),
+            )
+            gevent.joinall(tasks)
+            util.check_gevent_exceptions(*tasks)
+
+            # Ignore the metadata for now, it is cached and will be
+            # recalled later
+            pl_json = tasks[0].value
+            pl_info = yt_data_extract.extract_playlist_info(pl_json)
+            number_of_videos = pl_info['metadata']['video_count']
+            if number_of_videos is None:
+                number_of_videos = 1000
+            else:
+                set_cached_number_of_videos(channel_id, number_of_videos)
+        else:
+            tasks = (
+                gevent.spawn(playlist.get_videos, 'UU' + channel_id[2:],
+                             page_number, include_shorts=include_shorts),
+                gevent.spawn(get_metadata, channel_id),
+                gevent.spawn(get_number_of_videos_channel, channel_id),
+            )
+            gevent.joinall(tasks)
+            util.check_gevent_exceptions(*tasks)
+
+            pl_json = tasks[0].value
+            pl_info = yt_data_extract.extract_playlist_info(pl_json)
+            number_of_videos = tasks[2].value
+            print(number_of_videos)
+        info = pl_info
+        info['channel_id'] = channel_id
+        info['current_tab'] = 'videos'
+        if info['items']:
+            page_size = 100
+        else:
+            playlist_method_failed = True   # Try the first-page method next
+
+    # Use the regular channel API
+    if tab in ('shorts','streams') or tab=='videos' and playlist_method_failed:
         if channel_id:
             num_videos_call = (get_number_of_videos_channel, channel_id)
         else:
             num_videos_call = (get_number_of_videos_general, base_url)
+
+        # Use ctoken method, which YouTube changes all the time
+        if channel_id and not default_params:
+            page_call = (get_channel_tab, channel_id, page_number, sort,
+                         tab, view, ctoken)
+        # Use the first-page method, which won't break
+        else:
+            page_call = (get_channel_first_page, base_url, tab)
+
         tasks = (
             gevent.spawn(*num_videos_call),
-            gevent.spawn(get_channel_first_page, base_url=base_url, tab=tab),
+            gevent.spawn(*page_call),
         )
         gevent.joinall(tasks)
         util.check_gevent_exceptions(*tasks)
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
+
     elif tab == 'about':
         polymer_json = util.fetch_url(base_url + '/about?pbj=1', headers_desktop, debug_name='gen_channel_about')
     elif tab == 'playlists' and page_number == 1:
@@ -405,12 +463,16 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     elif tab == 'search':
         url = base_url + '/search?pbj=1&query=' + urllib.parse.quote(query, safe='')
         polymer_json = util.fetch_url(url, headers_desktop, debug_name='gen_channel_search')
+    elif tab == 'videos':
+        pass
     else:
         flask.abort(404, 'Unknown channel tab: ' + tab)
 
+    if tab != 'videos' or playlist_method_failed:
+        info = yt_data_extract.extract_channel_info(
+            json.loads(polymer_json), tab, continuation=continuation
+        )
 
-    info = yt_data_extract.extract_channel_info(json.loads(polymer_json), tab,
-                                                continuation=continuation)
     if channel_id:
         info['channel_url'] = 'https://www.youtube.com/channel/' + channel_id
         info['channel_id'] = channel_id
@@ -418,11 +480,11 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         channel_id = info['channel_id']
 
     # Will have microformat present, cache metadata while we have it
-    if channel_id and default_params:
+    if channel_id and default_params and tab != 'videos':
         metadata = extract_metadata_for_caching(info)
         set_cached_metadata(channel_id, metadata)
     # Otherwise, populate with our (hopefully cached) metadata
-    elif channel_id and info['channel_name'] is None:
+    elif channel_id and info.get('channel_name') is None:
         metadata = get_metadata(channel_id)
         for key, value in metadata.items():
             yt_data_extract.conservative_update(info, key, value)
@@ -440,7 +502,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
 
     if tab in ('videos', 'shorts', 'streams'):
         info['number_of_videos'] = number_of_videos
-        info['number_of_pages'] = math.ceil(number_of_videos/30)
+        info['number_of_pages'] = math.ceil(number_of_videos/page_size)
         info['header_playlist_names'] = local_playlist.get_playlist_names()
     if tab in ('videos', 'shorts', 'streams', 'playlists'):
         info['current_sort'] = sort
