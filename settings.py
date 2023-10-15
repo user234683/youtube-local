@@ -276,6 +276,16 @@ For security reasons, enabling this is not recommended.''',
         'default': 0,
         'comment': '',
     }),
+    ('include_shorts_in_subscriptions', {
+        'type': bool,
+        'default': 0,
+        'comment': '',
+    }),
+    ('include_shorts_in_channel', {
+        'type': bool,
+        'default': 1,
+        'comment': '',
+    }),
 
     ('gather_googlevideo_domains', {
         'type': bool,

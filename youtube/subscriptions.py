@@ -439,8 +439,12 @@ def _get_atoma_feed(channel_id):
 def _get_channel_videos_first_page(channel_id, channel_status_name):
     try:
         # First try the playlist method
-        pl_json = playlist.get_videos('UU' + channel_id[2:], 1,
-                                      include_shorts=False, report_text=None)
+        pl_json = playlist.get_videos(
+            'UU' + channel_id[2:],
+            1,
+            include_shorts=settings.include_shorts_in_subscriptions,
+            report_text=None
+        )
         pl_info = yt_data_extract.extract_playlist_info(pl_json)
         if pl_info.get('items'):
             pl_info['items'] = pl_info['items'][0:30]

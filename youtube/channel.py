@@ -2,6 +2,7 @@ import base64
 from youtube import (util, yt_data_extract, local_playlist, subscriptions,
                      playlist)
 from youtube import yt_app
+import settings
 
 import urllib
 import json
@@ -376,7 +377,8 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     # sort 2: oldest
     # sort 3: newest
     # sort 4: newest - no shorts (Just a kludge on our end, not internal to yt)
-    sort = request.args.get('sort', '3')
+    default_sort = '3' if settings.include_shorts_in_channel else '4'
+    sort = request.args.get('sort', default_sort)
     view = request.args.get('view', '1')
     query = request.args.get('query', '')
     ctoken = request.args.get('ctoken', '')
