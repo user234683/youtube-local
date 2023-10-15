@@ -363,12 +363,12 @@ def _extract_watch_info_mobile(top_level):
             comment_count_text = extract_str(deep_get(comment_info,
                 'header', 'commentSectionHeaderRenderer', 'countText'))
         if comment_count_text == 'Comments':    # just this with no number, means 0 comments
-            info['comment_count'] = 0
+            info['comment_count'] = '0'
         else:
-            info['comment_count'] = extract_int(comment_count_text)
+            info['comment_count'] = extract_approx_int(comment_count_text)
         info['comments_disabled'] = False
     else:   # no comment section present means comments are disabled
-        info['comment_count'] = 0
+        info['comment_count'] = '0'
         info['comments_disabled'] = True
 
     # check for limited state

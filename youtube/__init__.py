@@ -39,7 +39,10 @@ def commatize(num):
     if num is None:
         return ''
     if isinstance(num, str):
-        num = int(num)
+        try:
+            num = int(num)
+        except ValueError:
+            return num
     return '{:,}'.format(num)
 
 def timestamp_replacement(match):

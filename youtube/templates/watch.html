@@ -670,7 +670,7 @@ Reload without invidious (for usage of new identity button).</a>
             <div class="comments-area-outer comments-disabled">Comments disabled</div>
         {% else %}
             <details class="comments-area-outer" {{'open' if settings.comments_mode == 1 else ''}}>
-                <summary>{{ comment_count|commatize }} comment{{'s' if comment_count != 1 else ''}}</summary>
+                <summary>{{ comment_count|commatize }} comment{{'s' if comment_count != '1' else ''}}</summary>
                 <section class="comments-area-inner comments-area">
                     {% if comments_info %}
                         {{ comments.video_comments(comments_info) }}
