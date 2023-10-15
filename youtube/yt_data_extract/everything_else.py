@@ -191,6 +191,19 @@ def extract_playlist_metadata(polymer_json):
         elif 'updated' in text:
             metadata['time_published'] = extract_date(text)
 
+    microformat = deep_get(response, 'microformat', 'microformatDataRenderer',
+                           default={})
+    conservative_update(
+        metadata, 'title', extract_str(microformat.get('title'))
+    )
+    conservative_update(
+        metadata, 'description', extract_str(microformat.get('description'))
+    )
+    conservative_update(
+        metadata, 'thumbnail', deep_get(microformat, 'thumbnail',
+                                        'thumbnails', -1, 'url')
+    )
+
     return metadata
 
 def extract_playlist_info(polymer_json):
@@ -198,13 +211,11 @@ def extract_playlist_info(polymer_json):
     if err:
         return {'error': err}
     info = {'error': None}
-    first_page = 'continuationContents' not in response
     video_list, _ = extract_items(response)
 
     info['items'] = [extract_item_info(renderer) for renderer in video_list]
 
-    if first_page:
-        info['metadata'] = extract_playlist_metadata(polymer_json)
+    info['metadata'] = extract_playlist_metadata(polymer_json)
 
     return info
 
