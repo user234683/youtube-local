@@ -28,7 +28,8 @@ def playlist_ctoken(playlist_id, offset, include_shorts=True):
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
 
 
-def playlist_first_page(playlist_id, report_text="Retrieved playlist", use_mobile=False):
+def playlist_first_page(playlist_id, report_text="Retrieved playlist",
+                        use_mobile=False):
     if use_mobile:
         url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&pbj=1'
         content = util.fetch_url(
@@ -47,7 +48,8 @@ def playlist_first_page(playlist_id, report_text="Retrieved playlist", use_mobil
     return content
 
 
-def get_videos(playlist_id, page, include_shorts=True, use_mobile=False):
+def get_videos(playlist_id, page, include_shorts=True, use_mobile=False,
+               report_text='Retrieved playlist'):
     # mobile requests return 20 videos per page
     if use_mobile:
         page_size = 20
@@ -62,7 +64,7 @@ def get_videos(playlist_id, page, include_shorts=True, use_mobile=False):
                            include_shorts=include_shorts)
     url += "&pbj=1"
     content = util.fetch_url(
-        url, headers, report_text="Retrieved playlist",
+        url, headers, report_text=report_text,
         debug_name='playlist_videos'
     )
 

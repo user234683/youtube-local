@@ -1,4 +1,4 @@
-from youtube import util, yt_data_extract, channel, local_playlist
+from youtube import util, yt_data_extract, channel, local_playlist, playlist
 from youtube import yt_app
 import settings
 
@@ -438,7 +438,20 @@ def _get_atoma_feed(channel_id):
 
 def _get_channel_videos_first_page(channel_id, channel_status_name):
     try:
-        return channel.get_channel_first_page(channel_id=channel_id)
+        # First try the playlist method
+        pl_json = playlist.get_videos('UU' + channel_id[2:], 1,
+                                      include_shorts=False, report_text=None)
+        pl_info = yt_data_extract.extract_playlist_info(pl_json)
+        if pl_info.get('items'):
+            pl_info['items'] = pl_info['items'][0:30]
+            return pl_info
+
+        # Try the channel api method
+        channel_json = channel.get_channel_first_page(channel_id=channel_id)
+        channel_info = yt_data_extract.extract_channel_info(
+            json.loads(channel_json), 'videos'
+        )
+        return channel_info
     except util.FetchError as e:
         if e.code == '429' and settings.route_tor:
             error_message = ('Error checking channel ' + channel_status_name
@@ -471,7 +484,7 @@ def _get_upstream_videos(channel_id):
     )
     gevent.joinall(tasks)
 
-    channel_tab, feed = tasks[0].value, tasks[1].value
+    channel_info, feed = tasks[0].value, tasks[1].value
 
     # extract published times from atoma feed
     times_published = {}
@@ -509,9 +522,8 @@ def _get_upstream_videos(channel_id):
     except defusedxml.ElementTree.ParseError:
         print('Failed to read atoma feed for ' + channel_status_name)
 
-    if channel_tab is None: # there was an error
+    if channel_info is None: # there was an error
         return
-    channel_info = yt_data_extract.extract_channel_info(json.loads(channel_tab), 'videos')
     if channel_info['error']:
         print('Error checking channel ' + channel_status_name + ': ' + channel_info['error'])
         return
