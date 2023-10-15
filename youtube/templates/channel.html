@@ -160,7 +160,7 @@
         <div class="content {{ current_tab + '-content'}}">
             <div id="links-metadata">
                 {% if current_tab in ('videos', 'shorts', 'streams') %}
-                    {% set sorts = [('1', 'views'), ('2', 'newest - no shorts'), ('3', 'newest')] %}
+                    {% set sorts = [('1', 'views'), ('2', 'oldest'), ('3', 'newest'), ('4', 'newest - no shorts'),] %}
                     <div id="number-of-results">{{ number_of_videos }} videos</div>
                 {% elif current_tab == 'playlists' %}
                     {% set sorts = [('2', 'oldest'), ('3', 'newest'), ('4', 'last video added')] %}
@@ -196,7 +196,7 @@
 
             {% if current_tab in ('videos', 'shorts', 'streams') %}
                 <nav class="page-button-row">
-                    {{ common_elements.page_buttons(number_of_pages, channel_url + '/' + current_tab, parameters_dictionary, include_ends=(current_sort.__str__() in '23')) }}
+                    {{ common_elements.page_buttons(number_of_pages, channel_url + '/' + current_tab, parameters_dictionary, include_ends=(current_sort.__str__() in '34')) }}
                 </nav>
             {% elif current_tab == 'playlists' or current_tab == 'search' %}
                 <nav class="next-previous-button-row">

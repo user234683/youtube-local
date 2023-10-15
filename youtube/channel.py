@@ -372,18 +372,23 @@ playlist_sort_codes = {'2': "da", '3': "dd", '4': "lad"}
 def get_channel_page_general_url(base_url, tab, request, channel_id=None):
 
     page_number = int(request.args.get('page', 1))
+    # sort 1: views
+    # sort 2: oldest
+    # sort 3: newest
+    # sort 4: newest - no shorts (Just a kludge on our end, not internal to yt)
     sort = request.args.get('sort', '3')
     view = request.args.get('view', '1')
     query = request.args.get('query', '')
     ctoken = request.args.get('ctoken', '')
-    include_shorts = (sort != '2')
-    default_params = (page_number == 1 and sort in ('2', '3') and view == '1')
+    include_shorts = (sort != '4')
+    default_params = (page_number == 1 and sort in ('3', '4') and view == '1')
     continuation = bool(ctoken) # whether or not we're using a continuation
     page_size = 30
+    try_channel_api = True
+    polymer_json = None
 
     # Use the special UU playlist which contains all the channel's uploads
-    playlist_method_failed = False
-    if tab == 'videos':
+    if tab == 'videos' and sort in ('3', '4'):
         if not channel_id:
             channel_id = get_channel_id(base_url)
         if page_number == 1 and include_shorts:
@@ -418,17 +423,17 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
             pl_json = tasks[0].value
             pl_info = yt_data_extract.extract_playlist_info(pl_json)
             number_of_videos = tasks[2].value
-            print(number_of_videos)
         info = pl_info
         info['channel_id'] = channel_id
         info['current_tab'] = 'videos'
-        if info['items']:
+        if info['items']:   # Success
             page_size = 100
-        else:
-            playlist_method_failed = True   # Try the first-page method next
+            try_channel_api = False
+        else:   # Try the first-page method next
+            try_channel_api = True
 
     # Use the regular channel API
-    if tab in ('shorts','streams') or tab=='videos' and playlist_method_failed:
+    if tab in ('shorts', 'streams') or (tab=='videos' and try_channel_api):
         if channel_id:
             num_videos_call = (get_number_of_videos_channel, channel_id)
         else:
@@ -436,7 +441,11 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
 
         # Use ctoken method, which YouTube changes all the time
         if channel_id and not default_params:
-            page_call = (get_channel_tab, channel_id, page_number, sort,
+            if sort == 4:
+                _sort = 3
+            else:
+                _sort = sort
+            page_call = (get_channel_tab, channel_id, page_number, _sort,
                          tab, view, ctoken)
         # Use the first-page method, which won't break
         else:
@@ -468,7 +477,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
     else:
         flask.abort(404, 'Unknown channel tab: ' + tab)
 
-    if tab != 'videos' or playlist_method_failed:
+    if polymer_json is not None:
         info = yt_data_extract.extract_channel_info(
             json.loads(polymer_json), tab, continuation=continuation
         )
