@@ -226,3 +226,19 @@ if (data.settings.related_videos_mode !== 0 || data.playlist !== null) {
         }
     }
 }
+
+// save watched time to session storage
+video_id = window.location.href.split("?v=")[1].split("&")[0]
+window.addEventListener('beforeunload', function(e) {
+    sessionStorage.setItem(video_id, video.currentTime);
+});
+
+video.addEventListener('loadedmetadata', function () {
+    if (sessionStorage.getItem(video_id) !== null) {
+        const prevWatchTime = sessionStorage.getItem(video_id);
+        if (video.duration > prevWatchTime && prevWatchTime > 0) {
+            video.currentTime = prevWatchTime;
+        }
+    }
+});
+
