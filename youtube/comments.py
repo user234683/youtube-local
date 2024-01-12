@@ -93,7 +93,7 @@ def post_process_comments_info(comments_info):
             ctoken = comment['reply_ctoken']
             ctoken, err = proto.set_protobuf_value(
                 ctoken,
-                'base64p', 6, 3, 9, value=250)
+                'base64p', 6, 3, 9, value=200)
             if err:
                 print('Error setting ctoken value:')
                 print(err)
@@ -123,7 +123,7 @@ def post_process_comments_info(comments_info):
             # change max_replies field to 250 in ctoken
             new_ctoken, err = proto.set_protobuf_value(
                 ctoken,
-                'base64p', 6, 3, 9, value=250)
+                'base64p', 6, 3, 9, value=200)
             if err:
                 print('Error setting ctoken value:')
                 print(err)
