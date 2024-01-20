@@ -415,6 +415,7 @@ def fetch_watch_page_info(video_id, playlist_id, index):
         ('Accept-Language', 'en-US,en;q=0.5'),
         ('X-YouTube-Client-Name', '2'),
         ('X-YouTube-Client-Version', '2.20180830'),
+#        ('Cookie', 'SOCS=CAI'),
     ) + util.mobile_ua
 
     watch_page = util.fetch_url(url, headers=headers,

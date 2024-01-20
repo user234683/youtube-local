@@ -10,7 +10,10 @@ function setVideoDimensions(height, width){
         body.style.setProperty('--plyr-control-spacing-num', '10');
     var theaterWidth = Math.max(640, data['video_duration'] || 0, width);
     body.style.setProperty('--theater_video_target_width', String(theaterWidth));
-    function setVideoAspectRatio(){
+
+    // This will set the correct media query
+    document.querySelector('#video-container').className = 'h' + height;
+    /*function setVideoAspectRatio(){
         // Recreate the video constant aspect ratio media query
         // in javascript because media queries do not accept css
         // variables and cannot be modified by javascript
@@ -26,7 +29,7 @@ function setVideoDimensions(height, width){
     if (data.settings.theater_mode) {
         setVideoAspectRatio();
         window.onresize = function(event) { setVideoAspectRatio() };
-    }
+    }*/
 }
 function changeQuality(selection) {
     var currentVideoTime = video.currentTime;
