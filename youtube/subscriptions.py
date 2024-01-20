@@ -542,14 +542,37 @@ def _get_upstream_videos(channel_id):
         if video_item['id'] in times_published:
             video_item['time_published'] = times_published[video_item['id']]
             video_item['is_time_published_exact'] = True
-        else:
+        elif video_item.get('time_published'):
             video_item['is_time_published_exact'] = False
             try:
                 video_item['time_published'] = youtube_timestamp_to_posix(video_item['time_published']) - i  # subtract a few seconds off the videos so they will be in the right order
-            except KeyError:
+            except Exception:
                 print(video_item)
-
+        else:
+            video_item['is_time_published_exact'] = False
+            video_item['time_published'] = None
         video_item['channel_id'] = channel_id
+    if len(videos) > 1:
+        # Go back and fill in any videos that don't have a time published
+        # using the time published of the surrounding ones
+        for i in range(len(videos)-1):
+            if (videos[i+1]['time_published'] is None
+                and videos[i]['time_published'] is not None
+            ):
+                videos[i+1]['time_published'] = videos[i]['time_published'] - 1
+        for i in reversed(range(1,len(videos))):
+            if (videos[i-1]['time_published'] is None
+                and videos[i]['time_published'] is not None
+            ):
+                videos[i-1]['time_published'] = videos[i]['time_published'] + 1
+    # Special case: none of the videos have a time published.
+    # In this case, make something up
+    if videos and videos[0]['time_published'] is None:
+        assert all(v['time_published'] is None for v in videos)
+        now = time.time()
+        for i in range(len(videos)):
+            # 1 month between videos
+            videos[i]['time_published'] = now - i*3600*24*30
 
 
     if len(videos) == 0:
