@@ -138,8 +138,11 @@
             <ul>
                 {% for (before_text, stat, after_text) in [
                     ('Joined ', date_joined, ''),
-                    ('', view_count|commatize, ' views'),
+                    ('', approx_view_count, ' views'),
                     ('', approx_subscriber_count, ' subscribers'),
+                    ('', approx_video_count, ' videos'),
+                    ('Country: ', country, ''),
+                    ('Canonical Url: ', canonical_url, ''),
                 ] %}
                     {% if stat %}
                         <li>{{ before_text + stat|string + after_text }}</li>
@@ -151,8 +154,12 @@
             <div class="description">{{ common_elements.text_runs(description) }}</div>
             <hr>
             <ul>
-                {% for text, url in links %}
-                    <li><a href="{{ url }}">{{ text }}</a></li>
+                {% for text, url in links%}
+                    {% if url %}
+                        <li><a href="{{ url }}">{{ text }}</a></li>
+                    {% else %}
+                        <li>{{ text }}</li>
+                    {% endif %}
                 {% endfor %}
             </ul>
         </div>

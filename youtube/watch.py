@@ -19,51 +19,6 @@ from urllib.parse import parse_qs, urlencode
 from types import SimpleNamespace
 from math import ceil
 
-# https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/youtube.py#L72
-INNERTUBE_CLIENTS = {
-    'android': {
-        'INNERTUBE_API_KEY': 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w',
-        'INNERTUBE_CONTEXT': {
-            'client': {
-                'hl': 'en',
-                'gl': 'US',
-                'clientName': 'ANDROID',
-                'clientVersion': '17.31.35',
-                'osName': 'Android',
-                'osVersion': '12',
-                'androidSdkVersion': 31,
-                'userAgent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 12) gzip'
-            },
-            # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
-            #'thirdParty': {
-            #    'embedUrl': 'https://google.com',  # Can be any valid URL
-            #}
-        },
-        'INNERTUBE_CONTEXT_CLIENT_NAME': 3,
-        'REQUIRE_JS_PLAYER': False,
-    },
-
-    # This client can access age restricted videos (unless the uploader has disabled the 'allow embedding' option)
-    # See: https://github.com/zerodytrash/YouTube-Internal-Clients
-    'tv_embedded': {
-        'INNERTUBE_API_KEY': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
-        'INNERTUBE_CONTEXT': {
-            'client': {
-                'hl': 'en',
-                'gl': 'US',
-                'clientName': 'TVHTML5_SIMPLY_EMBEDDED_PLAYER',
-                'clientVersion': '2.0',
-            },
-            # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
-            'thirdParty': {
-                'embedUrl': 'https://google.com',  # Can be any valid URL
-            }
-
-        },
-        'INNERTUBE_CONTEXT_CLIENT_NAME': 85,
-        'REQUIRE_JS_PLAYER': True,
-    },
-}
 
 try:
     with open(os.path.join(settings.data_dir, 'decrypt_function_cache.json'), 'r') as f:
@@ -380,26 +335,10 @@ def _add_to_error(info, key, additional_message):
         info[key] = additional_message
 
 def fetch_player_response(client, video_id):
-    client_params = INNERTUBE_CLIENTS[client]
-    context = client_params['INNERTUBE_CONTEXT']
-    key = client_params['INNERTUBE_API_KEY']
-    host = client_params.get('INNERTUBE_HOST') or 'www.youtube.com'
-    user_agent = context['client'].get('userAgent') or util.mobile_user_agent
-
-    url = 'https://' + host + '/youtubei/v1/player?key=' + key
-    data = {
+    return util.call_youtube_api(client, 'player', {
         'videoId': video_id,
-        'context': context,
         'params': 'CgIQBg',
-    }
-    data = json.dumps(data)
-    headers = (('Content-Type', 'application/json'),('User-Agent', user_agent))
-    player_response = util.fetch_url(
-        url, data=data, headers=headers,
-        debug_name='youtubei_player_' + client,
-        report_text='Fetched ' + client + ' youtubei player'
-    ).decode('utf-8')
-    return player_response
+    })
 
 def fetch_watch_page_info(video_id, playlist_id, index):
     # bpctr=9999999999 will bypass are-you-sure dialogs for controversial

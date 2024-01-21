@@ -654,3 +654,80 @@ def to_valid_filename(name):
         name = '_' + name
 
     return name
+
+# https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/youtube.py#L72
+INNERTUBE_CLIENTS = {
+    'android': {
+        'INNERTUBE_API_KEY': 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w',
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'hl': 'en',
+                'gl': 'US',
+                'clientName': 'ANDROID',
+                'clientVersion': '17.31.35',
+                'osName': 'Android',
+                'osVersion': '12',
+                'androidSdkVersion': 31,
+                'userAgent': 'com.google.android.youtube/17.31.35 (Linux; U; Android 12) gzip'
+            },
+            # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
+            #'thirdParty': {
+            #    'embedUrl': 'https://google.com',  # Can be any valid URL
+            #}
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 3,
+        'REQUIRE_JS_PLAYER': False,
+    },
+
+    # This client can access age restricted videos (unless the uploader has disabled the 'allow embedding' option)
+    # See: https://github.com/zerodytrash/YouTube-Internal-Clients
+    'tv_embedded': {
+        'INNERTUBE_API_KEY': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'hl': 'en',
+                'gl': 'US',
+                'clientName': 'TVHTML5_SIMPLY_EMBEDDED_PLAYER',
+                'clientVersion': '2.0',
+            },
+            # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
+            'thirdParty': {
+                'embedUrl': 'https://google.com',  # Can be any valid URL
+            }
+
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 85,
+        'REQUIRE_JS_PLAYER': True,
+    },
+
+    'web': {
+        'INNERTUBE_API_KEY': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'WEB',
+                'clientVersion': '2.20220801.00.00',
+                'userAgent': desktop_user_agent,
+            }
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 1
+    },
+}
+
+def call_youtube_api(client, api, data):
+    client_params = INNERTUBE_CLIENTS[client]
+    context = client_params['INNERTUBE_CONTEXT']
+    key = client_params['INNERTUBE_API_KEY']
+    host = client_params.get('INNERTUBE_HOST') or 'www.youtube.com'
+    user_agent = context['client'].get('userAgent') or mobile_user_agent
+
+    url = 'https://' + host + '/youtubei/v1/' + api + '?key=' + key
+    data['context'] = context
+
+    data = json.dumps(data)
+    headers = (('Content-Type', 'application/json'),('User-Agent', user_agent))
+    response = fetch_url(
+        url, data=data, headers=headers,
+        debug_name='youtubei_' + api + '_' + client,
+        report_text='Fetched ' + client + ' youtubei ' + api
+    ).decode('utf-8')
+    return response
