@@ -154,6 +154,13 @@ For security reasons, enabling this is not recommended.''',
         'category': 'playback',
     }),
 
+    ('autoplay_videos', {
+        'type': bool,
+        'default': False,
+        'comment': '',
+        'category': 'playback',
+    }),
+
     ('codec_rank_h264', {
         'type': int,
         'default': 1,

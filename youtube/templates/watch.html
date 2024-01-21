@@ -472,7 +472,7 @@ Reload without invidious (for usage of new identity button).</a>
         </div>
     {% else %}
         <div id="video-container" class="h{{video_height}}"> <!--Do not add other classes here, classes changed by javascript-->
-            <video controls autofocus class="video">
+            <video controls autofocus class="video" {{ 'autoplay' if settings.autoplay_videos }}>
                 {% if uni_sources %}
                     <source src="{{ uni_sources[uni_idx]['url'] }}" type="{{ uni_sources[uni_idx]['type'] }}" data-res="{{ uni_sources[uni_idx]['quality'] }}">
                 {% endif %}
