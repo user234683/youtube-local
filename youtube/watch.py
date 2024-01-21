@@ -696,9 +696,17 @@ def get_watch_page(video_id=None):
     else:
         closer_to_target = 'pair'
 
-    using_pair_sources = (
-        bool(pair_sources) and (not uni_sources or closer_to_target == 'pair')
-    )
+    if settings.prefer_uni_sources == 2:
+        # Use uni sources unless there's no choice.
+        using_pair_sources = (
+            bool(pair_sources) and (not uni_sources)
+        )
+    else:
+        # Use the pair sources if they're closer to the desired resolution
+        using_pair_sources = (
+            bool(pair_sources)
+            and (not uni_sources or closer_to_target == 'pair')
+        )
     if using_pair_sources:
         video_height = pair_sources[pair_idx]['height']
         video_width = pair_sources[pair_idx]['width']
