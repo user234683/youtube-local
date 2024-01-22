@@ -204,6 +204,7 @@ Stream.prototype.setup = async function(){
             this.url,
             this.initRange.start,
             this.indexRange.end,
+        ).then(
             (buffer) => {
                 var init_end = this.initRange.end - this.initRange.start + 1;
                 var index_start = this.indexRange.start - this.initRange.start;
@@ -211,22 +212,21 @@ Stream.prototype.setup = async function(){
                 this.setupInitSegment(buffer.slice(0, init_end));
                 this.setupSegmentIndex(buffer.slice(index_start, index_end));
             }
-        )
+        );
     } else {
         // initialization data
         await fetchRange(
             this.url,
             this.initRange.start,
             this.initRange.end,
-            this.setupInitSegment.bind(this),
-        );
+        ).then(this.setupInitSegment.bind(this));
+
         // sidx (segment index) table
         fetchRange(
             this.url,
             this.indexRange.start,
             this.indexRange.end,
-            this.setupSegmentIndex.bind(this)
-        );
+        ).then(this.setupSegmentIndex.bind(this));
     }
 }
 Stream.prototype.setupInitSegment = function(initSegment) {
@@ -484,8 +484,7 @@ Stream.prototype.fetchSegment = function(segmentIdx) {
         this.url,
         entry.start,
         entry.end,
-        this.appendSegment.bind(this, segmentIdx),
-    );
+    ).then(this.appendSegment.bind(this, segmentIdx));
 }
 Stream.prototype.fetchSegmentIfNeeded = function(segmentIdx) {
     if (segmentIdx < 0 || segmentIdx >= this.sidx.entries.length){
@@ -521,15 +520,29 @@ Stream.prototype.reportError = function(...args) {
 
 // Utility functions
 
-function fetchRange(url, start, end, cb) {
+// https://gomakethings.com/promise-based-xhr/
+// https://stackoverflow.com/a/30008115
+function fetchRange(url, start, end) {
     return new Promise((resolve, reject) => {
         var xhr = new XMLHttpRequest();
         xhr.open('get', url);
         xhr.responseType = 'arraybuffer';
         xhr.setRequestHeader('Range', 'bytes=' + start + '-' + end);
-        xhr.onload = function() {
-            //bytesFetched += end - start + 1;
-            resolve(cb(xhr.response));
+        xhr.onload = function () {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(xhr.response);
+            } else {
+                reject({
+                    status: xhr.status,
+                    statusText: xhr.statusText
+                });
+            }
+        };
+        xhr.onerror = function () {
+            reject({
+                status: xhr.status,
+                statusText: xhr.statusText
+            });
         };
         xhr.send();
     });
