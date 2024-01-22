@@ -204,6 +204,7 @@ Stream.prototype.setup = async function(){
             this.url,
             this.initRange.start,
             this.indexRange.end,
+            'Initialization+index segments',
         ).then(
             (buffer) => {
                 var init_end = this.initRange.end - this.initRange.start + 1;
@@ -219,6 +220,7 @@ Stream.prototype.setup = async function(){
             this.url,
             this.initRange.start,
             this.initRange.end,
+            'Initialization segment',
         ).then(this.setupInitSegment.bind(this));
 
         // sidx (segment index) table
@@ -226,6 +228,7 @@ Stream.prototype.setup = async function(){
             this.url,
             this.indexRange.start,
             this.indexRange.end,
+            'Index segment',
         ).then(this.setupSegmentIndex.bind(this));
     }
 }
@@ -484,6 +487,7 @@ Stream.prototype.fetchSegment = function(segmentIdx) {
         this.url,
         entry.start,
         entry.end,
+        String(this.streamType) + ' segment ' + String(segmentIdx),
     ).then(this.appendSegment.bind(this, segmentIdx));
 }
 Stream.prototype.fetchSegmentIfNeeded = function(segmentIdx) {
@@ -522,27 +526,49 @@ Stream.prototype.reportError = function(...args) {
 
 // https://gomakethings.com/promise-based-xhr/
 // https://stackoverflow.com/a/30008115
-function fetchRange(url, start, end) {
+// http://lofi.limo/blog/retry-xmlhttprequest-carefully
+function fetchRange(url, start, end, debugInfo) {
     return new Promise((resolve, reject) => {
+        var retryCount = 0;
         var xhr = new XMLHttpRequest();
+        function onFailure(err, message, maxRetries=5){
+            message = debugInfo + ': ' + message + ' - Err: ' + String(err);
+            retryCount++;
+            if (retryCount > maxRetries || xhr.status == 403){
+                reportError('fetchRange error while fetching ' + message);
+                reject(message);
+                return;
+            } else {
+                reportWarning('Failed to fetch ' + message
+                    + '. Attempting retry '
+                    + String(retryCount) +'/' + String(maxRetries));
+            }
+
+            // Retry in 1 second, doubled for each next retry
+            setTimeout(function(){
+                xhr.open('get',url);
+                xhr.send();
+            }, 1000*Math.pow(2,(retryCount-1)));
+        }
         xhr.open('get', url);
+        xhr.timeout = 15000;
         xhr.responseType = 'arraybuffer';
         xhr.setRequestHeader('Range', 'bytes=' + start + '-' + end);
-        xhr.onload = function () {
+        xhr.onload = function (e) {
             if (xhr.status >= 200 && xhr.status < 300) {
                 resolve(xhr.response);
             } else {
-                reject({
-                    status: xhr.status,
-                    statusText: xhr.statusText
-                });
+                onFailure(e, 
+                    'Status '
+                    + String(xhr.status) + ' ' + String(xhr.statusText)
+                );
             }
         };
-        xhr.onerror = function () {
-            reject({
-                status: xhr.status,
-                statusText: xhr.statusText
-            });
+        xhr.onerror = function (event) {
+            onFailure(e, 'Network error');
+        };
+        xhr.ontimeout = function (event){
+            onFailure(null, 'Timeout (15s)', maxRetries=1);
         };
         xhr.send();
     });
