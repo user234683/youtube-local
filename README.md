@@ -65,7 +65,7 @@ The YouTube API is not used, so no keys or anything are needed. It uses the same
 - [ ] Subscriptions: Option to mark what has been watched
 - [ ] Subscriptions: Option to filter videos based on keywords in title or description
 - [ ] Subscriptions: Delete old entries and thumbnails
-- [ ] Support for more sites, such as Vimeo, Dailymotion, LBRY, etc.
+- [ ] Support for more sites, such as Vimeo, Dailymotion, LBRY, etc
 
 ## Installing
 
@@ -127,13 +127,13 @@ In general, Tor video routing will be slower (for instance, moving around in the
 
 ### Importing subscriptions
 
-1. Go to the [Google takeout manager](https://takeout.google.com/takeout/custom/youtube).
-2. Log in if asked.
-3. Click on "All data included", then on "Deselect all", then select only "subscriptions" and click "OK".
-4. Click on "Next step" and then on "Create export".
-5. Click on the "Download" button after it appears.
+1. Go to the [Google takeout manager](https://takeout.google.com/takeout/custom/youtube)
+2. Log in if asked
+3. Click on "All data included", then on "Deselect all", then select only "subscriptions" and click "OK"
+4. Click on "Next step" and then on "Create export"
+5. Click on the "Download" button after it appears
 6. From the downloaded takeout ZIP, extract the CSV file. It is usually located under `YouTube and YouTube Music/subscriptions/subscriptions.csv`
-7. Go to the subscriptions manager in youtube-local. In the import area, select your .csv file, then press import.
+7. Go to the subscriptions manager in youtube-local. In the import area, select your .csv file, then press import
 
 Supported subscriptions import formats:
 - NewPipe subscriptions export JSON
