@@ -568,7 +568,8 @@ function fetchRange(url, start, end, debugInfo) {
             onFailure(e, 'Network error');
         };
         xhr.ontimeout = function (event){
-            onFailure(null, 'Timeout (15s)', maxRetries=1);
+            xhr.timeout += 5000;
+            onFailure(null, 'Timeout (15s)', maxRetries=5);
         };
         xhr.send();
     });
