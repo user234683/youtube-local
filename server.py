@@ -85,8 +85,12 @@ def proxy_site(env, start_response, video=False):
             response, cleanup_func = util.fetch_url_response(url, send_headers)
 
         response_headers = response.getheaders()
-        if isinstance(response_headers, urllib3._collections.HTTPHeaderDict):
-            response_headers = response_headers.items()
+        #if isinstance(response_headers, urllib3._collections.HTTPHeaderDict):
+        #   response_headers = response_headers.items()
+        try:
+            response_headers = list(response_headers.items())
+        except AttributeError:
+            pass
         if video:
             response_headers = (list(response_headers)
                                 +[('Access-Control-Allow-Origin', '*')])
