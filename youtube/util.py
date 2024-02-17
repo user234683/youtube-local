@@ -330,7 +330,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
                    )
             )
         ):
-            print(response.status, response.reason, response.getheaders())
+            print(response.status, response.reason, response.headers)
             ip = re.search(
                 br'IP address: ((?:[\da-f]*:)+[\da-f]+|(?:\d+\.)+\d+)',
                 content)

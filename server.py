@@ -84,7 +84,7 @@ def proxy_site(env, start_response, video=False):
         else:
             response, cleanup_func = util.fetch_url_response(url, send_headers)
 
-        response_headers = response.getheaders()
+        response_headers = response.headers
         #if isinstance(response_headers, urllib3._collections.HTTPHeaderDict):
         #   response_headers = response_headers.items()
         try:
