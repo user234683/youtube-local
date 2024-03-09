@@ -114,10 +114,12 @@ if bitness == '32':
     visual_c_runtime_url = 'https://github.com/yuempek/vc-archive/raw/master/archives/vc15_(14.10.25017.0)_2017_x86.7z'
     visual_c_runtime_sha256 = '2549eb4d2ce4cf3a87425ea01940f74368bf1cda378ef8a8a1f1a12ed59f1547'
     visual_c_name = 'vc15_(14.10.25017.0)_2017_x86.7z'
+    visual_c_path_to_dlls = 'runtime_minimum/System'
 else:
     visual_c_runtime_url = 'https://github.com/yuempek/vc-archive/raw/master/archives/vc15_(14.10.25017.0)_2017_x64.7z'
     visual_c_runtime_sha256 = '4f00b824c37e1017a93fccbd5775e6ee54f824b6786f5730d257a87a3d9ce921'
     visual_c_name = 'vc15_(14.10.25017.0)_2017_x64.7z'
+    visual_c_path_to_dlls = 'runtime_minimum/System64'
 
 download_if_not_exists('get-pip.py', get_pip_url)
 
@@ -198,7 +200,7 @@ with open('./python/python3' + major_release + '._pth', 'a', encoding='utf-8') a
     f.write('..\n')'''
 
 log('Inserting Microsoft C Runtime')
-check_subp(subprocess.run([r'7z', '-y', 'e', '-opython', 'vc15_(14.10.25017.0)_2017_x86.7z', 'runtime_minimum/System']))
+check_subp(subprocess.run([r'7z', '-y', 'e', '-opython', visual_c_name, visual_c_path_to_dlls]))
 
 log('Installing dependencies')
 wine_run(['./python/python.exe', '-I', '-m', 'pip', 'install', '--no-compile', '-r', './requirements.txt'])
