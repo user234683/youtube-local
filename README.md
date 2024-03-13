@@ -85,6 +85,29 @@ pip3 install -r requirements.txt
 - Arch users can use the [AUR package](https://aur.archlinux.org/packages/youtube-local-git) maintained by @ByJumperX4
 - RPM-based distros such as Fedora/OpenSUSE/RHEL/CentOS can use the [COPR package](https://copr.fedorainfracloud.org/coprs/anarcoco/youtube-local) maintained by @ByJumperX4
 
+
+### FreeBSD
+
+If pip isn't installed, first try installing it from the package manager:
+```
+pkg install py39-pip
+```
+
+Some packages are unable to compile with pip, install them manually: 
+```
+pkg install py39-gevent py39-sqlite3
+```
+
+Download the tarball under the Releases page and extract it. `cd` into the directory and run
+```
+pip install -r requirements.txt
+```
+
+**Note**: You may have to start the server redirecting its output to /dev/null to avoid I/O errors: 
+```
+python3 ./server.py > /dev/null 2>&1 &
+```
+
 ## Usage
 
 To run the program on windows, open `run.bat`. On Linux/MacOS, run `python3 server.py`.
