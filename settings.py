@@ -406,8 +406,14 @@ if os.path.isfile("settings.txt"):
     data_dir = os.path.normpath('./data')
 else:
     print("Running in non-portable mode")
-    settings_dir = os.path.expanduser(os.path.normpath("~/.youtube-local"))
-    data_dir = os.path.expanduser(os.path.normpath("~/.youtube-local/data"))
+    config_dir = os.path.normpath('~/.config/youtube-local')
+
+    if os.getenv('XDG_CONFIG_HOME') != None:
+        config_dir = os.path.normpath(
+            os.path.join(os.getenv('XDG_CONFIG_HOME'), 'youtube-local'))
+
+    settings_dir = os.path.expanduser(config_dir)
+    data_dir = os.path.expanduser(os.path.join(config_dir, 'data'))
     if not os.path.exists(settings_dir):
         os.makedirs(settings_dir)
 
