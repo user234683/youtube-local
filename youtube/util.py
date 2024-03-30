@@ -396,13 +396,13 @@ desktop_xhr_headers = (
     ('Accept', '*/*'),
     ('Accept-Language', 'en-US,en;q=0.5'),
     ('X-YouTube-Client-Name', '1'),
-    ('X-YouTube-Client-Version', '2.20180830'),
+    ('X-YouTube-Client-Version', '2.20240304.00.00'),
 ) + desktop_ua
 mobile_xhr_headers = (
     ('Accept', '*/*'),
     ('Accept-Language', 'en-US,en;q=0.5'),
     ('X-YouTube-Client-Name', '2'),
-    ('X-YouTube-Client-Version', '2.20180830'),
+    ('X-YouTube-Client-Version', '2.20240304.08.00'),
 ) + mobile_ua
 
 
@@ -664,11 +664,12 @@ INNERTUBE_CLIENTS = {
                 'hl': 'en',
                 'gl': 'US',
                 'clientName': 'ANDROID',
-                'clientVersion': '18.11.34',
+                'clientVersion': '19.09.36',
                 'osName': 'Android',
                 'osVersion': '12',
-                'androidSdkVersion': 30,
-                'userAgent': 'com.google.android.youtube/18.11.34 (Linux; U; Android 12) gzip'
+                'androidSdkVersion': 31,
+                'platform': 'MOBILE',
+                'userAgent': 'com.google.android.youtube/19.09.36 (Linux; U; Android 12; US) gzip'
             },
             # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
             #'thirdParty': {
@@ -689,6 +690,7 @@ INNERTUBE_CLIENTS = {
                 'gl': 'US',
                 'clientName': 'TVHTML5_SIMPLY_EMBEDDED_PLAYER',
                 'clientVersion': '2.0',
+                'clientScreen': 'EMBED',
             },
             # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
             'thirdParty': {
