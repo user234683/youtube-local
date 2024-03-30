@@ -680,6 +680,23 @@ INNERTUBE_CLIENTS = {
         'REQUIRE_JS_PLAYER': False,
     },
 
+
+    'ios': {
+        'INNERTUBE_API_KEY': 'AIzaSyB-63vPrdThhKuerbB2N_l7Kwwcxj6yUAc',
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'hl': 'en',
+                'gl': 'US',
+                'clientName': 'IOS',
+                'clientVersion': '19.09.3',
+                'deviceModel': 'iPhone14,3',
+                'userAgent': 'com.google.ios.youtube/19.09.3 (iPhone14,3; U; CPU iOS 15_6 like Mac OS X)'
+            }
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 5,
+        'REQUIRE_JS_PLAYER': False
+    },
+
     # This client can access age restricted videos (unless the uploader has disabled the 'allow embedding' option)
     # See: https://github.com/zerodytrash/YouTube-Internal-Clients
     'tv_embedded': {

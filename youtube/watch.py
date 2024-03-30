@@ -366,16 +366,8 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
         # Get video metadata from here
         gevent.spawn(fetch_watch_page_info, video_id, playlist_id, index),
 
-        # Get video URLs by spoofing as android client because its urls don't
-        # require decryption
-        # The URLs returned with WEB for videos requiring decryption
-        # couldn't be decrypted with the base.js from the web page for some
-        # reason
-        # https://github.com/yt-dlp/yt-dlp/issues/574#issuecomment-887171136
 
-        # Update 4/26/23, these URLs will randomly start returning 403
-        # mid-playback and I'm not sure why
-        gevent.spawn(fetch_player_response, 'android', video_id)
+        gevent.spawn(fetch_player_response, 'ios', video_id)
     )
     gevent.joinall(tasks)
     util.check_gevent_exceptions(*tasks)
