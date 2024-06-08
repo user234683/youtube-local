@@ -367,7 +367,7 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
         gevent.spawn(fetch_watch_page_info, video_id, playlist_id, index),
 
 
-        gevent.spawn(fetch_player_response, 'ios', video_id)
+        gevent.spawn(fetch_player_response, 'android-test-suite', video_id)
     )
     gevent.joinall(tasks)
     util.check_gevent_exceptions(*tasks)

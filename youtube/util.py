@@ -680,6 +680,30 @@ INNERTUBE_CLIENTS = {
         'REQUIRE_JS_PLAYER': False,
     },
 
+    'android-test-suite': {
+        'INNERTUBE_API_KEY': 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w',
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'hl': 'en',
+                'gl': 'US',
+                'clientName': 'ANDROID_TESTSUITE',
+                'clientVersion': '1.9',
+                'osName': 'Android',
+                'osVersion': '12',
+                'androidSdkVersion': 31,
+                'platform': 'MOBILE',
+                'userAgent': 'com.google.android.youtube/1.9 (Linux; U; Android 12; US) gzip'
+            },
+            # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
+            #'thirdParty': {
+            #    'embedUrl': 'https://google.com',  # Can be any valid URL
+            #}
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 3,
+        'REQUIRE_JS_PLAYER': False,
+    },
+
+
 
     'ios': {
         'INNERTUBE_API_KEY': 'AIzaSyB-63vPrdThhKuerbB2N_l7Kwwcxj6yUAc',
