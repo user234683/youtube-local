@@ -528,6 +528,7 @@ Reload without invidious (for usage of new identity button).</a>
 
         <span class="direct-link"><a href="https://youtu.be/{{ video_id }}">Direct Link</a></span>
 
+        {% if settings.use_video_download != 0 %}
         <details class="download-dropdown">
             <summary class="download-dropdown-label">Download</summary>
             <ul class="download-dropdown-content">
@@ -556,7 +557,7 @@ Reload without invidious (for usage of new identity button).</a>
                 {% endfor %}
             </ul>
         </details>
-
+	{% endif %}
 
         <span class="description">{{ common_elements.text_runs(description)|escape|urlize|timestamps|safe }}</span>
         <div class="music-list">

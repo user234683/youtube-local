@@ -235,6 +235,20 @@ Defaults to -1, which means no default value is forced and the browser will set 
         'category': 'interface',
     }),
 
+    ('use_video_download', {
+        'type': int,
+        'default': 0,
+        'comment': '',
+        'options': [
+            (0, 'Disabled'),
+            (1, 'Enabled'),
+        ],
+        'category': 'interface',
+        'comment': '''If enabled, you may incur legal issues with RIAA. Disabled by default.
+More info: https://torrentfreak.com/riaa-thwarts-youts-attempt-to-declare-youtube-ripping-legal-221002/
+Archive: https://archive.ph/OZQbN''',
+    }),
+
     ('proxy_images', {
         'label': 'Route images',
         'type': bool,
