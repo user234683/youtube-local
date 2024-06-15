@@ -18,7 +18,7 @@ yt_app.add_url_rule('/settings', 'settings_page', settings.settings_page, method
 
 @yt_app.route('/')
 def homepage():
-    return flask.render_template('home.html', title="Youtube local")
+    return flask.render_template('home.html', title="youtube-local")
 
 
 theme_names = {
