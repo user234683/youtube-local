@@ -1033,7 +1033,7 @@ def post_subscriptions_page():
 
     elif action == 'unsubscribe':
         with_open_db(_unsubscribe, request.values.getlist('channel_id'))
-        return flas	k.redirect(util.URL_ORIGIN + "/channel/" + request.values.get('channel_id'))
+        return flask.redirect(util.URL_ORIGIN + "/channel/" + request.values.get('channel_id'))
 
     elif action == 'refresh':
         type = request.values['type']
