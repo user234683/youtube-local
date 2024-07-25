@@ -84,6 +84,15 @@ For security reasons, enabling this is not recommended.''',
         'category': 'playback',
     }),
 
+    ('default_volume', {
+        'type': int,
+        'default': 100,
+        'max': 100,
+        'min': 0,
+        'comment': 'Sets a default volume. Defaults to 100.',
+        'category': 'playback',
+    }),
+
     ('related_videos_mode', {
         'type': int,
         'default': 1,

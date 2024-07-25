@@ -120,6 +120,7 @@ const player = new Plyr(document.querySelector('video'), {
         enabled: storyboard_url != null,
         src: [storyboard_url],
     },
+    volume: data.settings.default_volume / 100,
     settings: ['captions', 'quality', 'speed', 'loop'],
 });
 

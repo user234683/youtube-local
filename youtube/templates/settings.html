@@ -58,6 +58,8 @@
                                         <option value="{{ option[0] }}" {{ 'selected' if option[0] == value else '' }}>{{ option[1] }}</option>
                                     {% endfor %}
                                 </select>
+                            {% elif 'max' in setting_info and 'min' in setting_info %}
+                                <input type="number" id="{{ 'setting_' + setting_name }}" name="{{ setting_name }}" value="{{ value }}" min="{{ setting_info['min'] }}" max="{{ setting_info['max'] }}">
                             {% else %}
                                 <input type="number" id="{{ 'setting_' + setting_name }}" name="{{ setting_name }}" value="{{ value }}" step="1">
                             {% endif %}
