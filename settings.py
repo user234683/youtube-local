@@ -86,10 +86,11 @@ For security reasons, enabling this is not recommended.''',
 
     ('default_volume', {
         'type': int,
-        'default': 100,
+        'default': -1,
         'max': 100,
-        'min': 0,
-        'comment': 'Sets a default volume. Defaults to 100.',
+        'min': -1,
+        'comment': '''Sets a default volume.
+        Defaults to -1, which means no default value is forced and the browser will set the volume.''',
         'category': 'playback',
     }),
 
