@@ -1029,9 +1029,11 @@ def post_subscriptions_page():
         if len(request.values.getlist('channel_id')) != len(request.values.getlist('channel_name')):
             return '400 Bad Request, length of channel_id != length of channel_name', 400
         _subscribe(zip(request.values.getlist('channel_id'), request.values.getlist('channel_name')))
+        return flask.redirect(util.URL_ORIGIN + "/channel/" + request.values.get('channel_id'))
 
     elif action == 'unsubscribe':
         with_open_db(_unsubscribe, request.values.getlist('channel_id'))
+        return flask.redirect(util.URL_ORIGIN + "/channel/" + request.values.get('channel_id'))
 
     elif action == 'refresh':
         type = request.values['type']
