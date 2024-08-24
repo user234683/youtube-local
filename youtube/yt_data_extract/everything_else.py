@@ -85,23 +85,84 @@ def extract_channel_info(polymer_json, tab, continuation=False):
         if tab in ('search', 'playlists'):
             info['is_last_page'] = (ctoken is None)
     elif tab == 'about':
-        items, _ = extract_items(response, item_types={'channelAboutFullMetadataRenderer'})
-        if not items:
-            info['error'] = 'Could not find channelAboutFullMetadataRenderer'
-            return info
-        channel_metadata = items[0]['channelAboutFullMetadataRenderer']
+        # Latest type
+        items, _ = extract_items(response, item_types={'aboutChannelRenderer'})
+        if items:
+            a_metadata = deep_get(items, 0, 'aboutChannelRenderer',
+                'metadata', 'aboutChannelViewModel')
+            if not a_metadata:
+                info['error'] = 'Could not find aboutChannelViewModel'
+                return info
 
-        info['links'] = []
-        for link_json in channel_metadata.get('primaryLinks', ()):
-            url = remove_redirect(deep_get(link_json, 'navigationEndpoint', 'urlEndpoint', 'url'))
-            if not (url.startswith('http://') or url.startswith('https://')):
-                url = 'http://' + url
-            text = extract_str(link_json.get('title'))
-            info['links'].append( (text, url) )
+            info['links'] = []
+            for link_outer in a_metadata.get('links', ()):
+                link = link_outer.get('channelExternalLinkViewModel') or {}
+                link_content = extract_str(deep_get(link, 'link', 'content'))
+                for run in deep_get(link, 'link', 'commandRuns') or ():
+                    url = remove_redirect(deep_get(run, 'onTap', 
+                        'innertubeCommand', 'urlEndpoint', 'url'))
+                    if url and not (url.startswith('http://')
+                            or url.startswith('https://')):
+                        url = 'https://' + url
+                    if link_content is None or (link_content in url):
+                        break
+                else: # didn't break
+                    url = link_content
+                    if url and not (url.startswith('http://')
+                            or url.startswith('https://')):
+                        url = 'https://' + url
+                text = extract_str(deep_get(link, 'title', 'content'))
+                info['links'].append( (text, url) )
 
-        info['date_joined'] = extract_date(channel_metadata.get('joinedDateText'))
-        info['view_count'] = extract_int(channel_metadata.get('viewCountText'))
-        info['description'] = extract_str(channel_metadata.get('description'), default='')
+            info['date_joined'] = extract_date(
+                a_metadata.get('joinedDateText')
+            )
+            info['view_count'] = extract_int(a_metadata.get('viewCountText'))
+            info['approx_view_count'] = extract_approx_int(
+                a_metadata.get('viewCountText')
+            )
+            info['description'] = extract_str(
+                a_metadata.get('description'), default=''
+            )
+            info['approx_video_count'] = extract_approx_int(
+                a_metadata.get('videoCountText')
+            )
+            info['approx_subscriber_count'] = extract_approx_int(
+                a_metadata.get('subscriberCountText')
+            )
+            info['country'] = extract_str(a_metadata.get('country'))
+            info['canonical_url'] = extract_str(
+                a_metadata.get('canonicalChannelUrl')
+            )
+
+        # Old type
+        else:
+            items, _ = extract_items(response,
+                item_types={'channelAboutFullMetadataRenderer'})
+            if not items:
+                info['error'] = 'Could not find aboutChannelRenderer or channelAboutFullMetadataRenderer'
+                return info
+            a_metadata = items[0]['channelAboutFullMetadataRenderer']
+
+            info['links'] = []
+            for link_json in a_metadata.get('primaryLinks', ()):
+                url = remove_redirect(deep_get(link_json, 'navigationEndpoint',
+                    'urlEndpoint', 'url'))
+                if url and not (url.startswith('http://')
+                                or url.startswith('https://')):
+                    url = 'https://' + url
+                text = extract_str(link_json.get('title'))
+                info['links'].append( (text, url) )
+
+            info['date_joined'] = extract_date(a_metadata.get('joinedDateText'))
+            info['view_count'] = extract_int(a_metadata.get('viewCountText'))
+            info['description'] = extract_str(a_metadata.get(
+                'description'), default='')
+
+            info['approx_video_count'] = None
+            info['approx_subscriber_count'] = None
+            info['country'] = None
+            info['canonical_url'] = None
     else:
         raise NotImplementedError('Unknown or unsupported channel tab: ' + tab)
 

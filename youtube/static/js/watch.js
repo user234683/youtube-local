@@ -10,23 +10,9 @@ function setVideoDimensions(height, width){
         body.style.setProperty('--plyr-control-spacing-num', '10');
     var theaterWidth = Math.max(640, data['video_duration'] || 0, width);
     body.style.setProperty('--theater_video_target_width', String(theaterWidth));
-    function setVideoAspectRatio(){
-        // Recreate the video constant aspect ratio media query
-        // in javascript because media queries do not accept css
-        // variables and cannot be modified by javascript
-        var videoContainerInner = document.querySelector('#video-container-inner');
-        if (window.innerWidth < width){
-            videoContainerInner.style.paddingTop = String(100*height/width) + '%';
-            videoContainerInner.style.height = '0px';
-        } else {
-            videoContainerInner.style.paddingTop = '';
-            videoContainerInner.style.height = '';
-        }
-    }
-    if (data.settings.theater_mode) {
-        setVideoAspectRatio();
-        window.onresize = function(event) { setVideoAspectRatio() };
-    }
+
+    // This will set the correct media query
+    document.querySelector('#video-container').className = 'h' + height;
 }
 function changeQuality(selection) {
     var currentVideoTime = video.currentTime;

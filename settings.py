@@ -84,6 +84,16 @@ For security reasons, enabling this is not recommended.''',
         'category': 'playback',
     }),
 
+    ('default_volume', {
+        'type': int,
+        'default': -1,
+        'max': 100,
+        'min': -1,
+        'comment': '''Sets a default volume.
+        Defaults to -1, which means no default value is forced and the browser will set the volume.''',
+        'category': 'playback',
+    }),
+
     ('related_videos_mode', {
         'type': int,
         'default': 1,
@@ -154,6 +164,13 @@ For security reasons, enabling this is not recommended.''',
         'category': 'playback',
     }),
 
+    ('autoplay_videos', {
+        'type': bool,
+        'default': False,
+        'comment': '',
+        'category': 'playback',
+    }),
+
     ('codec_rank_h264', {
         'type': int,
         'default': 1,
@@ -186,12 +203,17 @@ For security reasons, enabling this is not recommended.''',
     }),
 
     ('prefer_uni_sources', {
-        'label': 'Prefer integrated sources',
-        'type': bool,
-        'default': True,
+        'label': 'Use integrated sources',
+        'type': int,
+        'default': 1,
         'comment': '',
+        'options': [
+            (0, 'Prefer not'),
+            (1, 'Prefer'),
+            (2, 'Always'),
+        ],
         'category': 'playback',
-        'description': 'If enabled and the default resolution is set to 360p or 720p, uses the unified (integrated) video files which contain audio and video, with buffering managed by the browser. If disabled, always uses the separate audio and video files through custom buffer management in av-merge via MediaSource.',
+        'description': 'If set to Prefer or Always and the default resolution is set to 360p or 720p, uses the unified (integrated) video files which contain audio and video, with buffering managed by the browser. If set to prefer not, uses the separate audio and video files through custom buffer management in av-merge via MediaSource unless they are unavailable.',
     }),
 
     ('use_video_hotkeys', {
@@ -303,7 +325,7 @@ For security reasons, enabling this is not recommended.''',
 
     ('settings_version', {
         'type': int,
-        'default': 4,
+        'default': 5,
         'comment': '''Do not change, remove, or comment out this value, or else your settings may be lost or corrupted''',
         'hidden': True,
     }),
@@ -368,10 +390,18 @@ def upgrade_to_4(settings_dict):
     new_settings['settings_version'] = 4
     return new_settings
 
+def upgrade_to_5(settings_dict):
+    new_settings = settings_dict.copy()
+    if 'prefer_uni_sources' in settings_dict:
+        new_settings['prefer_uni_sources'] = int(settings_dict['prefer_uni_sources'])
+    new_settings['settings_version'] = 5
+    return new_settings
+
 upgrade_functions = {
     1: upgrade_to_2,
     2: upgrade_to_3,
     3: upgrade_to_4,
+    4: upgrade_to_5,
 }
 
 def log_ignored_line(line_number, message):

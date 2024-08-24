@@ -185,7 +185,7 @@ def extract_int(string, default=None, whole_word=True):
         return default
 
 def extract_approx_int(string):
-    '''e.g. "15.1M" from "15.1M subscribers"'''
+    '''e.g. "15.1M" from "15.1M subscribers" or '4,353' from 4353'''
     if not isinstance(string, str):
         string = extract_str(string)
     if not string:
@@ -193,7 +193,10 @@ def extract_approx_int(string):
     match = re.search(r'\b(\d+(?:\.\d+)?[KMBTkmbt]?)\b', string.replace(',', ''))
     if match is None:
         return None
-    return match.group(1)
+    result = match.group(1)
+    if re.fullmatch(r'\d+', result):
+        result = '{:,}'.format(int(result))
+    return result
 
 MONTH_ABBREVIATIONS = {'jan':'1', 'feb':'2', 'mar':'3', 'apr':'4', 'may':'5', 'jun':'6', 'jul':'7', 'aug':'8', 'sep':'9', 'oct':'10', 'nov':'11', 'dec':'12'}
 def extract_date(date_text):

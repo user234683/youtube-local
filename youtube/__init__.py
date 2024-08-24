@@ -11,8 +11,8 @@ yt_app.url_map.strict_slashes = False
 # yt_app.jinja_env.trim_blocks = True
 # yt_app.jinja_env.lstrip_blocks = True
 
-
-
+# https://stackoverflow.com/questions/39858191/do-statement-not-working-in-jinja
+yt_app.jinja_env.add_extension('jinja2.ext.do') # why
 
 yt_app.add_url_rule('/settings', 'settings_page', settings.settings_page, methods=['POST', 'GET'])
 

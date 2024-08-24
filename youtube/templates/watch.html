@@ -7,7 +7,8 @@
         --theater_video_target_width: {{ theater_video_target_width }};
         --video_height: {{ video_height }};
         --video_width: {{ video_width }};
-        --plyr-control-spacing-num: {{ '3' if video_height < 240 else '10' }}
+        --plyr-control-spacing-num: {{ '3' if video_height < 240 else '10' }};
+        --screen-width: calc(100vw - 25px);
     }
     details > summary{
         background-color: var(--interface-color);
@@ -57,47 +58,46 @@
         }
 
     {% if settings.theater_mode %}
-        /*  This is the constant aspect ratio trick
-            Percentages in padding-top declarations are based on the width of the
-            parent element. We can use this trick to achieve a constant aspect ratio
-            for video-container-inner by setting height to 0.
-
-            So the video height will decrease if the browser window is narrow,
-            but it will keep same aspect ratio. Must use absolute positioning on
-            video to keep it inside its container since the container's height is 0.
-
-            However, because we widen the video player longer than the video's
-            intrinsic width for long video to make scrubbing easier, we can't use
-            the aspect ratio to set the height. The height needs to be the
-            intrinsic height in these cases. So we use a media query so aspect
-            ratio trick is only used if page width is less than or equal to
-            intrinsic video width.
-        */
         #video-container{
             grid-column: 1 / span 5;
             justify-self: center;
             max-width: 100%;
+            max-height: calc(var(--screen-width)*var(--video_height)/var(--video_width));
+            height: calc(var(--video_height)*1px);
             width: calc(var(--theater_video_target_width)*1px);
             margin-bottom: 10px;
             --plyr-video-background: rgba(0, 0, 0, 0);
         }
-            #video-container-inner{
-                height: calc(var(--video_height)*1px);
-                position: relative;
-            }
-            @media(max-width:{{ video_width }}px){
-                #video-container-inner{
-                    padding-top: calc(100%*var(--video_height)/var(--video_width));
-                    height: 0px;
+
+        /*
+        Really just want this as another max-height variable in
+        #video-container, but have to use media queries instead because min
+        is only supported by newer browsers:
+            https://stackoverflow.com/questions/30568424/min-max-width-height-with-multiple-values
+
+        Because CSS is extra special, we cannot change
+        this max-height value using javascript when the video resolution
+        is changed, so we use this technique:
+        https://stackoverflow.com/a/39610272
+        */
+
+        {% set heights = [] %}
+
+        {% for src in uni_sources+pair_sources %}
+            {% if src['height'] not in heights %}
+                {% do heights.append(src['height']) %}
+                @media(max-height:{{ src['height'] + 50 }}px){
+                    #video-container.h{{ src['height'] }}{
+                        height: calc(100vh - 50px); /* 50px is height of header */
+                    }
                 }
-            }
+            {% endif %}
+        {% endfor %}
+
                 video{
                     background-color: var(--video-background-color);
                 }
-                #video-container-inner > video, #video-container-inner > .plyr{
-                    position: absolute;
-                    top: 0px;
-                    left: 0px;
+                #video-container > video, #video-container > .plyr{
                     width: 100%;
                     height: 100%;
                 }
@@ -112,7 +112,7 @@
         #video-container{
             grid-column: 2;
         }
-        #video-container, #video-container-inner, video{
+        #video-container, video{
             height: calc(640px*var(--video_height)/var(--video_width)) !important;
             width: 640px !important;
         }
@@ -471,23 +471,20 @@ Reload without invidious (for usage of new identity button).</a>
             </ol>
         </div>
     {% else %}
-        <div id="video-container">
-            <div id="video-container-inner">
-                <video controls autofocus class="video" height="{{ video_height }}px">
-                    {% if uni_sources %}
-                        <source src="{{ uni_sources[uni_idx]['url'] }}" type="{{ uni_sources[uni_idx]['type'] }}" data-res="{{ uni_sources[uni_idx]['quality'] }}">
+        <div id="video-container" class="h{{video_height}}"> <!--Do not add other classes here, classes changed by javascript-->
+            <video controls autofocus class="video" {{ 'autoplay' if settings.autoplay_videos }}>
+                {% if uni_sources %}
+                    <source src="{{ uni_sources[uni_idx]['url'] }}" type="{{ uni_sources[uni_idx]['type'] }}" data-res="{{ uni_sources[uni_idx]['quality'] }}">
+                {% endif %}
+
+                {% for source in subtitle_sources %}
+                    {% if source['on'] %}
+                        <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
+                    {% else %}
+                        <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
                     {% endif %}
-
-                    {% for source in subtitle_sources %}
-                        {% if source['on'] %}
-                            <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}" default>
-                        {% else %}
-                            <track label="{{ source['label'] }}" src="{{ source['url'] }}" kind="subtitles" srclang="{{ source['srclang'] }}">
-                        {% endif %}
-                    {% endfor %}
-
-                </video>
-            </div>
+                {% endfor %}
+            </video>
         </div>
     {% endif %}
 

@@ -542,14 +542,37 @@ def _get_upstream_videos(channel_id):
         if video_item['id'] in times_published:
             video_item['time_published'] = times_published[video_item['id']]
             video_item['is_time_published_exact'] = True
-        else:
+        elif video_item.get('time_published'):
             video_item['is_time_published_exact'] = False
             try:
                 video_item['time_published'] = youtube_timestamp_to_posix(video_item['time_published']) - i  # subtract a few seconds off the videos so they will be in the right order
-            except KeyError:
+            except Exception:
                 print(video_item)
-
+        else:
+            video_item['is_time_published_exact'] = False
+            video_item['time_published'] = None
         video_item['channel_id'] = channel_id
+    if len(videos) > 1:
+        # Go back and fill in any videos that don't have a time published
+        # using the time published of the surrounding ones
+        for i in range(len(videos)-1):
+            if (videos[i+1]['time_published'] is None
+                and videos[i]['time_published'] is not None
+            ):
+                videos[i+1]['time_published'] = videos[i]['time_published'] - 1
+        for i in reversed(range(1,len(videos))):
+            if (videos[i-1]['time_published'] is None
+                and videos[i]['time_published'] is not None
+            ):
+                videos[i-1]['time_published'] = videos[i]['time_published'] + 1
+    # Special case: none of the videos have a time published.
+    # In this case, make something up
+    if videos and videos[0]['time_published'] is None:
+        assert all(v['time_published'] is None for v in videos)
+        now = time.time()
+        for i in range(len(videos)):
+            # 1 month between videos
+            videos[i]['time_published'] = now - i*3600*24*30
 
 
     if len(videos) == 0:
@@ -569,26 +592,31 @@ def _get_upstream_videos(channel_id):
     with open_database() as connection:
         with connection as cursor:
 
-            # calculate how many new videos there are
-            existing_vids = set(row[0] for row in cursor.execute(
-                '''SELECT video_id
+            # Get video ids and duration of existing vids so we
+            # can see how many new ones there are and update
+            # livestreams/premiers
+            existing_vids = list(cursor.execute(
+                '''SELECT video_id, duration
                    FROM videos
                    INNER JOIN subscribed_channels
                        ON videos.sql_channel_id = subscribed_channels.id
                    WHERE yt_channel_id=?
                    ORDER BY time_published DESC
                    LIMIT 30''', [channel_id]).fetchall())
+            existing_vid_ids = set(row[0] for row in existing_vids)
+            existing_durs = dict(existing_vids)
 
             # new videos the channel has uploaded since last time we checked
             number_of_new_videos = 0
             for video in videos:
-                if video['id'] in existing_vids:
+                if video['id'] in existing_vid_ids:
                     break
                 number_of_new_videos += 1
 
             is_first_check = cursor.execute('''SELECT time_last_checked FROM subscribed_channels WHERE yt_channel_id=?''', [channel_id]).fetchone()[0] in (None, 0)
             time_videos_retrieved = int(time.time())
             rows = []
+            update_rows = []
             for i, video_item in enumerate(videos):
                 if (is_first_check
                         or number_of_new_videos > 6
@@ -604,16 +632,34 @@ def _get_upstream_videos(channel_id):
                     time_noticed = video_item['time_published']
                 else:
                     time_noticed = time_videos_retrieved
-                rows.append((
-                    video_item['channel_id'],
-                    video_item['id'],
-                    video_item['title'],
-                    video_item['duration'],
-                    video_item['time_published'],
-                    video_item['is_time_published_exact'],
-                    time_noticed,
-                    video_item['description'],
-                ))
+
+                # videos which need durations updated
+                non_durations = ('upcoming', 'none', 'live', '')
+                v_id = video_item['id']
+                if (existing_durs.get(v_id) is not None
+                    and existing_durs[v_id].lower() in non_durations
+                    and video_item['duration'] not in non_durations
+                ):
+                    update_rows.append((
+                        video_item['title'],
+                        video_item['duration'],
+                        video_item['time_published'],
+                        video_item['is_time_published_exact'],
+                        video_item['description'],
+                        video_item['id'],
+                    ))
+                # all other videos
+                else:
+                    rows.append((
+                        video_item['channel_id'],
+                        video_item['id'],
+                        video_item['title'],
+                        video_item['duration'],
+                        video_item['time_published'],
+                        video_item['is_time_published_exact'],
+                        time_noticed,
+                        video_item['description'],
+                    ))
 
 
             cursor.executemany('''INSERT OR IGNORE INTO videos (
@@ -627,6 +673,13 @@ def _get_upstream_videos(channel_id):
                                       description
                                   )
                                   VALUES ((SELECT id FROM subscribed_channels WHERE yt_channel_id=?), ?, ?, ?, ?, ?, ?, ?)''', rows)
+            cursor.executemany('''UPDATE videos SET 
+                                      title=?,
+                                      duration=?,
+                                      time_published=?,
+                                      is_time_published_exact=?,
+                                      description=?
+                                  WHERE video_id=?''', update_rows)
             cursor.execute('''UPDATE subscribed_channels
                               SET time_last_checked = ?, next_check_time = ?
                               WHERE yt_channel_id=?''', [int(time.time()), next_check_time, channel_id])

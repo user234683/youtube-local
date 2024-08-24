@@ -136,6 +136,17 @@ base64_enc_funcs = {
     'base64p': percent_b64encode,
 }
 def _make_protobuf(data):
+    '''
+    Input: Recursive list of protobuf objects or base-64 encodings
+    Output: Protobuf bytestring
+    Each protobuf object takes the form [wire_type, field_number, field_data]
+    If a string protobuf has a list/tuple of length 2, this has the form
+    (base64 type, data)
+    The base64 types are
+    - base64 means a base64 encode with equals sign paddings
+    - base64s means a base64 encode without padding
+    - base64p means a url base64 encode with equals signs replaced with %3D
+    '''
     # must be dict mapping field_number to [wire_type, value]
     if isinstance(data, dict):
         new_data = []

@@ -203,6 +203,38 @@ def channel_ctoken_v1(channel_id, page, sort, tab, view=1):
 
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
 
+def channel_about_ctoken(channel_id):
+    return proto.make_protobuf(
+        ('base64p',
+         [
+          [2, 80226972,
+           [
+            [2, 2, channel_id],
+            [2, 3,
+             ('base64p',
+              [
+               [2, 110,
+                [
+                 [2, 3,
+                  [
+                   [2, 19,
+                    [
+                     [2, 1, b'66b0e9e9-0000-2820-9589-582429a83980'],
+                    ]
+                   ],
+                  ]
+                 ],
+                ]
+               ],
+              ]
+             )
+            ],
+           ]
+          ],
+         ]
+        )
+    )
+
 def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1,
                     ctoken=None, print_status=True):
     message = 'Got channel tab' if print_status else None
@@ -353,7 +385,7 @@ def post_process_channel_info(info):
         util.add_extra_html_info(item)
     if info['current_tab'] == 'about':
         for i, (text, url) in enumerate(info['links']):
-            if util.YOUTUBE_URL_RE.fullmatch(url):
+            if isinstance(url, str) and util.YOUTUBE_URL_RE.fullmatch(url):
                 info['links'][i] = (text, util.prefix_url(url))
 
 
@@ -462,7 +494,13 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
 
     elif tab == 'about':
-        polymer_json = util.fetch_url(base_url + '/about?pbj=1', headers_desktop, debug_name='gen_channel_about')
+        #polymer_json = util.fetch_url(base_url + '/about?pbj=1', headers_desktop, debug_name='gen_channel_about')
+        channel_id = get_channel_id(base_url)
+        ctoken = channel_about_ctoken(channel_id)
+        polymer_json = util.call_youtube_api('web', 'browse', {
+            'continuation': ctoken,
+        })
+        continuation=True
     elif tab == 'playlists' and page_number == 1:
         polymer_json = util.fetch_url(base_url+ '/playlists?pbj=1&view=1&sort=' + playlist_sort_codes[sort], headers_desktop, debug_name='gen_channel_playlists')
     elif tab == 'playlists':
@@ -484,6 +522,9 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
             json.loads(polymer_json), tab, continuation=continuation
         )
 
+    if info['error'] is not None:
+        return flask.render_template('error.html', error_message=info['error'])
+
     if channel_id:
         info['channel_url'] = 'https://www.youtube.com/channel/' + channel_id
         info['channel_id'] = channel_id
@@ -491,7 +532,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         channel_id = info['channel_id']
 
     # Will have microformat present, cache metadata while we have it
-    if channel_id and default_params and tab != 'videos':
+    if channel_id and default_params and tab not in ('videos', 'about'):
         metadata = extract_metadata_for_caching(info)
         set_cached_metadata(channel_id, metadata)
     # Otherwise, populate with our (hopefully cached) metadata
@@ -507,9 +548,6 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         }
         for item in info['items']:
             item.update(additional_info)
-
-    if info['error'] is not None:
-        return flask.render_template('error.html', error_message = info['error'])
 
     if tab in ('videos', 'shorts', 'streams'):
         info['number_of_videos'] = number_of_videos

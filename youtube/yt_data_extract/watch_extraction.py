@@ -140,11 +140,12 @@ def _extract_likes_dislikes(renderer_content):
             ['defaultText', 'accessibility', 'accessibilityData', 'label'],
             ['accessibility', 'label'],
             ['accessibilityData', 'accessibilityData', 'label'],
+            ['accessibilityText'],
         ))
 
         # this count doesn't have all the digits, it's like 53K for instance
-        dumb_count = extract_int(extract_str(deep_get(
-            toggle_button_renderer, 'defaultText')))
+        dumb_count = extract_int(extract_str(multi_get(
+            toggle_button_renderer, ['defaultText', 'title'])))
 
         # The accessibility text will be "No likes" or "No dislikes" or
         # something like that, but dumb count will be 0
@@ -168,16 +169,23 @@ def _extract_likes_dislikes(renderer_content):
                 info['dislike_count'] = count
         elif 'slimMetadataButtonRenderer' in button:
             button_renderer = button['slimMetadataButtonRenderer']
-            liberal_update(info, 'like_count', extract_button_count(deep_get(
-                button_renderer, 'button',
-                'segmentedLikeDislikeButtonRenderer',
-                'likeButton', 'toggleButtonRenderer'
-            )))
-            liberal_update(info, 'dislike_count',extract_button_count(deep_get(
-                button_renderer, 'button',
-                'segmentedLikeDislikeButtonRenderer',
-                'dislikeButton', 'toggleButtonRenderer'
-            )))
+            liberal_update(info, 'like_count', extract_button_count(
+                multi_deep_get(button_renderer,
+                    ['button', 'segmentedLikeDislikeButtonRenderer',
+                     'likeButton', 'toggleButtonRenderer'],
+                    ['button', 'segmentedLikeDislikeButtonViewModel',
+                     'likeButtonViewModel', 'likeButtonViewModel',
+                     'toggleButtonViewModel', 'toggleButtonViewModel',
+                     'defaultButtonViewModel', 'buttonViewModel']
+                )
+            ))
+            '''liberal_update(info, 'dislike_count', extract_button_count(
+                deep_get(
+                    button_renderer, 'button',
+                    'segmentedLikeDislikeButtonRenderer',
+                    'dislikeButton', 'toggleButtonRenderer'
+                )
+            ))'''
     return info
 
 def _extract_from_owner_renderer(renderer_content):
