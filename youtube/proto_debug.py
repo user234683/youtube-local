@@ -1,4 +1,5 @@
 # TODO: clean this file up more and heavily refactor
+from fake_useragent import UserAgent
 
 ''' Helper functions for reverse engineering protobuf.
 
@@ -571,7 +572,7 @@ def pp(obj, indent=1):
     print(_pp(obj, indent))
 
 
-desktop_user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0'
+desktop_user_agent = UserAgent(os='windows').firefox
 desktop_headers = (
     ('Accept', '*/*'),
     ('Accept-Language', 'en-US,en;q=0.5'),
@@ -579,7 +580,7 @@ desktop_headers = (
     ('X-YouTube-Client-Version', '2.20180830'),
 ) + (('User-Agent', desktop_user_agent),)
 
-mobile_user_agent = 'Mozilla/5.0 (Linux; Android 7.0; Redmi Note 4 Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Mobile Safari/537.36'
+mobile_user_agent = UserAgent(os='android').chrome
 mobile_headers = (
     ('Accept', '*/*'),
     ('Accept-Language', 'en-US,en;q=0.5'),
