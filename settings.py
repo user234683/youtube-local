@@ -249,6 +249,23 @@ More info: https://torrentfreak.com/riaa-thwarts-youts-attempt-to-declare-youtub
 Archive: https://archive.ph/OZQbN''',
     }),
 
+    ('innertube_client_id', {
+        'type': int,
+        'default': 1,
+        'label': 'innertube client',
+        'comment': '''innertube client to access YouTube API, i.e. fetching player data
+        Available clients: android, ios, android-test-suite, web
+        ''',
+        'options': [
+            (0, 'android'),
+            (1, 'ios'),
+            (2, 'android-test-suite'),
+            (3, 'web'),
+        ],
+        'category': 'network',
+    }),
+
+
     ('proxy_images', {
         'label': 'Route images',
         'type': bool,
