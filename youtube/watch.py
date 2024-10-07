@@ -361,12 +361,14 @@ def fetch_watch_page_info(video_id, playlist_id, index):
     return yt_data_extract.extract_watch_info_from_html(watch_page)
 
 def extract_info(video_id, use_invidious, playlist_id=None, index=None):
+    innertube_client = [ 'android', 'ios', 'android-test-suite', 'web' ]
+    innertube_client_id = settings.innertube_client_id
     tasks = (
         # Get video metadata from here
         gevent.spawn(fetch_watch_page_info, video_id, playlist_id, index),
 
 
-        gevent.spawn(fetch_player_response, 'android_vr', video_id)
+        gevent.spawn(fetch_player_response, innertube_client[innertube_client_id], video_id)
     )
     gevent.joinall(tasks)
     util.check_gevent_exceptions(*tasks)
