@@ -708,14 +708,16 @@ INNERTUBE_CLIENTS = {
 
     'ios': {
         'INNERTUBE_API_KEY': 'AIzaSyB-63vPrdThhKuerbB2N_l7Kwwcxj6yUAc',
+        'INNERTUBE_HOST': 'youtubei.googleapis.com',
         'INNERTUBE_CONTEXT': {
             'client': {
-                'hl': 'en',
-                'gl': 'US',
                 'clientName': 'IOS',
-                'clientVersion': '19.09.3',
-                'deviceModel': 'iPhone14,3',
-                'userAgent': 'com.google.ios.youtube/19.09.3 (iPhone14,3; U; CPU iOS 15_6 like Mac OS X)'
+                'clientVersion': '19.29.1',
+                'deviceMake': 'Apple',
+                'deviceModel': 'iPhone16,2',
+                'userAgent': 'com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)',
+                'osName': 'iPhone',
+                'osVersion': '17.5.1.21F90',
             }
         },
         'INNERTUBE_CONTEXT_CLIENT_NAME': 5,
@@ -736,7 +738,7 @@ INNERTUBE_CLIENTS = {
             },
             # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
             'thirdParty': {
-                'embedUrl': 'https://google.com',  # Can be any valid URL
+                'embedUrl': 'https://www.google.com',  # Can be any valid URL
             }
 
         },
@@ -749,7 +751,7 @@ INNERTUBE_CLIENTS = {
         'INNERTUBE_CONTEXT': {
             'client': {
                 'clientName': 'WEB',
-                'clientVersion': '2.20220801.00.00',
+                'clientVersion': '2.20240726.00.00',
                 'userAgent': desktop_user_agent,
             }
         },
@@ -809,14 +811,14 @@ def get_visitor_data():
 def call_youtube_api(client, api, data):
     client_params = INNERTUBE_CLIENTS[client]
     context = client_params['INNERTUBE_CONTEXT']
-    key = client_params['INNERTUBE_API_KEY']
+    key = client_params.get('INNERTUBE_API_KEY') or None
     host = client_params.get('INNERTUBE_HOST') or 'www.youtube.com'
     user_agent = context['client'].get('userAgent') or mobile_user_agent
     visitor_data = get_visitor_data()
 
-    url = 'https://' + host + '/youtubei/v1/' + api + '?key=' + key
-    if visitor_data:
-        context['client'].update({'visitorData': visitor_data})
+    url = 'https://' + host + '/youtubei/v1/' + api
+    if key != None:
+        url = url + '?key=' + key
     data['context'] = context
 
     data = json.dumps(data)
