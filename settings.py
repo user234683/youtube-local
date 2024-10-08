@@ -340,6 +340,15 @@ Archive: https://archive.ph/OZQbN''',
         'comment': '',
     }),
 
+    ('allow_age_restricted_content', {
+        'type': bool,
+        'label': 'Allow playback of age restricted videos',
+        'default': False,
+        'comment': '''Allow playback of age restricted videos.
+If set to True, the system will try reloading the video player when encountering age restricted content.''',
+        'category': 'playback',
+    }),
+
     ('debugging_save_responses', {
         'type': bool,
         'default': False,
