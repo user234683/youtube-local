@@ -59,7 +59,7 @@ def request_comments(ctoken, replies=False):
     })
 
     content = util.fetch_url(
-        url, headers=util.mobile_xhr_headers + util.json_header, data=data,
+        url, headers=util.client_xhr_headers + util.json_header, data=data,
         report_text='Retrieved comments', debug_name='request_comments')
     content = content.decode('utf-8')
 

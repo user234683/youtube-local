@@ -26,6 +26,12 @@ try:
 except FileNotFoundError:
     decrypt_cache = {}
 
+innertube_client_id = settings.innertube_client_id
+innertube_client = util.innertube_client
+client = innertube_client[innertube_client_id]
+client_params = util.INNERTUBE_CLIENTS[client]
+client_context = client_params['INNERTUBE_CONTEXT']['client']
+
 
 def codec_name(vcodec):
     if vcodec.startswith('avc'):
@@ -317,8 +323,30 @@ def decrypt_signatures(info, video_id):
         print('Using cached decryption function for: ' + player_name)
         info['decryption_function'] = decrypt_cache[player_name]
     else:
-        base_js = util.fetch_url(info['base_js'], debug_name='base.js', report_text='Fetched player ' + player_name)
-        base_js = base_js.decode('utf-8')
+        #base_js = util.fetch_url(info['base_js'], debug_name='base.js', report_text='Fetched player ' + player_name)
+        #player_version = util.get_player_version(video_id, headers=util.client_xhr_headers)
+        player_version = info['player_version']
+        player_file = settings.data_dir + '/iframe_api_base_' + player_version + '.js'
+        if not os.path.exists(settings.data_dir):
+            os.mkdir(settings.data_dir)
+        if os.path.exists(player_file):
+            try:
+                with open(player_file, 'rb') as file:
+                    base_js = file.read()
+                    base_js = base_js.decode('utf-8')
+                    info['base_js'] = base_js
+                    file.close()
+            except:
+                print('Unable to access ' + base_js)
+        else:
+            print('Unable to access ' + player_file)
+            print('Downloading ' + player_file)
+            base_js = util.fetch_url(info['base_js'], debug_name='base.js', report_text='Fetched player ' + player_name)
+            with open(player_file, 'wb') as file:
+                file.write(base_js)
+                file.close()
+                print('Downloaded ' + player_file)
+            base_js = base_js.decode('utf-8')
         err = yt_data_extract.extract_decryption_function(info, base_js)
         if err:
             return err
@@ -327,6 +355,9 @@ def decrypt_signatures(info, video_id):
     err = yt_data_extract.decrypt_signatures(info)
     return err
 
+def decrypt_n_signatures(info, video_id):
+    err = yt_data_extract.replace_n_signatures(info)
+    return err
 
 def _add_to_error(info, key, additional_message):
     if key in info and info[key]:
@@ -335,9 +366,13 @@ def _add_to_error(info, key, additional_message):
         info[key] = additional_message
 
 def fetch_player_response(client, video_id):
-    return util.call_youtube_api(client, 'player', {
+    api_data = {
         'videoId': video_id,
-    })
+    }
+    if settings.allow_age_restricted_content:
+        api_data['racyCheckOk'] = 'true'
+        api_data['contentCheckOk'] = 'true'
+    return util.call_youtube_api(client, 'player', api_data)
 
 def fetch_watch_page_info(video_id, playlist_id, index):
     # bpctr=9999999999 will bypass are-you-sure dialogs for controversial
@@ -348,12 +383,43 @@ def fetch_watch_page_info(video_id, playlist_id, index):
     if index:
         url += '&index=' + index
 
+    visitor_data_header = None
+    if not settings.use_po_token:
+        if settings.use_visitor_data:
+            visitor_data_file = settings.data_dir + '/visitorData.txt'
+            if os.path.exists(visitor_data_file):
+                try:
+                    with open(visitor_data_file, 'r') as file:
+                        visitor_data = file.read()
+                        visitor_data_header = (
+                                'X-Goog-Visitor-Id', visitor_data
+                                )
+                        file.close()
+                except:
+                    print('No visitor data is used in this request.')
+        else:
+            try:
+                po_token_cache = settings.data_dir + '/po_token_cache.txt'
+                with open(po_token_cache, 'r') as file:
+                    po_token_dict = json.loads(file.read())
+                    visitor_data = po_token_dict['visitorData']
+                    visitor_data_header = (
+                            'X-Goog-Visitor-Id', visitor_data
+                            )
+                    file.close()
+            except:
+                print('No visitor data is used in this request.')
+
     headers = (
         ('Accept', '*/*'),
         ('Accept-Language', 'en-US,en;q=0.5'),
-        ('X-YouTube-Client-Name', '2'),
-        ('X-YouTube-Client-Version', '2.20180830'),
-    ) + util.mobile_ua
+        ('X-YouTube-Client-Name', client_context['clientName']),
+        ('X-YouTube-Client-Version', client_context['clientVersion']),
+        ('User-Agent', client_context.get('userAgent') or util.mobile_user_agent )
+        )
+
+    if visitor_data_header != None:
+        headers = ( *headers, visitor_data_header )
 
     watch_page = util.fetch_url(url, headers=headers,
                                 debug_name='watch')
@@ -361,14 +427,12 @@ def fetch_watch_page_info(video_id, playlist_id, index):
     return yt_data_extract.extract_watch_info_from_html(watch_page)
 
 def extract_info(video_id, use_invidious, playlist_id=None, index=None):
-    innertube_client = [ 'android', 'ios', 'android-test-suite', 'web' ]
-    innertube_client_id = settings.innertube_client_id
     tasks = (
         # Get video metadata from here
         gevent.spawn(fetch_watch_page_info, video_id, playlist_id, index),
 
 
-        gevent.spawn(fetch_player_response, innertube_client[innertube_client_id], video_id)
+        gevent.spawn(fetch_player_response, client, video_id)
     )
     gevent.joinall(tasks)
     util.check_gevent_exceptions(*tasks)
@@ -393,10 +457,15 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     if decryption_error:
         decryption_error = 'Error decrypting url signatures: ' + decryption_error
         info['playability_error'] = decryption_error
+    # n_sig decryption
+    nsig_decryption_error = decrypt_n_signatures(info, video_id)
+    if nsig_decryption_error:
+        decryption_error += 'Error decrypting n signatures: ' + nsig_decryption_error
+        info['playability_error'] = decryption_error
 
     # check if urls ready (non-live format) in former livestream
     # urls not ready if all of them have no filesize
-    if info['was_live']:
+    if info.get('was_live'):
         info['urls_ready'] = False
         for fmt in info['formats']:
             if fmt['file_size'] is not None:
