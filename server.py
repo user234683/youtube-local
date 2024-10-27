@@ -20,7 +20,7 @@ import subprocess
 import re
 import sys
 import time
-
+import os
 
 
 
@@ -50,11 +50,45 @@ def parse_range(range_header, content_length):
         end_byte = int(end)
     return start_byte, end_byte
 
+innertube_client_id = settings.innertube_client_id
+innertube_client = util.innertube_client
+client = innertube_client[innertube_client_id]
 def proxy_site(env, start_response, video=False):
+    client_params = util.INNERTUBE_CLIENTS[client]
+    client_context = client_params['INNERTUBE_CONTEXT']
+    client_ua = client_context.get('userAgent') or util.mobile_user_agent
     send_headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)',
+        'User-Agent': client_ua,
         'Accept': '*/*',
+        'Accept-language': 'en-US',
+        'X-YouTube-Client-Name': client_params['INNERTUBE_CONTEXT_CLIENT_NAME'],
+        'X-YouTube-Client-Version': client_context['client']['clientVersion'],
     }
+    visitor_data_file = settings.data_dir + '/visitorData.txt'
+    visitor_data = None
+    if not settings.use_po_token:
+        if settings.use_visitor_data:
+            if os.path.exists(visitor_data_file):
+                try:
+                    with open(visitor_data_file, "r") as file:
+                        visitor_data = file.read()
+                        file.close()
+                except:
+                    print('unable to access visitorData.txt file')
+            else:
+                po_token_cache = settings.data_dir + '/po_token_cache.txt'
+                if os.path.exists(po_token_cache):
+                    try:
+                        with open(visitor_data_file, "r") as file:
+                            po_token_dict = json.loads(file.read())
+                            visitor_data = po_token_dict.get('visitorData') or None
+                            file.close()
+                    except:
+                        print('Unable to access po_token_cache.txt')
+
+    if visitor_data != None:
+        send_headers['X-Goog-Visitor-Id'] = visitor_data
+
     current_range_start = 0
     range_end = None
     if 'HTTP_RANGE' in env:
@@ -92,6 +126,8 @@ def proxy_site(env, start_response, video=False):
         except AttributeError:
             pass
         if video:
+            send_headers = (list(send_headers)
+                            + [('origin', 'https://www.youtube.com')])
             response_headers = (list(response_headers)
                                 +[('Access-Control-Allow-Origin', '*')])
 

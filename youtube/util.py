@@ -410,7 +410,6 @@ mobile_xhr_headers = (
 
 
 
-
 class RateLimitedQueue(gevent.queue.Queue):
     ''' Does initial_burst (def. 30) at first, then alternates between waiting waiting_period (def. 5) seconds and doing subsequent_bursts (def. 10) queries. After 5 seconds with nothing left in the queue, resets rate limiting. '''
 
@@ -755,7 +754,34 @@ INNERTUBE_CLIENTS = {
                 'userAgent': desktop_user_agent,
             }
         },
-        'INNERTUBE_CONTEXT_CLIENT_NAME': 1
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 1,
+        'REQUIRE_JS_PLAYER': True,
+    },
+
+    'web_creator': {
+        'INNERTUBE_API_KEY': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'WEB_CREATOR',
+                'clientVersion': '1.20240723.03.00',
+                'userAgent': desktop_user_agent,
+            },
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 62,
+        'REQUIRE_JS_PLAYER': True,
+    },
+
+    # mweb has 'ultralow' formats
+    # See: https://github.com/yt-dlp/yt-dlp/pull/557
+    'mweb': {
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'MWEB',
+                'clientVersion': '2.20240726.01.00',
+            },
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 2,
+        'REQUIRE_JS_PLAYER': True,
     },
     'android_vr': {
         'INNERTUBE_API_KEY': 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w',
@@ -776,37 +802,30 @@ INNERTUBE_CLIENTS = {
     },
 }
 
-def get_visitor_data():
-    visitor_data = None
-    visitor_data_cache = os.path.join(settings.data_dir, 'visitorData.txt')
-    if not os.path.exists(settings.data_dir):
-        os.makedirs(settings.data_dir)
-    if os.path.isfile(visitor_data_cache):
-        with open(visitor_data_cache, 'r') as file:
-            print('Getting visitor_data from cache')
-            visitor_data = file.read()
-        max_age = 12*3600
-        file_age = time.time() - os.path.getmtime(visitor_data_cache)
-        if file_age > max_age:
-            print('visitor_data cache is too old. Removing file...')
-            os.remove(visitor_data_cache)
-        return visitor_data
+innertube_client = list(INNERTUBE_CLIENTS.keys())
+innertube_client_id = settings.innertube_client_id
+client = innertube_client[innertube_client_id]
+client_xhr_headers = (
+    ('Accept', '*/*'),
+    ('Accept-Language', 'en-US,en;q=0.5'),
+    ('X-YouTube-Api-Format-Version', '1'),
+    ('X-YouTube-Client-Name', INNERTUBE_CLIENTS[client]['INNERTUBE_CONTEXT_CLIENT_NAME']),
+    ('X-YouTube-Client-Version', INNERTUBE_CLIENTS[client]['INNERTUBE_CONTEXT']['client']['clientVersion']),
+    )
 
-    print('Fetching youtube homepage to get visitor_data')
-    yt_homepage = 'https://www.youtube.com'
-    yt_resp = fetch_url(yt_homepage, headers={'User-Agent': mobile_user_agent}, report_text='Getting youtube homepage')
-    visitor_data_re = r'''"visitorData":\s*?"(.+?)"'''
-    visitor_data_match = re.search(visitor_data_re, yt_resp.decode())
-    if visitor_data_match:
-        visitor_data = visitor_data_match.group(1)
-        print(f'Got visitor_data: {len(visitor_data)}')
-        with open(visitor_data_cache, 'w') as file:
-            print('Saving visitor_data cache...')
-            file.write(visitor_data)
-        return visitor_data
-    else:
-        print('Unable to get visitor_data value')
-    return visitor_data
+def get_player_version(video_id, headers):
+    iframe_api = 'https://www.youtube.com/iframe_api'
+    iframe_dump = 'iframe_dump_'+video_id+'.js'
+    iframe_response = fetch_url(iframe_api + '?videoId=' + video_id, headers=headers, report_text='Downloading iframe_api js', debug_name=iframe_dump)
+    player_version_re = re.compile(r'player\\?/([0-9a-fA-F]{8})\\?/')
+    player_version = re.search(player_version_re, iframe_response.decode("utf-8"))
+    if not player_version == None:
+        return player_version.group(1)
+
+def extract_signature_timestamp(base_js):
+    sts_re = re.compile(r'(?:signatureTimestamp|sts)\s*:\s*(?P<sts>[0-9]{5})')
+    signature_timestamp = sts_re.search(base_js)
+    return signature_timestamp
 
 def call_youtube_api(client, api, data):
     client_params = INNERTUBE_CLIENTS[client]
@@ -814,20 +833,128 @@ def call_youtube_api(client, api, data):
     key = client_params.get('INNERTUBE_API_KEY') or None
     host = client_params.get('INNERTUBE_HOST') or 'www.youtube.com'
     user_agent = context['client'].get('userAgent') or mobile_user_agent
-    visitor_data = get_visitor_data()
+    visitor_data_file = settings.data_dir + '/visitorData.txt'
+    visitor_data_header = None
+    if not settings.use_po_token:
+        if os.path.exists(visitor_data_file):
+            try:
+                with open(visitor_data_file, 'r') as file:
+                    visitor_data = file.read()
+                    print('Visitor data : ' + visitor_data)
+                    visitor_data_header = (
+                            'X-Goog-Visitor-Id', visitor_data
+                            )
+            except:
+                print('No visitor data sent. Continuing anyway')
+    po_token_data = None
+    if settings.use_po_token:
+        po_token_cache = settings.data_dir + '/po_token_cache.txt'
+        if os.path.exists(po_token_cache):
+            try:
+                with open(po_token_cache, 'r') as file:
+                    po_token_dict = json.loads(file.read())
+                    file.close()
+            except:
+                print('po_token_cache is not found')
+            visitor_data_header = ('X-Goog-Visitor-Id', po_token_dict['visitorData'])
+            po_token_data = {
+                    'poToken': po_token_dict['poToken'],
+                    }
+    headers = (('Content-Type', 'application/json'),
+               ('User-Agent', user_agent),
+               ('X-Goog-Api-Format-Version', '1'),
+               ('X-YouTube-Client-Name',
+                client_params['INNERTUBE_CONTEXT_CLIENT_NAME']),
+               ('X-YouTube-Client-Version',
+                context['client'].get('clientVersion')))
+    if visitor_data_header != None:
+        headers = ( *headers, visitor_data_header )
+    data['context'] = context
+    require_js_player = client_params.get('REQUIRE_JS_PLAYER')
+    if require_js_player:
+        print('js player is required for this client: ' + str(client))
+        player_version = get_player_version(data['videoId'], headers=headers)
+        player_url = 'https://www.youtube.com/s/player/' + player_version + '/player_ias.vflset/en_US/base.js'
+        print("Player version: " + player_version)
+        player_file = settings.data_dir + '/iframe_api_base_'+ player_version + '.js'
+        if os.path.exists(player_file):
+            try:
+                with open(player_file, 'rb') as file:
+                    base_js = file.read()
+                    file.close()
+            except:
+                print('Unable to access ' + player_file)
+        else:
+            base_js = fetch_url(player_url, headers=headers, report_text='Fetching player url (base.js) version ' + player_version, debug_name='iframe_api_base_' + player_version + '.js')
+            try:
+                print("Saving " + player_file)
+                with open(player_file, 'wb') as file:
+                    file.write(base_js)
+                    file.close()
+            except:
+                print('Unable to access ' + player_file)
 
+        signature_timestamp = None
+        signature_timestamp_cache = settings.data_dir + '/sts_' + player_version + 'txt'
+        if require_js_player:
+            if os.path.exists(signature_timestamp_cache):
+                try:
+                    with open(signature_timestamp_cache, 'r') as file:
+                        signature_timestamp = file.read()
+                        file.close()
+                except:
+                    print('Unable to extract signature timestamp from cache')
+            else:
+                signature_timestamp = extract_signature_timestamp(base_js.decode("utf-8")).group(1)
+                try:
+                    if not os.path.exists(settings.data_dir):
+                        os.makedirs(settings.data_dir)
+                    with open(settings.data_dir + '/sts_' + player_version + '.txt', 'w') as file:
+                        file.write(signature_timestamp)
+                        file.close()
+                except:
+                    print('Unable to save signature timestamp')
+
+            if signature_timestamp != None:
+                print('Signature timestamp: ' + signature_timestamp)
+                data['playbackContext'] = {
+                        'contentPlaybackContext': {
+                          'html5Preference': 'HTML5_PREF_WANTS',
+                          'signatureTimestamp': signature_timestamp,
+                        }
+                    }
+
+    if po_token_data != None:
+        data['serviceIntegrityDimensions'] = po_token_data
     url = 'https://' + host + '/youtubei/v1/' + api
     if key != None:
         url = url + '?key=' + key
-    data['context'] = context
 
+    print("Debugging headers")
+    for item in headers:
+        print(item)
+    print("Debugging data payload")
+    print(json.dumps(data, indent=4))
     data = json.dumps(data)
-    headers = (('Content-Type', 'application/json'),('User-Agent', user_agent))
-    if visitor_data:
-        headers = ( *headers, ('X-Goog-Visitor-Id', visitor_data ))
     response = fetch_url(
         url, data=data, headers=headers,
         debug_name='youtubei_' + api + '_' + client,
         report_text='Fetched ' + client + ' youtubei ' + api
     ).decode('utf-8')
+    response_dict = json.loads(response)
+    if settings.use_visitor_data:
+        if not settings.use_po_token:
+            if response_dict['responseContext'].get('visitorData'):
+                if not os.path.exists(visitor_data_file):
+                    try:
+                        with open(visitor_data_file, 'w') as file:
+                            print('Saving ' + visitor_data_file)
+                            file.write(response_dict['responseContext']['visitorData'])
+                            file.close()
+                    except:
+                        print("Unable to save visitor data")
+        else:
+            if os.path.exists(visitor_data_file):
+                print('Removing visitor_data file')
+                os.remove(visitor_data_file)
     return response

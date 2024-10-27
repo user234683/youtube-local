@@ -251,19 +251,38 @@ Archive: https://archive.ph/OZQbN''',
 
     ('innertube_client_id', {
         'type': int,
-        'default': 1,
+        'default': 6,
         'label': 'innertube client',
         'comment': '''innertube client to access YouTube API, i.e. fetching player data
-        Available clients: android, ios, android-test-suite, web
+        Available clients: android, android-test-suite, ios, tv_embedded, web, web_creator, mweb
         ''',
         'options': [
             (0, 'android'),
-            (1, 'ios'),
-            (2, 'android-test-suite'),
-            (3, 'web'),
+            (1, 'android-test-suite'),
+            (2, 'ios'),
+            (3, 'tv_embedded'),
+            (4, 'web'),
+            (5, 'web_creator'),
+            (6, 'mweb'),
         ],
         'category': 'network',
     }),
+
+    ('use_visitor_data', {
+        'label': 'Use visitor data',
+        'type': bool,
+        'default': False,
+        'comment': '''Add X-Goog-Visitor-Id header to outgoing http requests''',
+        'category': 'network',
+        }),
+
+    ('use_po_token', {
+        'label': 'Use po_token',
+        'type': bool,
+        'default': False,
+        'comment': '''Use visitor_data and po_token using po-token-generator''',
+        'category': 'network',
+        }),
 
 
     ('proxy_images', {
