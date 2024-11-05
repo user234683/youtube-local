@@ -92,7 +92,7 @@ if os.path.exists('./youtube-local'):
 # confused with working directory. I'm calling it the same thing so it will
 # have that name when extracted from the final release zip archive)
 log('Making copy of youtube-local files')
-check(os.system('git archive --format tar master | 7z x -si -ttar -oyoutube-local'))
+check(os.system('git archive --format tar HEAD | 7z x -si -ttar -oyoutube-local'))
 
 if len(os.listdir('./youtube-local')) == 0:
     raise Exception('Failed to copy youtube-local files')
@@ -217,10 +217,10 @@ wine_run(['./python/python.exe', '-I', '-m', 'pip', 'uninstall', '--yes', 'pip',
 log('Removing pyc files')   # Have to do this because get-pip and some packages don't respect --no-compile
 remove_files_with_extensions(r'./python', ['.pyc'])
 
-log('Removing dist-info and __pycache__')
+log('Removing __pycache__')
 for root, dirs, files in os.walk(r'./python'):
     for dir in dirs:
-        if dir == '__pycache__' or dir.endswith('.dist-info'):
+        if dir == '__pycache__':
             shutil.rmtree(os.path.join(root, dir))
 
 
