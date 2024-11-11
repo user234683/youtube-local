@@ -64,7 +64,7 @@ def proxy_site(env, start_response, video=False):
         'X-YouTube-Client-Name': client_params['INNERTUBE_CONTEXT_CLIENT_NAME'],
         'X-YouTube-Client-Version': client_context['client']['clientVersion'],
     }
-    visitor_data_file = settings.data_dir + '/visitorData.txt'
+    visitor_data_file = os.path.join(settings.data_dir,'visitorData.txt')
     visitor_data = None
     if not settings.use_po_token:
         if settings.use_visitor_data:
@@ -73,18 +73,18 @@ def proxy_site(env, start_response, video=False):
                     with open(visitor_data_file, "r") as file:
                         visitor_data = file.read()
                         file.close()
-                except:
-                    print('unable to access visitorData.txt file')
+                except OSError:
+                    print('An OS error prevents accessing visitorData.txt file')
             else:
-                po_token_cache = settings.data_dir + '/po_token_cache.txt'
+                po_token_cache = os.path.join(settings.data_dir, 'po_token_cache.txt')
                 if os.path.exists(po_token_cache):
                     try:
                         with open(visitor_data_file, "r") as file:
                             po_token_dict = json.loads(file.read())
                             visitor_data = po_token_dict.get('visitorData') or None
                             file.close()
-                    except:
-                        print('Unable to access po_token_cache.txt')
+                    except OSError:
+                        print('An OS error prevents accessing po_token_cache.txt')
 
     if visitor_data != None:
         send_headers['X-Goog-Visitor-Id'] = visitor_data
