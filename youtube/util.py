@@ -833,29 +833,35 @@ def call_youtube_api(client, api, data):
     key = client_params.get('INNERTUBE_API_KEY') or None
     host = client_params.get('INNERTUBE_HOST') or 'www.youtube.com'
     user_agent = context['client'].get('userAgent') or mobile_user_agent
-    visitor_data_file = settings.data_dir + '/visitorData.txt'
+    visitor_data_file = os.path.join(settings.data_dir, 'visitorData.txt')
     visitor_data_header = None
     if not settings.use_po_token:
         if os.path.exists(visitor_data_file):
-            try:
-                with open(visitor_data_file, 'r') as file:
-                    visitor_data = file.read()
-                    print('Visitor data : ' + visitor_data)
-                    visitor_data_header = (
-                            'X-Goog-Visitor-Id', visitor_data
-                            )
-            except:
-                print('No visitor data sent. Continuing anyway')
+            file_age = time.time() - os.path.getmtime(visitor_data_file)
+            if file_age < 86400:
+                print('visitor data file is less than 24h old. Using its content')
+                try:
+                    with open(visitor_data_file, 'r') as file:
+                        visitor_data = file.read()
+                        print('Visitor data : ' + visitor_data)
+                        visitor_data_header = (
+                                'X-Goog-Visitor-Id', visitor_data
+                                )
+                except OSError:
+                    print('An OS Error occured while reading visitor data file. No visitor data sent. Continuing anyway')
+            else:
+                print('visitor data file is more than 24h old. Removing the file.')
+                os.remove(visitor_data_file)
     po_token_data = None
     if settings.use_po_token:
-        po_token_cache = settings.data_dir + '/po_token_cache.txt'
+        po_token_cache = os.path.join(settings.data_dir,'po_token_cache.txt')
         if os.path.exists(po_token_cache):
             try:
                 with open(po_token_cache, 'r') as file:
                     po_token_dict = json.loads(file.read())
                     file.close()
-            except:
-                print('po_token_cache is not found')
+            except OSError:
+                print('An OS error occured which prevents access to po_token_cache file')
             visitor_data_header = ('X-Goog-Visitor-Id', po_token_dict['visitorData'])
             po_token_data = {
                     'poToken': po_token_dict['poToken'],
@@ -876,7 +882,7 @@ def call_youtube_api(client, api, data):
         player_version = get_player_version(data['videoId'], headers=headers)
         player_url = 'https://www.youtube.com/s/player/' + player_version + '/player_ias.vflset/en_US/base.js'
         print("Player version: " + player_version)
-        player_file = settings.data_dir + '/iframe_api_base_'+ player_version + '.js'
+        player_file = os.path.join(settings.data_dir,'iframe_api_base_'+ player_version + '.js')
         if os.path.exists(player_file):
             try:
                 with open(player_file, 'rb') as file:
@@ -891,29 +897,29 @@ def call_youtube_api(client, api, data):
                 with open(player_file, 'wb') as file:
                     file.write(base_js)
                     file.close()
-            except:
-                print('Unable to access ' + player_file)
+            except OSError:
+                print('An OS error prevents accessing ' + player_file)
 
         signature_timestamp = None
-        signature_timestamp_cache = settings.data_dir + '/sts_' + player_version + 'txt'
+        signature_timestamp_cache = os.path.join(settings.data_dir,'sts_' + player_version + '.txt')
         if require_js_player:
             if os.path.exists(signature_timestamp_cache):
                 try:
                     with open(signature_timestamp_cache, 'r') as file:
                         signature_timestamp = file.read()
                         file.close()
-                except:
-                    print('Unable to extract signature timestamp from cache')
+                except OSError:
+                    print('An OS error prevents extracting signature timestamp from cache')
             else:
                 signature_timestamp = extract_signature_timestamp(base_js.decode("utf-8")).group(1)
                 try:
                     if not os.path.exists(settings.data_dir):
                         os.makedirs(settings.data_dir)
-                    with open(settings.data_dir + '/sts_' + player_version + '.txt', 'w') as file:
+                    with open(signature_timestamp_cache, 'w') as file:
                         file.write(signature_timestamp)
                         file.close()
-                except:
-                    print('Unable to save signature timestamp')
+                except OSError:
+                    print('An OS error prevents saving signature timestamp')
 
             if signature_timestamp != None:
                 print('Signature timestamp: ' + signature_timestamp)
@@ -944,17 +950,20 @@ def call_youtube_api(client, api, data):
     response_dict = json.loads(response)
     if settings.use_visitor_data:
         if not settings.use_po_token:
-            if response_dict['responseContext'].get('visitorData'):
-                if not os.path.exists(visitor_data_file):
-                    try:
-                        with open(visitor_data_file, 'w') as file:
-                            print('Saving ' + visitor_data_file)
-                            file.write(response_dict['responseContext']['visitorData'])
-                            file.close()
-                    except:
-                        print("Unable to save visitor data")
-        else:
-            if os.path.exists(visitor_data_file):
-                print('Removing visitor_data file')
-                os.remove(visitor_data_file)
+            try:
+                if response_dict['responseContext'].get('visitorData'):
+                    if not os.path.exists(visitor_data_file):
+                        try:
+                            with open(visitor_data_file, 'w') as file:
+                                print('Saving ' + visitor_data_file)
+                                file.write(response_dict['responseContext']['visitorData'])
+                                file.close()
+                        except OSError:
+                            print("An OS error prevents saving visitor data file")
+            except KeyError:
+                print('Unable to parse responseContext from yt api')
+    else:
+        if os.path.exists(visitor_data_file):
+            print('Removing visitor_data file')
+            os.remove(visitor_data_file)
     return response
