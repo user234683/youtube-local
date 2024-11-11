@@ -8,7 +8,6 @@ from .common import (get, multi_get, deep_get, multi_deep_get,
 import json
 import urllib.parse
 import traceback
-import flpc as regex
 import re
 import dukpy
 import os
@@ -1004,21 +1003,17 @@ def replace_n_signatures(info):
     player_version = info['player_version']
     for fmt in info['formats']:
         if fmt['url']:
-            print('Replacing n signature for itag: ' + str(fmt['itag']))
             media_url = fmt['url']
             params = media_url.split('&')
             for i, member in enumerate(params):
                 if member.startswith('n='):
                     n_sig_index = i
-                    #print('Found n_sig index: ' + str(n_sig_index))
                     n_sig = member.split('=')[1]
-                    #print('n_sig found: ' + n_sig)
 
             if n_sig == None:
-                #print('No n value found in query params')
                 return False
             else:
-                nsig_decrypt_code_cache = settings.data_dir + '/nsig_func_' + info['player_version'] + '.js'
+                nsig_decrypt_code_cache = os.path.join(settings.data_dir, 'nsig_func_' + info['player_version'] + '.js')
                 def _set_nsig_info():
                     if os.path.exists(nsig_decrypt_code_cache):
                         print('Loading saved nsig func: ' + nsig_decrypt_code_cache)
@@ -1027,12 +1022,10 @@ def replace_n_signatures(info):
                             info['nsig_func'] = {
                                     player_version: js_nsig_decrypt_code
                                     }
-                            print('nsig func length: ' + str(len(js_nsig_decrypt_code)))
                             file.close()
                     else:
                         with open(info['player_name'], 'r') as file:
                             base_js = file.read()
-                            print('base_js loaded: ' + str(len(base_js)))
                             file.close()
 
                         js_nsig_decrypt_code = extract_nsig_func(base_js)
@@ -1055,18 +1048,14 @@ def replace_n_signatures(info):
                         _set_nsig_info()
                         js_nsig_decrypt_code = info['nsig_func'].get(player_version)
                 n_sig_result = decrypt_n_signature(n_sig=n_sig, jscode=js_nsig_decrypt_code)
-                print('Replacing n with n_sig_result')
-                print('Current n value: ' + params[n_sig_index])
                 params.pop(n_sig_index)
                 params.insert(n_sig_index, 'n=' + n_sig_result)
-                print('n value now is: ' + params[n_sig_index])
                 final_url = '&'.join(params)
                 fmt['url'] = final_url
     return False
 
 # nsig decryption
-# adapted from iv-org/inv-sig-helper
-# regex matching will be performed using flpc (imported as regex) instead of python's built in re for performance reason.
+# adapted from iv-org/inv_sig_helper
 NSIG_FUNCTION_ARRAYS = [
     r'null\)&&\([a-zA-Z]=(?P<nfunc>[a-zA-Z0-9$]+)\[(?P<idx>\d+)\]\([a-zA-Z0-9]\)',
     r'(?x)&&\(b="n+"\[[a-zA-Z0-9.+$]+\],c=a\.get\(b\)\)&&\(c=(?P<nfunc>[a-zA-Z0-9$]+)(?:\[(?P<idx>\d+)\])?\([a-zA-Z0-9]\)',
@@ -1079,18 +1068,19 @@ NSIG_FUNCTION_ENDINGS = [
 ]
 
 def extract_nsig_func(base_js):
+    regex = re
     for i, member in enumerate(NSIG_FUNCTION_ARRAYS):
         func_array_re = regex.compile(member.replace('$', '\\$'))
         func_array = regex.search(func_array_re, base_js)
         if not func_array == None:
             func_name = func_array.group(1)
             break
-    NSIG_CONTEXT = 'var '+func_name+'\\s*=\\s*\\[(.+?)][;,]'
+    NSIG_CONTEXT = 'var '+re.escape(func_name)+'\\s*=\\s*\\[(.+?)][;,]'
     func_context = regex.search(regex.compile(NSIG_CONTEXT), base_js)
     func_body_re = []
     for i, member in enumerate(NSIG_FUNCTION_ENDINGS):
         func_body_re_item = ''
-        func_body_re_item += func_context.group(1)
+        func_body_re_item += re.escape(func_context.group(1))
         func_body_re_item += member
         func_body_re.append(func_body_re_item)
     nsig_func_body = None
@@ -1108,12 +1098,9 @@ def extract_nsig_func(base_js):
         return None
 
 def decrypt_n_signature(n_sig, jscode):
-    print('jscode len is: ' + str(len(jscode)))
     dukpy_session = dukpy.JSInterpreter()
     # Loading the function into dukpy session
     dukpy_session.evaljs(jscode)
-    print('n_sig = ' + n_sig)
     #n_sig_result = dukpy_session.evaljs('decrypt_nsig("' + n_sig + '")')
     n_sig_result = dukpy_session.evaljs("decrypt_nsig(dukpy['n'])", n=n_sig)
-    print('n_sig_result = ' + n_sig_result)
     return n_sig_result
