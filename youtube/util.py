@@ -824,7 +824,11 @@ def get_player_version(video_id, headers):
 
 def extract_signature_timestamp(base_js):
     sts_re = re.compile(r'(?:signatureTimestamp|sts)\s*:\s*(?P<sts>[0-9]{5})')
-    signature_timestamp = sts_re.search(base_js)
+    signature_timestamp_search = sts_re.search(base_js)
+    if not signature_timestamp_search == None:
+        signature_timestamp = signature_timestamp_search.group(1)
+    else:
+        signature_timestamp = None
     return signature_timestamp
 
 def call_youtube_api(client, api, data):
@@ -911,7 +915,7 @@ def call_youtube_api(client, api, data):
                 except OSError:
                     print('An OS error prevents extracting signature timestamp from cache')
             else:
-                signature_timestamp = extract_signature_timestamp(base_js.decode("utf-8")).group(1)
+                signature_timestamp = extract_signature_timestamp(base_js.decode("utf-8"))
                 try:
                     if not os.path.exists(settings.data_dir):
                         os.makedirs(settings.data_dir)
