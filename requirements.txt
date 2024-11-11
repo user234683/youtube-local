@@ -7,5 +7,4 @@ defusedxml>=0.5.0
 cachetools>=4.0.0
 stem>=1.8.0
 fake-useragent>=1.5.1
-flpc>=0.2.5
 dukpy>=0.4.0
