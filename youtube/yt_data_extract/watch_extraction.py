@@ -1011,7 +1011,8 @@ def replace_n_signatures(info):
                     n_sig = member.split('=')[1]
 
             if n_sig == None:
-                return False
+                error_message = 'Could not find n signature in query parameters'
+                return error_message
             else:
                 nsig_decrypt_code_cache = os.path.join(settings.data_dir, 'nsig_func_' + info['player_version'] + '.js')
                 def _set_nsig_info():
