@@ -940,11 +940,6 @@ def call_youtube_api(client, api, data):
     if key != None:
         url = url + '?key=' + key
 
-    print("Debugging headers")
-    for item in headers:
-        print(item)
-    print("Debugging data payload")
-    print(json.dumps(data, indent=4))
     data = json.dumps(data)
     response = fetch_url(
         url, data=data, headers=headers,
