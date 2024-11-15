@@ -86,8 +86,12 @@ def proxy_site(env, start_response, video=False):
                     except OSError:
                         print('An OS error prevents accessing po_token_cache.txt')
 
-    if visitor_data != None:
-        send_headers['X-Goog-Visitor-Id'] = visitor_data
+    google_domains = [ 'youtube.com', 'youtube-nocookie.com', 'youtu.be', 'googlevideo.com', 'ytimg.com', 'ggpht.com', 'googleapis.com' ]
+    for domain in google_domains:
+        if env['SERVER_NAME'].endswith(domain):
+            if visitor_data != None:
+                send_headers['X-Goog-Visitor-Id'] = visitor_data
+                break
 
     current_range_start = 0
     range_end = None
