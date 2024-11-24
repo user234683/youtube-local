@@ -30,6 +30,7 @@ headers_mobile = (
     ('X-YouTube-Client-Name', '2'),
     ('X-YouTube-Client-Version', '2.20180830'),
 ) + util.mobile_ua
+headers_client = util.client_xhr_headers
 real_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=8XihrAcN1l4'),)
 generic_cookie = (('Cookie', 'VISITOR_INFO1_LIVE=ST1Ti53r4fU'),)
 
@@ -283,7 +284,7 @@ def get_number_of_videos_channel(channel_id):
     url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&pbj=1'
 
     try:
-        response = util.fetch_url(url, headers_mobile,
+        response = util.fetch_url(url, headers_client,
             debug_name='number_of_videos', report_text='Got number of videos')
     except urllib.error.HTTPError as e:
         traceback.print_exc()

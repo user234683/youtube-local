@@ -235,6 +235,56 @@ For security reasons, enabling this is not recommended.''',
         'category': 'interface',
     }),
 
+    ('use_video_download', {
+        'type': int,
+        'default': 0,
+        'comment': '',
+        'options': [
+            (0, 'Disabled'),
+            (1, 'Enabled'),
+        ],
+        'category': 'interface',
+        'comment': '''If enabled, you may incur legal issues with RIAA. Disabled by default.
+More info: https://torrentfreak.com/riaa-thwarts-youts-attempt-to-declare-youtube-ripping-legal-221002/
+Archive: https://archive.ph/OZQbN''',
+    }),
+
+    ('innertube_client_id', {
+        'type': int,
+        'default': 6,
+        'label': 'innertube client',
+        'comment': '''innertube client to access YouTube API, i.e. fetching player data
+        Available clients: android, android-test-suite, ios, tv_embedded, web, web_creator, mweb
+        ''',
+        'options': [
+            (0, 'android'),
+            (1, 'android-test-suite'),
+            (2, 'ios'),
+            (3, 'tv_embedded'),
+            (4, 'web'),
+            (5, 'web_creator'),
+            (6, 'mweb'),
+        ],
+        'category': 'network',
+    }),
+
+    ('use_visitor_data', {
+        'label': 'Use visitor data',
+        'type': bool,
+        'default': False,
+        'comment': '''Add X-Goog-Visitor-Id header to outgoing http requests''',
+        'category': 'network',
+        }),
+
+    ('use_po_token', {
+        'label': 'Use po_token',
+        'type': bool,
+        'default': False,
+        'comment': '''Use visitor_data and po_token using po-token-generator''',
+        'category': 'network',
+        }),
+
+
     ('proxy_images', {
         'label': 'Route images',
         'type': bool,
@@ -308,6 +358,16 @@ For security reasons, enabling this is not recommended.''',
         'default': 1,
         'comment': '',
     }),
+
+    ('allow_age_restricted_content', {
+        'type': bool,
+        'label': 'Allow playback of age restricted videos',
+        'default': False,
+        'comment': '''Allow playback of age restricted videos.
+If set to True, the system will try reloading the video player when encountering age restricted content.''',
+        'category': 'playback',
+    }),
+
 
     ('gather_googlevideo_domains', {
         'type': bool,
