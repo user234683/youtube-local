@@ -711,12 +711,12 @@ INNERTUBE_CLIENTS = {
         'INNERTUBE_CONTEXT': {
             'client': {
                 'clientName': 'IOS',
-                'clientVersion': '19.29.1',
+                'clientVersion': '19.45.4',
                 'deviceMake': 'Apple',
                 'deviceModel': 'iPhone16,2',
-                'userAgent': 'com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)',
+                'userAgent': 'com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X;)',
                 'osName': 'iPhone',
-                'osVersion': '17.5.1.21F90',
+                'osVersion': '18.1.0.22B83',
             }
         },
         'INNERTUBE_CONTEXT_CLIENT_NAME': 5,
