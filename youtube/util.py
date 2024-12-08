@@ -388,9 +388,9 @@ def head(url, use_tor=False, report_text=None, max_redirects=10):
             round(time.monotonic() - start_time,3))
     return response
 
-mobile_user_agent = UserAgent(os='android').chrome
+mobile_user_agent = UserAgent(os='Android').chrome
 mobile_ua = (('User-Agent', mobile_user_agent),)
-desktop_user_agent = UserAgent(os='windows').firefox
+desktop_user_agent = UserAgent(os='Windows').firefox
 desktop_ua = (('User-Agent', desktop_user_agent),)
 json_header = (('Content-Type', 'application/json'),)
 desktop_xhr_headers = (
