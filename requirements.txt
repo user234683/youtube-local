@@ -6,5 +6,5 @@ urllib3>=1.24.1
 defusedxml>=0.5.0
 cachetools>=4.0.0
 stem>=1.8.0
-fake-useragent>=1.5.1
+fake-useragent>=2.0.0
 dukpy>=0.4.0

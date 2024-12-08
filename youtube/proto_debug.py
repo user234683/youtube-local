@@ -572,7 +572,7 @@ def pp(obj, indent=1):
     print(_pp(obj, indent))
 
 
-desktop_user_agent = UserAgent(os='windows').firefox
+desktop_user_agent = UserAgent(os='Windows').firefox
 desktop_headers = (
     ('Accept', '*/*'),
     ('Accept-Language', 'en-US,en;q=0.5'),
@@ -580,7 +580,7 @@ desktop_headers = (
     ('X-YouTube-Client-Version', '2.20180830'),
 ) + (('User-Agent', desktop_user_agent),)
 
-mobile_user_agent = UserAgent(os='android').chrome
+mobile_user_agent = UserAgent(os='Android').chrome
 mobile_headers = (
     ('Accept', '*/*'),
     ('Accept-Language', 'en-US,en;q=0.5'),
