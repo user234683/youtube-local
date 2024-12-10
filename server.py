@@ -75,16 +75,16 @@ def proxy_site(env, start_response, video=False):
                         file.close()
                 except OSError:
                     print('An OS error prevents accessing visitorData.txt file')
-            else:
-                po_token_cache = os.path.join(settings.data_dir, 'po_token_cache.txt')
-                if os.path.exists(po_token_cache):
-                    try:
-                        with open(visitor_data_file, "r") as file:
-                            po_token_dict = json.loads(file.read())
-                            visitor_data = po_token_dict.get('visitorData') or None
-                            file.close()
-                    except OSError:
-                        print('An OS error prevents accessing po_token_cache.txt')
+        else:
+            po_token_cache = os.path.join(settings.data_dir, 'po_token_cache.txt')
+            if os.path.exists(po_token_cache):
+                try:
+                    with open(po_token_cache, "r") as file:
+                        po_token_dict = json.loads(file.read())
+                        visitor_data = po_token_dict.get('visitorData') or None
+                        file.close()
+                except OSError:
+                    print('An OS error prevents accessing po_token_cache.txt')
 
     google_domains = [ 'youtube.com', 'youtube-nocookie.com', 'youtu.be', 'googlevideo.com', 'ytimg.com', 'ggpht.com', 'googleapis.com' ]
     for domain in google_domains:
