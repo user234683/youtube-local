@@ -877,10 +877,10 @@ def requires_decryption(info):
 
 # adapted from youtube-dl and invidious:
 # https://github.com/omarroth/invidious/blob/master/src/invidious/helpers/signatures.cr
-decrypt_function_re = re.compile(r'function\(a\)\{(a=a\.split\(""\)[^\}{]+)return a\.join\(""\)\}')
+decrypt_function_re = re.compile(r'function\([a-zA-Z]{1}\)\{(.{1}=.{1}\.split\(""\)[^\}{]+)return .{1}\.join\(""\)\}')
 # gives us e.g. rt, .xK, 5 from rt.xK(a,5) or rt, ["xK"], 5 from rt["xK"](a,5)
 # (var, operation, argument)
-var_op_arg_re = re.compile(r'(\w+)(\.\w+|\["[^"]+"\])\(a,(\d+)\)')
+var_op_arg_re = re.compile(r'(\w+)(\.\w+|\["[^"]+"\])\([a-zA-Z]{1},(\d+)\)')
 
 def extract_decryption_function(info, base_js):
     '''Insert decryption function into info. Return error string if not successful.
@@ -923,11 +923,11 @@ def extract_decryption_function(info, base_js):
             return 'Could not parse operation'
         op_name = op[:colon_index]
         op_body = op[opening_brace_index+1:]
-        if 'a.reverse()' in op_body:
+        if '.reverse()' in op_body:
             operation_definitions[op_name] = 1
-        elif 'a.splice(0,b)' in op_body:
+        elif '.splice(0,' in op_body:
             operation_definitions[op_name] = 2
-        elif 'var c=a[0]' in op_body:
+        elif 'var ' in op_body:
             operation_definitions[op_name] = 0
         else:
             return 'Unknown op_body: ' + op_body
@@ -1064,7 +1064,7 @@ NSIG_FUNCTION_ARRAYS = [
 
 NSIG_FUNCTION_ENDINGS = [
     r'=\s*function(\([\w]+\)\{\s*var\s+[\w\s]+=[\w\.\s]+?\.call\s*\([\w\s$]+?,[\(\)\",\s]+\)[\S\s]*?\}\s*return [\w\.\s$]+?\.call\s*\([\w\s$]+?\s*,[\(\)\",\s]+\)\s*\}\s*;)',
-    r'=\s*function([\S\s]*?\}\s*return \w+?\.join\(\"\"\)\s*\};)',
+    r'=\s*function([\S\s]*?\}\s*?return \w+?\.join\(\"\"\)\s*\};)',
     r'=\s*function([\S\s]*?\}\s*return [\W\w$]+?\.call\([\w$]+?,\"\"\)\s*\};)',
 ]
 
@@ -1094,9 +1094,17 @@ def extract_nsig_func(base_js):
     if nsig_func_body != None:
         nsig_func_name = 'decrypt_nsig'
         full_nsig_func = 'var ' + nsig_func_name + '=function' + nsig_func_body
-        return full_nsig_func
+        return fixup_nsig_jscode(jscode=full_nsig_func)
     else:
         return None
+
+def fixup_nsig_jscode(jscode):
+    fixup_re = re.compile(r';\s*if\s*\(\s*typeof\s+[a-zA-Z0-9_$]+\s*===?\s*(["\'])undefined\1\s*\)\s*return\s+\w+;')
+    fixup_needed = re.search(fixup_re, jscode)
+    if not fixup_needed == None:
+        return re.sub(fixup_re, ';', jscode)
+    else:
+        return jscode
 
 def decrypt_n_signature(n_sig, jscode):
     dukpy_session = dukpy.JSInterpreter()
