@@ -18,6 +18,7 @@ import collections
 import stem
 import stem.control
 import traceback
+from fake_useragent import UserAgent
 
 # The trouble with the requests library: It ships its own certificate bundle via certifi
 #  instead of using the system certificate store, meaning self-signed certificates
@@ -387,9 +388,9 @@ def head(url, use_tor=False, report_text=None, max_redirects=10):
             round(time.monotonic() - start_time,3))
     return response
 
-mobile_user_agent = 'Mozilla/5.0 (Linux; Android 7.0; Redmi Note 4 Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Mobile Safari/537.36'
+mobile_user_agent = UserAgent(os='Android').chrome
 mobile_ua = (('User-Agent', mobile_user_agent),)
-desktop_user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0'
+desktop_user_agent = UserAgent(os='Windows').firefox
 desktop_ua = (('User-Agent', desktop_user_agent),)
 json_header = (('Content-Type', 'application/json'),)
 desktop_xhr_headers = (
@@ -404,7 +405,6 @@ mobile_xhr_headers = (
     ('X-YouTube-Client-Name', '2'),
     ('X-YouTube-Client-Version', '2.20240304.08.00'),
 ) + mobile_ua
-
 
 
 
@@ -707,14 +707,16 @@ INNERTUBE_CLIENTS = {
 
     'ios': {
         'INNERTUBE_API_KEY': 'AIzaSyB-63vPrdThhKuerbB2N_l7Kwwcxj6yUAc',
+        'INNERTUBE_HOST': 'youtubei.googleapis.com',
         'INNERTUBE_CONTEXT': {
             'client': {
-                'hl': 'en',
-                'gl': 'US',
                 'clientName': 'IOS',
-                'clientVersion': '19.09.3',
-                'deviceModel': 'iPhone14,3',
-                'userAgent': 'com.google.ios.youtube/19.09.3 (iPhone14,3; U; CPU iOS 15_6 like Mac OS X)'
+                'clientVersion': '19.45.4',
+                'deviceMake': 'Apple',
+                'deviceModel': 'iPhone16,2',
+                'userAgent': 'com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X;)',
+                'osName': 'iPhone',
+                'osVersion': '18.1.0.22B83',
             }
         },
         'INNERTUBE_CONTEXT_CLIENT_NAME': 5,
@@ -735,7 +737,7 @@ INNERTUBE_CLIENTS = {
             },
             # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
             'thirdParty': {
-                'embedUrl': 'https://google.com',  # Can be any valid URL
+                'embedUrl': 'https://www.google.com',  # Can be any valid URL
             }
 
         },
@@ -748,29 +750,203 @@ INNERTUBE_CLIENTS = {
         'INNERTUBE_CONTEXT': {
             'client': {
                 'clientName': 'WEB',
-                'clientVersion': '2.20220801.00.00',
+                'clientVersion': '2.20241126.01.00',
                 'userAgent': desktop_user_agent,
             }
         },
-        'INNERTUBE_CONTEXT_CLIENT_NAME': 1
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 1,
+        'REQUIRE_JS_PLAYER': True,
+    },
+
+    'web_creator': {
+        'INNERTUBE_API_KEY': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'WEB_CREATOR',
+                'clientVersion': '1.20241203.01.00',
+                'userAgent': desktop_user_agent,
+            },
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 62,
+        'REQUIRE_JS_PLAYER': True,
+    },
+
+    # mweb has 'ultralow' formats
+    # See: https://github.com/yt-dlp/yt-dlp/pull/557
+    'mweb': {
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'MWEB',
+                'clientVersion': '2.20241202.07.00',
+                'userAgent': mobile_user_agent,
+            },
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 2,
+        'REQUIRE_JS_PLAYER': True,
     },
 }
+
+innertube_client = list(INNERTUBE_CLIENTS.keys())
+innertube_client_id = settings.innertube_client_id
+client = innertube_client[innertube_client_id]
+client_xhr_headers = (
+    ('Accept', '*/*'),
+    ('Accept-Language', 'en-US,en;q=0.5'),
+    ('X-YouTube-Api-Format-Version', '1'),
+    ('X-YouTube-Client-Name', INNERTUBE_CLIENTS[client]['INNERTUBE_CONTEXT_CLIENT_NAME']),
+    ('X-YouTube-Client-Version', INNERTUBE_CLIENTS[client]['INNERTUBE_CONTEXT']['client']['clientVersion']),
+    )
+
+def get_player_version(video_id, headers):
+    iframe_api = 'https://www.youtube.com/iframe_api'
+    iframe_dump = 'iframe_dump_'+video_id+'.js'
+    iframe_response = fetch_url(iframe_api + '?videoId=' + video_id, headers=headers, report_text='Downloading iframe_api js', debug_name=iframe_dump)
+    player_version_re = re.compile(r'player\\?/([0-9a-fA-F]{8})\\?/')
+    player_version = re.search(player_version_re, iframe_response.decode("utf-8"))
+    if not player_version == None:
+        return player_version.group(1)
+
+def extract_signature_timestamp(base_js):
+    sts_re = re.compile(r'(?:signatureTimestamp|sts)\s*:\s*(?P<sts>[0-9]{5})')
+    signature_timestamp_search = sts_re.search(base_js)
+    if not signature_timestamp_search == None:
+        signature_timestamp = signature_timestamp_search.group(1)
+    else:
+        signature_timestamp = None
+    return signature_timestamp
 
 def call_youtube_api(client, api, data):
     client_params = INNERTUBE_CLIENTS[client]
     context = client_params['INNERTUBE_CONTEXT']
-    key = client_params['INNERTUBE_API_KEY']
+    key = client_params.get('INNERTUBE_API_KEY') or None
     host = client_params.get('INNERTUBE_HOST') or 'www.youtube.com'
     user_agent = context['client'].get('userAgent') or mobile_user_agent
-
-    url = 'https://' + host + '/youtubei/v1/' + api + '?key=' + key
+    visitor_data_file = os.path.join(settings.data_dir, 'visitorData.txt')
+    visitor_data_header = None
+    if not settings.use_po_token:
+        if os.path.exists(visitor_data_file):
+            file_age = time.time() - os.path.getmtime(visitor_data_file)
+            if file_age < 86400:
+                print('visitor data file is less than 24h old. Using its content')
+                try:
+                    with open(visitor_data_file, 'r') as file:
+                        visitor_data = file.read()
+                        print('Visitor data : ' + visitor_data)
+                        visitor_data_header = (
+                                'X-Goog-Visitor-Id', visitor_data
+                                )
+                except OSError:
+                    print('An OS Error occured while reading visitor data file. No visitor data sent. Continuing anyway')
+            else:
+                print('visitor data file is more than 24h old. Removing the file.')
+                os.remove(visitor_data_file)
+    po_token_data = None
+    if settings.use_po_token:
+        po_token_cache = os.path.join(settings.data_dir,'po_token_cache.txt')
+        if os.path.exists(po_token_cache):
+            try:
+                with open(po_token_cache, 'r') as file:
+                    po_token_dict = json.loads(file.read())
+                    file.close()
+            except OSError:
+                print('An OS error occured which prevents access to po_token_cache file')
+            visitor_data_header = ('X-Goog-Visitor-Id', po_token_dict['visitorData'])
+            po_token_data = {
+                    'poToken': po_token_dict['poToken'],
+                    }
+    headers = (('Content-Type', 'application/json'),
+               ('User-Agent', user_agent),
+               ('X-Goog-Api-Format-Version', '1'),
+               ('X-YouTube-Client-Name',
+                client_params['INNERTUBE_CONTEXT_CLIENT_NAME']),
+               ('X-YouTube-Client-Version',
+                context['client'].get('clientVersion')))
+    if visitor_data_header != None:
+        headers = ( *headers, visitor_data_header )
     data['context'] = context
+    require_js_player = client_params.get('REQUIRE_JS_PLAYER')
+    if require_js_player:
+        print('js player is required for this client: ' + str(client))
+        player_version = get_player_version(data['videoId'], headers=headers)
+        player_url = 'https://www.youtube.com/s/player/' + player_version + '/player_ias.vflset/en_US/base.js'
+        print("Player version: " + player_version)
+        player_file = os.path.join(settings.data_dir,'iframe_api_base_'+ player_version + '.js')
+        if os.path.exists(player_file):
+            try:
+                with open(player_file, 'rb') as file:
+                    base_js = file.read()
+                    file.close()
+            except:
+                print('Unable to access ' + player_file)
+        else:
+            base_js = fetch_url(player_url, headers=headers, report_text='Fetching player url (base.js) version ' + player_version, debug_name='iframe_api_base_' + player_version + '.js')
+            try:
+                print("Saving " + player_file)
+                with open(player_file, 'wb') as file:
+                    file.write(base_js)
+                    file.close()
+            except OSError:
+                print('An OS error prevents accessing ' + player_file)
+
+        signature_timestamp = None
+        signature_timestamp_cache = os.path.join(settings.data_dir,'sts_' + player_version + '.txt')
+        if require_js_player:
+            if os.path.exists(signature_timestamp_cache):
+                try:
+                    with open(signature_timestamp_cache, 'r') as file:
+                        signature_timestamp = file.read()
+                        file.close()
+                except OSError:
+                    print('An OS error prevents extracting signature timestamp from cache')
+            else:
+                signature_timestamp = extract_signature_timestamp(base_js.decode("utf-8"))
+                try:
+                    if not os.path.exists(settings.data_dir):
+                        os.makedirs(settings.data_dir)
+                    with open(signature_timestamp_cache, 'w') as file:
+                        file.write(signature_timestamp)
+                        file.close()
+                except OSError:
+                    print('An OS error prevents saving signature timestamp')
+
+            if signature_timestamp != None:
+                print('Signature timestamp: ' + signature_timestamp)
+                data['playbackContext'] = {
+                        'contentPlaybackContext': {
+                          'html5Preference': 'HTML5_PREF_WANTS',
+                          'signatureTimestamp': signature_timestamp,
+                        }
+                    }
+
+    if po_token_data != None:
+        data['serviceIntegrityDimensions'] = po_token_data
+    url = 'https://' + host + '/youtubei/v1/' + api
+    if key != None:
+        url = url + '?key=' + key
 
     data = json.dumps(data)
-    headers = (('Content-Type', 'application/json'),('User-Agent', user_agent))
     response = fetch_url(
         url, data=data, headers=headers,
         debug_name='youtubei_' + api + '_' + client,
         report_text='Fetched ' + client + ' youtubei ' + api
     ).decode('utf-8')
+    response_dict = json.loads(response)
+    if settings.use_visitor_data:
+        if not settings.use_po_token:
+            try:
+                if response_dict['responseContext'].get('visitorData'):
+                    if not os.path.exists(visitor_data_file):
+                        try:
+                            with open(visitor_data_file, 'w') as file:
+                                print('Saving ' + visitor_data_file)
+                                file.write(response_dict['responseContext']['visitorData'])
+                                file.close()
+                        except OSError:
+                            print("An OS error prevents saving visitor data file")
+            except KeyError:
+                print('Unable to parse responseContext from yt api')
+    else:
+        if os.path.exists(visitor_data_file):
+            print('Removing visitor_data file')
+            os.remove(visitor_data_file)
     return response
