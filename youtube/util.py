@@ -388,7 +388,7 @@ def head(url, use_tor=False, report_text=None, max_redirects=10):
             round(time.monotonic() - start_time,3))
     return response
 
-mobile_user_agent = UserAgent(os='Android').chrome
+mobile_user_agent = 'Mozilla/5.0 (iPad; CPU OS 16_7_10 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1,gzip(gfe)'
 mobile_ua = (('User-Agent', mobile_user_agent),)
 desktop_user_agent = UserAgent(os='Windows').firefox
 desktop_ua = (('User-Agent', desktop_user_agent),)
