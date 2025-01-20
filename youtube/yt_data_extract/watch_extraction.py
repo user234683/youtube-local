@@ -974,7 +974,6 @@ def decrypt_signatures(info):
 
         signature = ''.join(a)
         format['url'] += '&' + format['sp'] + '=' + urllib.parse.quote(signature)
-        po_token_data = None
         if settings.use_po_token:
             try:
                 po_token_cache = settings.data_dir + '/po_token_cache.txt'
@@ -983,8 +982,8 @@ def decrypt_signatures(info):
                     file.close()
             except:
                 print('Unable to access po_token_cache.txt')
-            po_token_data = po_token_dict.get('poToken') or None
-            if po_token_data != None:
+            po_token_data = po_token_dict.get('poToken')
+            if po_token_data:
                 format['url'] += '&pot=' + urllib.parse.quote(po_token_data)
 
     return False
