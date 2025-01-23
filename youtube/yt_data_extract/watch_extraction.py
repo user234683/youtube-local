@@ -974,17 +974,6 @@ def decrypt_signatures(info):
 
         signature = ''.join(a)
         format['url'] += '&' + format['sp'] + '=' + urllib.parse.quote(signature)
-        if settings.use_po_token:
-            try:
-                po_token_cache = settings.data_dir + '/po_token_cache.txt'
-                with open(po_token_cache, 'r') as file:
-                    po_token_dict = json.loads(file.read())
-                    file.close()
-            except:
-                print('Unable to access po_token_cache.txt')
-            po_token_data = po_token_dict.get('poToken')
-            if po_token_data:
-                format['url'] += '&pot=' + urllib.parse.quote(po_token_data)
 
     return False
 
@@ -1112,3 +1101,18 @@ def decrypt_n_signature(n_sig, jscode):
     #n_sig_result = dukpy_session.evaljs('decrypt_nsig("' + n_sig + '")')
     n_sig_result = dukpy_session.evaljs("decrypt_nsig(dukpy['n'])", n=n_sig)
     return n_sig_result
+
+def append_po_token(info):
+    if not settings.use_po_token:
+        return False
+    else:
+        po_token_cache = os.path.join(settings.data_dir, 'po_token_cache.txt')
+        if os.path.exists(po_token_cache):
+            with open(po_token_cache, 'r') as file:
+                po_token_dict = json.loads(file.read())
+            info['poToken'] = po_token_dict.get('poToken')
+            po_token = info['poToken']
+            if po_token:
+                for fmt in info['formats']:
+                    fmt['url'] += f'&pot={po_token}'
+                return False
