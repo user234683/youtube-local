@@ -359,6 +359,10 @@ def decrypt_n_signatures(info, video_id):
     err = yt_data_extract.replace_n_signatures(info)
     return err
 
+def append_po_token(info):
+    err = yt_data_extract.append_po_token(info)
+    return err
+
 def _add_to_error(info, key, additional_message):
     if key in info and info[key]:
         info[key] += additional_message
@@ -462,7 +466,11 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     if nsig_decryption_error:
         decryption_error += 'Error decrypting n signatures: ' + nsig_decryption_error
         info['playability_error'] = decryption_error
-
+    # append po_token
+    po_token_append_error = append_po_token(info)
+    if po_token_append_error:
+        decryption_error += 'Error appending po_token'
+        info['playability_error'] = decryption_error
     # check if urls ready (non-live format) in former livestream
     # urls not ready if all of them have no filesize
     if info.get('was_live'):
