@@ -868,6 +868,9 @@ def call_youtube_api(client, api, data):
             else:
                 print('visitor data file is more than 24h old. Removing the file.')
                 os.remove(visitor_data_file)
+        else:
+            visitor_data = None
+            print('''Not using visitor_data in the api request. Reload the page if you are asked to sign in.''')
     po_token_data = None
     if settings.use_po_token:
         po_token_cache = os.path.join(settings.data_dir,'po_token_cache.txt')
@@ -878,7 +881,8 @@ def call_youtube_api(client, api, data):
                     file.close()
             except OSError:
                 print('An OS error occured which prevents access to po_token_cache file')
-            visitor_data_header = ('X-Goog-Visitor-Id', po_token_dict['visitorData'])
+            visitor_data = po_token_dict.get('visitorData')
+            visitor_data_header = ('X-Goog-Visitor-Id', visitor_data)
             po_token_data = {
                     'poToken': po_token_dict['poToken'],
                     }
@@ -891,6 +895,8 @@ def call_youtube_api(client, api, data):
                 context['client'].get('clientVersion')))
     if visitor_data_header:
         headers = ( *headers, visitor_data_header )
+    if visitor_data:
+        context['client']['visitorData'] = visitor_data
     data['context'] = context
     require_js_player = client_params.get('REQUIRE_JS_PLAYER')
     if require_js_player:
