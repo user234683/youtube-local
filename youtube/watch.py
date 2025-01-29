@@ -422,7 +422,7 @@ def fetch_watch_page_info(video_id, playlist_id, index):
         ('User-Agent', client_context.get('userAgent') or util.mobile_user_agent )
         )
 
-    if visitor_data_header != None:
+    if visitor_data_header:
         headers = ( *headers, visitor_data_header )
 
     watch_page = util.fetch_url(url, headers=headers,
