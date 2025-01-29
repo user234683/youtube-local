@@ -315,10 +315,10 @@ def decrypt_signatures(info, video_id):
     '''return error string, or False if no errors'''
     if not yt_data_extract.requires_decryption(info):
         return False
-    if not info['player_name']:
+    if not info.get('player_name'):
         return 'Could not find player name'
 
-    player_name = info['player_name']
+    player_name = info.get('player_name')
     if player_name in decrypt_cache:
         print('Using cached decryption function for: ' + player_name)
         info['decryption_function'] = decrypt_cache[player_name]
