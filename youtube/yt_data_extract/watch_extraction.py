@@ -988,7 +988,11 @@ def replace_n_signatures(info):
         return False
 
     n_sig = None
-    player_version = info['player_version']
+    player_version = info.get('player_version')
+    if not player_version:
+        print('n_sig_decrypt: Unable to determine player version')
+        return False
+
     for fmt in info['formats']:
         if fmt['url']:
             media_url = fmt['url']
