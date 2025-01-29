@@ -889,7 +889,7 @@ def call_youtube_api(client, api, data):
                 client_params['INNERTUBE_CONTEXT_CLIENT_NAME']),
                ('X-YouTube-Client-Version',
                 context['client'].get('clientVersion')))
-    if visitor_data_header != None:
+    if visitor_data_header:
         headers = ( *headers, visitor_data_header )
     data['context'] = context
     require_js_player = client_params.get('REQUIRE_JS_PLAYER')
@@ -937,7 +937,7 @@ def call_youtube_api(client, api, data):
                 except OSError:
                     print('An OS error prevents saving signature timestamp')
 
-            if signature_timestamp != None:
+            if signature_timestamp:
                 print('Signature timestamp: ' + signature_timestamp)
                 data['playbackContext'] = {
                         'contentPlaybackContext': {
@@ -946,10 +946,10 @@ def call_youtube_api(client, api, data):
                         }
                     }
 
-    if po_token_data != None:
+    if po_token_data:
         data['serviceIntegrityDimensions'] = po_token_data
     url = 'https://' + host + '/youtubei/v1/' + api
-    if key != None:
+    if key:
         url = url + '?key=' + key
 
     data = json.dumps(data)
