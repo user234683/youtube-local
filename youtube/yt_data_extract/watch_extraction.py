@@ -1079,11 +1079,11 @@ def extract_nsig_func(base_js):
     nsig_func_body = None
     for i, member in enumerate(func_body_re):
         result = regex.search(regex.compile(member.replace('$', '\\$')), base_js)
-        if result != None:
+        if result:
             nsig_func_body = result.group(1)
             print('nsig_func_body length: ' + str(len(nsig_func_body)))
             break
-    if nsig_func_body != None:
+    if nsig_func_body:
         nsig_func_name = 'decrypt_nsig'
         full_nsig_func = 'var ' + nsig_func_name + '=function' + nsig_func_body
         return fixup_nsig_jscode(jscode=full_nsig_func)
