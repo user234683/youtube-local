@@ -272,7 +272,7 @@ Archive: https://archive.ph/OZQbN''',
     ('use_visitor_data', {
         'label': 'Use visitor data',
         'type': bool,
-        'default': False,
+        'default': True,
         'comment': '''Add X-Goog-Visitor-Id header to outgoing http requests''',
         'category': 'network',
         }),
