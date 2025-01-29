@@ -251,10 +251,10 @@ Archive: https://archive.ph/OZQbN''',
 
     ('innertube_client_id', {
         'type': int,
-        'default': 6,
+        'default': 7,
         'label': 'innertube client',
         'comment': '''innertube client to access YouTube API, i.e. fetching player data
-        Available clients: android, android-test-suite, ios, tv_embedded, web, web_creator, mweb
+        Available clients: android, android-test-suite, ios, tv_embedded, web, web_creator, mweb, tv
         ''',
         'options': [
             (0, 'android'),
@@ -264,6 +264,7 @@ Archive: https://archive.ph/OZQbN''',
             (4, 'web'),
             (5, 'web_creator'),
             (6, 'mweb'),
+            (7, 'tv'),
         ],
         'category': 'network',
     }),
