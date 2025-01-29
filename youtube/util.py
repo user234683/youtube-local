@@ -784,6 +784,17 @@ INNERTUBE_CLIENTS = {
         'INNERTUBE_CONTEXT_CLIENT_NAME': 2,
         'REQUIRE_JS_PLAYER': True,
     },
+    'tv': {
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'TVHTML5',
+                'clientVersion': '7.20250126.17.00',
+                'userAgent': 'Mozilla/5.0 (PlayStation; PlayStation 4/10.50) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15,gzip(gfe)'
+            },
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 7,
+        'REQUIRE_JS_PLAYER': True,
+    },
     'android_vr': {
         'INNERTUBE_API_KEY': 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w',
         'INNERTUBE_CONTEXT': {
