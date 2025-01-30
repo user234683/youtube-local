@@ -825,6 +825,49 @@ client_xhr_headers = (
     ('X-YouTube-Client-Version', INNERTUBE_CLIENTS[client]['INNERTUBE_CONTEXT']['client']['clientVersion']),
     )
 
+def get_ytcfg(client):
+    if not settings.use_ytcfg:
+        print('Not using ytcfg for innertube api')
+        return None
+    yt_endpoint = {
+            'android': 'https://m.youtube.com',
+            'android-test-suite': 'https://m.youtube.com',
+            'ios': 'https://m.youtube.com',
+            'tv_embedded': 'https://www.youtube.com/tv',
+            'web': 'https://www.youtube.com',
+            'web_creator': 'https://www.youtube.com',
+            'mweb': 'https://m.youtube.com',
+            'tv': 'https://www.youtube.com/tv'
+            }
+    user_agent = INNERTUBE_CLIENTS[client]['INNERTUBE_CONTEXT']['client']['userAgent'].replace(',gzip(gfe)','')
+    ytcfg_file = os.path.join(settings.data_dir,f'ytcfg_{client}.json')
+    if not os.path.exists(ytcfg_file):
+        endpoint_response = fetch_url(yt_endpoint.get(client), headers={'User-Agent': user_agent}, report_text='Downloading yt_endpoint to get ytcfg', debug_name=f'yt_endpoint_{client}')
+        ytcfg_re = re.compile(r'ytcfg\.set\((\{.+?\})\)')
+        ytcfg_search = re.search(ytcfg_re, endpoint_response.decode())
+        if ytcfg_search:
+            print('ytcfg found')
+            ytcfg_str = ytcfg_search.group(1)
+            ytcfg = json.loads(ytcfg_str)
+            if ytcfg.get('INNERTUBE_CONTEXT').get('client').get('remoteHost'):
+                print('Removing remoteHost from ytcfg')
+                ytcfg['INNERTUBE_CONTEXT']['client'].pop('remoteHost')
+            ytcfg_str = json.dumps(ytcfg)
+            with open(ytcfg_file, 'x') as file:
+                print(f'Saving ytcfg file as {ytcfg_file}: ' + str(len(ytcfg_str)))
+                file.write(ytcfg_str)
+                return ytcfg
+        else:
+            print('unable to find ytcfg')
+            return None
+    else:
+        with open(ytcfg_file, 'r') as file:
+            print(f'Loading {ytcfg_file}')
+            with open(ytcfg_file, 'r') as file:
+                ytcfg = json.load(file)
+                print(f'{ytcfg_file} loaded: ' + str(len(ytcfg)))
+                return ytcfg
+
 def get_player_version(video_id, headers):
     iframe_api = 'https://www.youtube.com/iframe_api'
     iframe_dump = 'iframe_dump_'+video_id+'.js'
@@ -850,6 +893,7 @@ def call_youtube_api(client, api, data):
     host = client_params.get('INNERTUBE_HOST') or 'www.youtube.com'
     user_agent = context['client'].get('userAgent') or mobile_user_agent
     visitor_data_file = os.path.join(settings.data_dir, 'visitorData.txt')
+    ytcfg = get_ytcfg(client)
     visitor_data_header = None
     if not settings.use_po_token:
         if os.path.exists(visitor_data_file):
@@ -886,6 +930,13 @@ def call_youtube_api(client, api, data):
             po_token_data = {
                     'poToken': po_token_dict['poToken'],
                     }
+    if ytcfg:
+        ytcfg_context = ytcfg.get('INNERTUBE_CONTEXT')
+        print('Got client context from ytcfg')
+        key = ytcfg.get('INNERTUBE_API_KEY')
+        if ytcfg_context:
+            # Needed to set correct client version obtained from ytcfg
+            context = ytcfg_context
     headers = (('Content-Type', 'application/json'),
                ('User-Agent', user_agent),
                ('X-Goog-Api-Format-Version', '1'),
@@ -893,10 +944,10 @@ def call_youtube_api(client, api, data):
                 client_params['INNERTUBE_CONTEXT_CLIENT_NAME']),
                ('X-YouTube-Client-Version',
                 context['client'].get('clientVersion')))
-    if visitor_data_header:
-        headers = ( *headers, visitor_data_header )
-    if visitor_data:
-        context['client']['visitorData'] = visitor_data
+    # Only send visitor_data_header if not using ytcfg
+    if not ytcfg:
+        if visitor_data_header:
+            headers = ( *headers, visitor_data_header )
     data['context'] = context
     require_js_player = client_params.get('REQUIRE_JS_PLAYER')
     if require_js_player:
@@ -953,7 +1004,8 @@ def call_youtube_api(client, api, data):
                     }
 
     if po_token_data:
-        data['serviceIntegrityDimensions'] = po_token_data
+        if not ytcfg:
+            data['serviceIntegrityDimensions'] = po_token_data
     url = 'https://' + host + '/youtubei/v1/' + api
     if key:
         url = url + '?key=' + key
