@@ -849,9 +849,14 @@ def get_ytcfg(client):
             print('ytcfg found')
             ytcfg_str = ytcfg_search.group(1)
             ytcfg = json.loads(ytcfg_str)
-            if ytcfg.get('INNERTUBE_CONTEXT').get('client').get('remoteHost'):
-                print('Removing remoteHost from ytcfg')
-                ytcfg['INNERTUBE_CONTEXT']['client'].pop('remoteHost')
+            forbidden_item = [ 'remoteHost', 'configInfo', 'rolloutToken', 'deviceExperimentId' ]
+            for item in forbidden_item:
+                if ytcfg['INNERTUBE_CONTEXT']['client'].get(item):
+                    print(f'Removing {item} from ytcfg')
+                    ytcfg['INNERTUBE_CONTEXT']['client'].pop(item)
+            if ytcfg['INNERTUBE_CONTEXT'].get('clickTracking'):
+                print('Removing clickTracking from ytcfg')
+                ytcfg['INNERTUBE_CONTEXT'].pop('clickTracking')
             ytcfg_str = json.dumps(ytcfg)
             with open(ytcfg_file, 'x') as file:
                 print(f'Saving ytcfg file as {ytcfg_file}: ' + str(len(ytcfg_str)))
@@ -937,6 +942,9 @@ def call_youtube_api(client, api, data):
         if ytcfg_context:
             # Needed to set correct client version obtained from ytcfg
             context = ytcfg_context
+        if settings.use_po_token:
+            # Needed to use correct visitorData from po_token_cache.txt
+            context['client']['visitorData'] = visitor_data
     headers = (('Content-Type', 'application/json'),
                ('User-Agent', user_agent),
                ('X-Goog-Api-Format-Version', '1'),
