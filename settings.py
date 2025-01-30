@@ -285,6 +285,13 @@ Archive: https://archive.ph/OZQbN''',
         'category': 'network',
         }),
 
+    ('use_ytcfg', {
+        'label': 'Use ytcfg for innertube api request',
+        'type': bool,
+        'default': True,
+        'comment': '''Use ytcfg from yt_endpoint for innertube api client request''',
+        'category': 'network',
+        }),
 
     ('proxy_images', {
         'label': 'Route images',
