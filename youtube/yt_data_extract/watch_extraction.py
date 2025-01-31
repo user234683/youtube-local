@@ -1050,20 +1050,20 @@ def replace_n_signatures(info):
 # nsig decryption
 # adapted from iv-org/inv_sig_helper
 NSIG_FUNCTION_ARRAYS = [
-    r'null\)&&\([a-zA-Z]=(?P<nfunc>[a-zA-Z0-9$]+)\[(?P<idx>\d+)\]\([a-zA-Z0-9]\)',
-    r'(?x)&&\(b="n+"\[[a-zA-Z0-9.+$]+\],c=a\.get\(b\)\)&&\(c=(?P<nfunc>[a-zA-Z0-9$]+)(?:\[(?P<idx>\d+)\])?\([a-zA-Z0-9]\)',
+    r'null\)&&\([a-zA-Z]=(?P<nfunc>[a-zA-Z0-9_]+)\[(?P<idx>\d+)\]\([a-zA-Z0-9]\)',
+    r'(?x)&&\(b="n+"\[[a-zA-Z0-9_.+\\$]+\],c=a\.get\(b\)\)&&\(c=(?P<nfunc>[a-zA-Z0-9_\\$]+)(?:\[(?P<idx>\d+)\])?\([a-zA-Z0-9]\)',
 ]
 
 NSIG_FUNCTION_ENDINGS = [
-    r'=\s*function(\([\w]+\)\{\s*var\s+[\w\s]+=[\w\.\s]+?\.call\s*\([\w\s$]+?,[\(\)\",\s]+\)[\S\s]*?\}\s*return [\w\.\s$]+?\.call\s*\([\w\s$]+?\s*,[\(\)\",\s]+\)\s*\}\s*;)',
+    r'=\s*function(\(\w\)\s*\{[\S\s]*\{return.[a-zA-Z0-9_-]+_w8_.+?\}\s*return\s*\w+\.join\(""\)\};)',
     r'=\s*function([\S\s]*?\}\s*?return \w+?\.join\(\"\"\)\s*\};)',
-    r'=\s*function([\S\s]*?\}\s*return [\W\w$]+?\.call\([\w$]+?,\"\"\)\s*\};)',
+    r'=\s*function([\S\s]*?\}\s*return [\W\w\\$]+?\.call\([\w\\$]+?,\"\"\)\s*\};)',
 ]
 
 def extract_nsig_func(base_js):
     regex = re
     for i, member in enumerate(NSIG_FUNCTION_ARRAYS):
-        func_array_re = regex.compile(member.replace('$', '\\$'))
+        func_array_re = regex.compile(member)
         func_array = regex.search(func_array_re, base_js)
         if not func_array == None:
             func_name = func_array.group(1)
@@ -1078,7 +1078,7 @@ def extract_nsig_func(base_js):
         func_body_re.append(func_body_re_item)
     nsig_func_body = None
     for i, member in enumerate(func_body_re):
-        result = regex.search(regex.compile(member.replace('$', '\\$')), base_js)
+        result = regex.search(regex.compile(member), base_js)
         if result:
             nsig_func_body = result.group(1)
             print('nsig_func_body length: ' + str(len(nsig_func_body)))
