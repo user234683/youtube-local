@@ -869,19 +869,34 @@ def get_ytcfg(client):
     else:
         with open(ytcfg_file, 'r') as file:
             print(f'Loading {ytcfg_file}')
-            with open(ytcfg_file, 'r') as file:
-                ytcfg = json.load(file)
-                print(f'{ytcfg_file} loaded: ' + str(len(ytcfg)))
-                return ytcfg
+            ytcfg = json.load(file)
+            ytcfg_file_age = time.time() - os.path.getmtime(ytcfg_file)
+            print(f'{ytcfg_file} loaded: ' + str(len(ytcfg)))
+            if ytcfg_file_age > 86400:
+                print(f'{ytcfg_file} is more than 24h old. Will get a new one on the next video load.')
+                file.close()
+                os.remove(ytcfg_file)
+            return ytcfg
 
-def get_player_version(video_id, headers):
-    iframe_api = 'https://www.youtube.com/iframe_api'
-    iframe_dump = 'iframe_dump_'+video_id+'.js'
-    iframe_response = fetch_url(iframe_api + '?videoId=' + video_id, headers=headers, report_text='Downloading iframe_api js', debug_name=iframe_dump)
+def get_player_version(video_id, headers, ytcfg: {} or None):
+    player_version = None
     player_version_re = re.compile(r'player\\?/([0-9a-fA-F]{8})\\?/')
-    player_version = re.search(player_version_re, iframe_response.decode("utf-8"))
-    if not player_version == None:
-        return player_version.group(1)
+    if not ytcfg:
+        print('Querying yt iframe api to get player version')
+        iframe_api = 'https://www.youtube.com/iframe_api'
+        iframe_dump = 'iframe_dump_'+video_id+'.js'
+        iframe_response = fetch_url(iframe_api + '?videoId=' + video_id, headers=headers, report_text='Downloading iframe_api js', debug_name=iframe_dump)
+        player_version_search = re.search(player_version_re, iframe_response.decode("utf-8"))
+        if player_version_search:
+            player_version = player_version_search.group(1)
+    else:
+        print('Getting player version from ytcfg')
+        ytcfg_str = json.dumps(ytcfg)
+        player_version_search = re.search(player_version_re, ytcfg_str)
+        if player_version_search:
+            player_version = player_version_search.group(1)
+    if player_version is not None:
+        return player_version
 
 def extract_signature_timestamp(base_js):
     sts_re = re.compile(r'(?:signatureTimestamp|sts)\s*:\s*(?P<sts>[0-9]{5})')
@@ -920,7 +935,8 @@ def call_youtube_api(client, api, data):
                 os.remove(visitor_data_file)
         else:
             visitor_data = None
-            print('''Not using visitor_data in the api request. Reload the page if you are asked to sign in.''')
+            if not ytcfg:
+                print('''Not using visitor_data in the api request. Reload the page if you are asked to sign in.''')
     po_token_data = None
     if settings.use_po_token:
         po_token_cache = os.path.join(settings.data_dir,'po_token_cache.txt')
@@ -961,7 +977,7 @@ def call_youtube_api(client, api, data):
     require_js_player = client_params.get('REQUIRE_JS_PLAYER')
     if require_js_player:
         print('js player is required for this client: ' + str(client))
-        player_version = get_player_version(data['videoId'], headers=headers)
+        player_version = get_player_version(data['videoId'], headers=headers, ytcfg=ytcfg)
         player_url = 'https://www.youtube.com/s/player/' + player_version + '/player_ias.vflset/en_US/base.js'
         print("Player version: " + player_version)
         player_file = os.path.join(settings.data_dir,'iframe_api_base_'+ player_version + '.js')
