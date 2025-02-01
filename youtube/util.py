@@ -840,6 +840,8 @@ def get_ytcfg(client):
             }
     user_agent = INNERTUBE_CLIENTS[client]['INNERTUBE_CONTEXT']['client']['userAgent'].replace(',gzip(gfe)','')
     ytcfg_file = os.path.join(settings.data_dir,f'ytcfg_{client}.json')
+    if not os.path.isdir(settings.data_dir):
+        os.makedirs(settings.data_dir)
     if not os.path.exists(ytcfg_file):
         endpoint_response = fetch_url(yt_endpoint.get(client), headers={'User-Agent': user_agent}, report_text='Downloading yt_endpoint to get ytcfg', debug_name=f'yt_endpoint_{client}')
         ytcfg_re = re.compile(r'ytcfg\.set\((\{.+?\})\)')
