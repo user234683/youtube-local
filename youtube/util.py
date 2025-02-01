@@ -829,13 +829,12 @@ def get_ytcfg(client):
     if not settings.use_ytcfg:
         print('Not using ytcfg for innertube api')
         return None
+    allowed_clients = [ 'web', 'mweb', 'tv' ]
+    if client not in allowed_clients:
+        print(f'Not using ytcfg with client: {client}')
+        return None
     yt_endpoint = {
-            'android': 'https://m.youtube.com',
-            'android-test-suite': 'https://m.youtube.com',
-            'ios': 'https://m.youtube.com',
-            'tv_embedded': 'https://www.youtube.com/tv',
             'web': 'https://www.youtube.com',
-            'web_creator': 'https://www.youtube.com',
             'mweb': 'https://m.youtube.com',
             'tv': 'https://www.youtube.com/tv'
             }
