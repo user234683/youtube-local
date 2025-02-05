@@ -57,7 +57,7 @@ client = innertube_client[innertube_client_id]
 def proxy_site(env, start_response, video=False):
     client_params = util.INNERTUBE_CLIENTS[client]
     client_context = client_params['INNERTUBE_CONTEXT']
-    client_ua = client_context.get('userAgent') or util.mobile_user_agent
+    client_ua = client_context['client'].get('userAgent') or util.mobile_user_agent
     send_headers = {
         'User-Agent': client_ua,
         'Accept': '*/*',
