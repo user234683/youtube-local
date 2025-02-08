@@ -446,7 +446,8 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
 
     # Age restricted video, retry
     if not settings.allow_age_restricted_content:
-        print('Age restricted content is not allowed.')
+        if info.get('age_restricted'):
+            print('Age restricted content is not allowed.')
     else:
         if info['age_restricted'] or info['player_urls_missing']:
             if info['age_restricted']:
