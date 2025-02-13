@@ -915,6 +915,63 @@ def get_player_version(video_id, headers, ytcfg: {} or None):
     if player_version is not None:
         return player_version
 
+def get_visitor_data():
+    visitor_data = None
+    if not settings.use_po_token:
+        if not settings.use_visitor_data:
+            return None
+    ytcfg = get_ytcfg(client)
+    po_token_cache = os.path.join(settings.data_dir, 'po_token_cache.txt')
+    visitor_data_cache = os.path.join(settings.data_dir, 'visitorData.txt')
+    if settings.use_po_token:
+        if os.path.isfile(po_token_cache):
+            with open(po_token_cache, 'r') as file:
+                print('Getting visitor_data from po_token_cache')
+                po_token_dict = json.load(file)
+                visitor_data = po_token_dict.get('visitorData')
+            return visitor_data
+    if os.path.isfile(visitor_data_cache):
+        with open(visitor_data_cache, 'r') as file:
+            print('Getting visitor_data from cache')
+            visitor_data = file.read()
+        max_age = 12*3600
+        file_age = time.time() - os.path.getmtime(visitor_data_cache)
+        if file_age > max_age:
+            print('visitor_data cache is too old. Removing file...')
+        return visitor_data
+    if ytcfg:
+        visitor_data = ytcfg['INNERTUBE_CONTEXT']['client'].get('visitorData')
+        return visitor_data
+    print('Fetching youtube homepage to get visitor_data')
+    yt_homepage = 'https://www.youtube.com'
+    yt_resp = fetch_url(yt_homepage, headers={'User-Agent': mobile_user_agent}, report_text='Getting youtube homepage')
+    visitor_data_re = r'''"visitorData":\s*?"(.+?)"'''
+    visitor_data_match = re.search(visitor_data_re, yt_resp.decode())
+    if visitor_data_match:
+        visitor_data = visitor_data_match.group(1)
+        print(f'Got visitor_data: {visitor_data}')
+        with open(visitor_data_cache, 'w') as file:
+            print('Saving visitor_data cache...')
+            file.write(visitor_data)
+        return visitor_data
+    else:
+        print('Unable to get visitor_data value')
+    return visitor_data
+
+def get_po_token():
+    if not settings.use_po_token:
+        return None
+    po_token_cache = os.path.join(settings.data_dir, 'po_token_cache.txt')
+    if os.path.isfile(po_token_cache):
+        with open(po_token_cache, 'r') as file:
+            print('Extracting po_token from po_token_cache')
+            po_token_dict = json.load(file)
+            po_token = po_token_dict.get('poToken')
+            return po_token
+    else:
+        print('po_token_cache.txt is not found.')
+        return None
+
 def extract_signature_timestamp(base_js):
     sts_re = re.compile(r'(?:signatureTimestamp|sts)\s*:\s*(?P<sts>[0-9]{5})')
     signature_timestamp_search = sts_re.search(base_js)
@@ -933,42 +990,10 @@ def call_youtube_api(client, api, data):
     visitor_data_file = os.path.join(settings.data_dir, 'visitorData.txt')
     ytcfg = get_ytcfg(client)
     visitor_data_header = None
-    if not settings.use_po_token:
-        if os.path.exists(visitor_data_file):
-            file_age = time.time() - os.path.getmtime(visitor_data_file)
-            if file_age < 86400:
-                print('visitor data file is less than 24h old. Using its content')
-                try:
-                    with open(visitor_data_file, 'r') as file:
-                        visitor_data = file.read()
-                        print('Visitor data : ' + visitor_data)
-                        visitor_data_header = (
-                                'X-Goog-Visitor-Id', visitor_data
-                                )
-                except OSError:
-                    print('An OS Error occured while reading visitor data file. No visitor data sent. Continuing anyway')
-            else:
-                print('visitor data file is more than 24h old. Removing the file.')
-                os.remove(visitor_data_file)
-        else:
-            visitor_data = None
-            if not ytcfg:
-                print('''Not using visitor_data in the api request. Reload the page if you are asked to sign in.''')
-    po_token_data = None
-    if settings.use_po_token:
-        po_token_cache = os.path.join(settings.data_dir,'po_token_cache.txt')
-        if os.path.exists(po_token_cache):
-            try:
-                with open(po_token_cache, 'r') as file:
-                    po_token_dict = json.loads(file.read())
-                    file.close()
-            except OSError:
-                print('An OS error occured which prevents access to po_token_cache file')
-            visitor_data = po_token_dict.get('visitorData')
-            visitor_data_header = ('X-Goog-Visitor-Id', visitor_data)
-            po_token_data = {
-                    'poToken': po_token_dict['poToken'],
-                    }
+    visitor_data = get_visitor_data()
+    if visitor_data:
+        visitor_data_header = ( 'X-Goog-Visitor-Id', visitor_data )
+    po_token_data = get_po_token()
     if ytcfg:
         ytcfg_context = ytcfg.get('INNERTUBE_CONTEXT')
         print('Got client context from ytcfg')
