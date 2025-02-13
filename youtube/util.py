@@ -882,13 +882,30 @@ def get_player_version(video_id, headers, ytcfg: {} or None):
     player_version = None
     player_version_re = re.compile(r'player\\?/([0-9a-fA-F]{8})\\?/')
     if not ytcfg:
-        print('Querying yt iframe api to get player version')
+        player_version_cache = os.path.join(settings.data_dir, 'player_version.txt')
         iframe_api = 'https://www.youtube.com/iframe_api'
         iframe_dump = 'iframe_dump_'+video_id+'.js'
-        iframe_response = fetch_url(iframe_api + '?videoId=' + video_id, headers=headers, report_text='Downloading iframe_api js', debug_name=iframe_dump)
-        player_version_search = re.search(player_version_re, iframe_response.decode("utf-8"))
-        if player_version_search:
-            player_version = player_version_search.group(1)
+        if not os.path.isfile(player_version_cache):
+            print('Querying yt iframe api to get player version')
+            iframe_response = fetch_url(iframe_api + '?videoId=' + video_id, headers=headers, report_text='Downloading iframe_api js', debug_name=iframe_dump)
+            player_version_search = re.search(player_version_re, iframe_response.decode("utf-8"))
+
+            if player_version_search:
+                player_version = player_version_search.group(1)
+            with open(player_version_cache, 'w') as file:
+                print('Saving extracted player_version from iframe_api')
+                file.write(player_version)
+        else:
+            file_age = time.time() - os.path.getmtime(player_version_cache)
+            max_age = 6*3600
+            player_version = ''
+            with open(player_version_cache, 'r') as file:
+                print('Getting player_version from cache.')
+                player_version = file.read()
+            if file_age > max_age:
+                print('Player_version cache is more than 6 hours, deleting file.')
+                os.remove(player_version_cache)
+
     else:
         print('Getting player version from ytcfg')
         ytcfg_str = json.dumps(ytcfg)
