@@ -754,7 +754,56 @@ INNERTUBE_CLIENTS = {
         },
         'INNERTUBE_CONTEXT_CLIENT_NAME': 1
     },
+    'android_vr': {
+        'INNERTUBE_API_KEY': 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w',
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'ANDROID_VR',
+                'clientVersion': '1.60.19',
+                'deviceMake': 'Oculus',
+                'deviceModel': 'Quest 3',
+                'androidSdkVersion': 32,
+                'userAgent': 'com.google.android.apps.youtube.vr.oculus/1.60.19 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip',
+                'osName': 'Android',
+                'osVersion': '12L',
+            },
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 28,
+        'REQUIRE_JS_PLAYER': False,
+    },
 }
+
+def get_visitor_data():
+    visitor_data = None
+    visitor_data_cache = os.path.join(settings.data_dir, 'visitorData.txt')
+    if not os.path.exists(settings.data_dir):
+        os.makedirs(settings.data_dir)
+    if os.path.isfile(visitor_data_cache):
+        with open(visitor_data_cache, 'r') as file:
+            print('Getting visitor_data from cache')
+            visitor_data = file.read()
+        max_age = 12*3600
+        file_age = time.time() - os.path.getmtime(visitor_data_cache)
+        if file_age > max_age:
+            print('visitor_data cache is too old. Removing file...')
+            os.remove(visitor_data_cache)
+        return visitor_data
+
+    print('Fetching youtube homepage to get visitor_data')
+    yt_homepage = 'https://www.youtube.com'
+    yt_resp = fetch_url(yt_homepage, headers={'User-Agent': mobile_user_agent}, report_text='Getting youtube homepage')
+    visitor_data_re = r'''"visitorData":\s*?"(.+?)"'''
+    visitor_data_match = re.search(visitor_data_re, yt_resp.decode())
+    if visitor_data_match:
+        visitor_data = visitor_data_match.group(1)
+        print(f'Got visitor_data: {len(visitor_data)}')
+        with open(visitor_data_cache, 'w') as file:
+            print('Saving visitor_data cache...')
+            file.write(visitor_data)
+        return visitor_data
+    else:
+        print('Unable to get visitor_data value')
+    return visitor_data
 
 def call_youtube_api(client, api, data):
     client_params = INNERTUBE_CLIENTS[client]
@@ -762,12 +811,17 @@ def call_youtube_api(client, api, data):
     key = client_params['INNERTUBE_API_KEY']
     host = client_params.get('INNERTUBE_HOST') or 'www.youtube.com'
     user_agent = context['client'].get('userAgent') or mobile_user_agent
+    visitor_data = get_visitor_data()
 
     url = 'https://' + host + '/youtubei/v1/' + api + '?key=' + key
+    if visitor_data:
+        context['client'].update({'visitorData': visitor_data})
     data['context'] = context
 
     data = json.dumps(data)
     headers = (('Content-Type', 'application/json'),('User-Agent', user_agent))
+    if visitor_data:
+        headers = ( *headers, ('X-Goog-Visitor-Id', visitor_data ))
     response = fetch_url(
         url, data=data, headers=headers,
         debug_name='youtubei_' + api + '_' + client,
