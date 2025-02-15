@@ -641,12 +641,6 @@ def get_watch_page(video_id=None):
             '/videoplayback',
             '/videoplayback/name/' + filename)
 
-    if settings.gather_googlevideo_domains:
-        with open(os.path.join(settings.data_dir, 'googlevideo-domains.txt'), 'a+', encoding='utf-8') as f:
-            url = info['formats'][0]['url']
-            subdomain = url[0:url.find(".googlevideo.com")]
-            f.write(subdomain + "\n")
-
 
     download_formats = []
 

@@ -309,13 +309,6 @@ Defaults to -1, which means no default value is forced and the browser will set 
         'comment': '',
     }),
 
-    ('gather_googlevideo_domains', {
-        'type': bool,
-        'default': False,
-        'comment': '''Developer use to debug 403s''',
-        'hidden': True,
-    }),
-
     ('debugging_save_responses', {
         'type': bool,
         'default': False,
@@ -325,7 +318,7 @@ Defaults to -1, which means no default value is forced and the browser will set 
 
     ('settings_version', {
         'type': int,
-        'default': 5,
+        'default': 6,
         'comment': '''Do not change, remove, or comment out this value, or else your settings may be lost or corrupted''',
         'hidden': True,
     }),
@@ -397,11 +390,19 @@ def upgrade_to_5(settings_dict):
     new_settings['settings_version'] = 5
     return new_settings
 
+def upgrade_to_6(settings_dict):
+    new_settings = settings_dict.copy()
+    if 'gather_googlevideo_domains' in new_settings:
+        del new_settings['gather_googlevideo_domains']
+    new_settings['settings_version'] = 6
+    return new_settings
+
 upgrade_functions = {
     1: upgrade_to_2,
     2: upgrade_to_3,
     3: upgrade_to_4,
     4: upgrade_to_5,
+    5: upgrade_to_6,
 }
 
 def log_ignored_line(line_number, message):
