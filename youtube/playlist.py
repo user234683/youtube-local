@@ -115,7 +115,7 @@ def get_playlist_page():
 
     video_count = yt_data_extract.deep_get(info, 'metadata', 'video_count')
     if video_count is None:
-        video_count = 40
+        video_count = 1000
 
     return flask.render_template('playlist.html',
         header_playlist_names = local_playlist.get_playlist_names(),
