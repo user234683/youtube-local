@@ -90,7 +90,7 @@ For security reasons, enabling this is not recommended.''',
         'max': 100,
         'min': -1,
         'comment': '''Sets a default volume.
-        Defaults to -1, which means no default value is forced and the browser will set the volume.''',
+Defaults to -1, which means no default value is forced and the browser will set the volume.''',
         'category': 'playback',
     }),
 
@@ -461,11 +461,27 @@ else:
                 log_ignored_line(node.lineno,  target.id + " is not a valid setting")
                 continue
 
-            if type(node.value) not in attributes:
+            value = None
+            # Negative values
+            if (
+                type(node.value) is ast.UnaryOp
+                and type(node.value.op) is ast.USub
+                and type(node.value.operand) in attributes
+            ):
+                value = -node.value.operand.__getattribute__(
+                    attributes[type(node.value.operand)]
+                )
+            elif type(node.value) not in attributes:
+                print(type(node.value))
                 log_ignored_line(node.lineno, "only literals allowed for values")
                 continue
 
-            current_settings_dict[target.id] = node.value.__getattribute__(attributes[type(node.value)])
+            # Regular values
+            if not value:
+                value = node.value.__getattribute__(
+                    attributes[type(node.value)]
+                )
+            current_settings_dict[target.id] = value
 
         # upgrades
         latest_version = SETTINGS_INFO['settings_version']['default']
