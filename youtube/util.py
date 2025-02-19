@@ -1083,23 +1083,4 @@ def call_youtube_api(client, api, data):
         debug_name='youtubei_' + api + '_' + client,
         report_text='Fetched ' + client + ' youtubei ' + api
     ).decode('utf-8')
-    response_dict = json.loads(response)
-    if settings.use_visitor_data:
-        if not settings.use_po_token:
-            try:
-                if response_dict['responseContext'].get('visitorData'):
-                    if not os.path.exists(visitor_data_file):
-                        try:
-                            with open(visitor_data_file, 'w') as file:
-                                print('Saving ' + visitor_data_file)
-                                file.write(response_dict['responseContext']['visitorData'])
-                                file.close()
-                        except OSError:
-                            print("An OS error prevents saving visitor data file")
-            except KeyError:
-                print('Unable to parse responseContext from yt api')
-    else:
-        if os.path.exists(visitor_data_file):
-            print('Removing visitor_data file')
-            os.remove(visitor_data_file)
     return response
