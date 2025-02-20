@@ -1049,9 +1049,8 @@ def replace_n_signatures(info):
 
 # nsig decryption
 # adapted from iv-org/inv_sig_helper
-NSIG_FUNCTION_ARRAYS = [
-    r'null\)&&\([a-zA-Z]=(?P<nfunc>[a-zA-Z0-9_]+)\[(?P<idx>\d+)\]\([a-zA-Z0-9]\)',
-    r'(?x)&&\(b="n+"\[[a-zA-Z0-9_.+\\$]+\],c=a\.get\(b\)\)&&\(c=(?P<nfunc>[a-zA-Z0-9_\\$]+)(?:\[(?P<idx>\d+)\])?\([a-zA-Z0-9]\)',
+NSIG_FUNCTION_ARRAYS = [ r'''null\)&&\([a-zA-Z]=(?P<nfunc>[_a-zA-Z0-9$]+)\[(?P<idx>\d+)\]\([a-zA-Z0-9]\)''',
+            r'''(?x)&&\(b="n+"\[[a-zA-Z0-9.+$]+\],c=a\.get\(b\)\)&&\(c=(?P<nfunc>[a-zA-Z0-9$]+)(?:\[(?P<idx>\d+)\])?\([a-zA-Z0-9]\)'''
 ]
 
 NSIG_FUNCTION_ENDINGS = [
