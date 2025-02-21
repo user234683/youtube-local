@@ -18,7 +18,6 @@ import collections
 import stem
 import stem.control
 import traceback
-from fake_useragent import UserAgent
 
 # The trouble with the requests library: It ships its own certificate bundle via certifi
 #  instead of using the system certificate store, meaning self-signed certificates
@@ -388,9 +387,9 @@ def head(url, use_tor=False, report_text=None, max_redirects=10):
             round(time.monotonic() - start_time,3))
     return response
 
-mobile_user_agent = UserAgent(os='Android').chrome
+mobile_user_agent = 'Mozilla/5.0 (Linux; Android 7.0; Redmi Note 4 Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Mobile Safari/537.36'
 mobile_ua = (('User-Agent', mobile_user_agent),)
-desktop_user_agent = UserAgent(os='Windows').firefox
+desktop_user_agent = 'Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0'
 desktop_ua = (('User-Agent', desktop_user_agent),)
 json_header = (('Content-Type', 'application/json'),)
 desktop_xhr_headers = (
