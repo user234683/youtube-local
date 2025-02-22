@@ -42,11 +42,14 @@ def page_number_to_sp_parameter(page, autocorrect, sort, filters):
     result = proto.uint(1, sort) + filters_enc + autocorrect + proto.uint(9, offset) + proto.string(61, b'')
     return base64.urlsafe_b64encode(result).decode('ascii')
 
+desktop_user_agent = util.desktop_user_agent
+mobile_user_agent = util.mobile_user_agent
+
 def get_search_json(query, page, autocorrect, sort, filters):
     url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote_plus(query)
     headers = {
         'Host': 'www.youtube.com',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)',
+        'User-Agent': desktop_user_agent,
         'Accept': '*/*',
         'Accept-Language': 'en-US,en;q=0.5',
         'X-YouTube-Client-Name': '1',
