@@ -880,7 +880,7 @@ def requires_decryption(info):
 decrypt_function_re = re.compile(r'function\([a-zA-Z]{1}\)\{(.{1}=.{1}\.split\(""\)[^\}{]+)return .{1}\.join\(""\)\}')
 # gives us e.g. rt, .xK, 5 from rt.xK(a,5) or rt, ["xK"], 5 from rt["xK"](a,5)
 # (var, operation, argument)
-var_op_arg_re = re.compile(r'(\w+)(\.\w+|\["[^"]+"\])\([a-zA-Z]{1},(\d+)\)')
+var_op_arg_re = re.compile(r'([\w\$]+)(\.[\w\$]+|\["[^"]+"\])\([a-zA-Z]{1},(\d+)\)')
 
 def extract_decryption_function(info, base_js):
     '''Insert decryption function into info. Return error string if not successful.
