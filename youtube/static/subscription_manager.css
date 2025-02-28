@@ -1,0 +1,366 @@
+body {
+    display: grid;
+    grid-gap: 20px;
+    grid-template-areas:
+        "header"
+        "main"
+        "footer";
+    /* Fix height */
+    height: 100vh;
+    grid-template-rows: auto 1fr auto;
+    /* fix top and bottom */
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
+
+img {
+    width: 100%;
+    height: auto;
+}
+
+a:link {
+    color: var(--link);
+}
+
+a:visited {
+    color: var(--link-visited);
+}
+
+input[type="text"],
+input[type="search"] {
+    background: var(--background);
+    border: 1px solid var(--button-border);
+    padding: 0.4rem 0.4rem;
+    font-size: 15px;
+    color: var(--search-text);
+    outline: none;
+    box-shadow: none;
+}
+
+input[type='search'] {
+    border-bottom: 1px solid var(--button-border);
+    border-top: 0px;
+    border-left: 0px;
+    border-right: 0px;
+    border-radius: 0px;
+}
+
+header {
+    display: grid;
+    grid-gap: 1px;
+    grid-template-areas:
+        "home"
+        "form"
+        "playlist";
+    grid-area: header;
+}
+
+.home {
+    grid-area: home;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 1rem;
+    margin-top: 1rem;
+}
+
+.form {
+    display: grid;
+    grid-gap: 4px;
+    grid-template-areas:
+        "search-box"
+        "search-button"
+        "dropdown";
+    grid-area: form;
+}
+
+.search-box {
+    grid-area: search-box;
+}
+.search-button {
+    grid-area: search-button;
+
+    cursor: pointer;
+    padding-bottom: 6px;
+    padding-left: .75em;
+    padding-right: .75em;
+    padding-top: 6px;
+    text-align: center;
+    white-space: nowrap;
+    background-color: var(--buttom);
+    border: 1px solid var(--button-border);
+    color: var(--buttom-text);
+    border-radius: 5px;
+}
+.search-button:hover {
+    background-color: var(--buttom-hover);
+}
+
+.dropdown {
+    display: grid;
+    grid-gap: 1px;
+    grid-template-areas:
+        "dropdown-label"
+        "dropdown-content";
+    grid-area: dropdown;
+}
+.dropdown-label {
+    grid-area: dropdown-label;
+
+    padding-bottom: 6px;
+    padding-left: .75em;
+    padding-right: .75em;
+    padding-top: 6px;
+    text-align: center;
+    white-space: nowrap;
+    background-color: var(--buttom);
+    border: 1px solid var(--button-border);
+    color: var(--buttom-text);
+    border-radius: 5px;
+}
+.dropdown-label:hover {
+    background-color: var(--buttom-hover);
+}
+
+/* ------------- Menu Mobile without JS ---------------- */
+/* input hidden */
+.opt-box {
+    display: none;
+}
+.dropdown-content {
+    display: none;
+    grid-area: dropdown-content;
+}
+label[for=options-toggle-cbox] {
+    cursor: pointer;
+    -webkit-touch-callout: none;
+      -webkit-user-select: none;
+       -khtml-user-select: none;
+         -moz-user-select: none;
+          -ms-user-select: none;
+              user-select: none;
+}
+
+#options-toggle-cbox:checked ~ .dropdown-content {
+    display: block;
+    white-space: nowrap;
+    background: var(--secondary-background);
+    padding: 0.5rem 1rem;
+}
+/*- ----------- End Menu Mobile without JS ------------- */
+
+.main {
+    grid-area: main;
+    display: grid;
+    grid-row-gap: 1rem;
+}
+
+/* fix hr when is children of grid */
+hr {
+    width: 100%;
+}
+
+.import-export {
+    display: grid;
+    grid-template-columns: 1fr;
+    margin: auto;
+    grid-template-areas:
+        "subscriptions-import-form"
+        "subscriptions-export-form";
+    align-items: center;
+    justify-items: center;
+    justify-content: center;
+}
+.subscriptions-import-form {
+    grid-area: subscriptions-import-form;
+    text-align: center;
+}
+
+.subscriptions-import-options {
+    display: grid;
+    grid-template-columns: repeat(1, auto);
+    margin: auto;
+}
+
+.subscriptions-export-form {
+    grid-area: subscriptions-export-form;
+    text-align: center;
+}
+
+.subscriptions-export-options {
+    display: grid;
+    grid-template-columns: repeat(1, auto);
+    margin: auto;
+}
+
+.sub-list-controls {
+    display: grid;
+    grid-row-gap: 0.2rem;
+}
+
+.subscriptions-import-form input[type='submit'],
+.subscriptions-export-form input[type='submit'],
+.sub-list-controls button[type='submit'],
+.sub-list-controls input[type='reset'] {
+    cursor: pointer;
+    padding-bottom: 6px;
+    padding-left: .75em;
+    padding-right: .75em;
+    padding-top: 6px;
+    text-align: center;
+    background-color: var(--buttom);
+    border: 1px solid var(--button-border);
+    color: var(--buttom-text);
+    border-radius: 5px;
+}
+
+.tag-group-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    margin: auto;
+}
+
+.sub-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    margin: auto;
+}
+
+/* pagination */
+.main .pagination-container {
+    display: grid;
+    justify-content: center;
+}
+
+.main .pagination-container .pagination-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.main .pagination-container .pagination-list .page-link {
+    border-style: none;
+    font-weight: bold;
+    text-align: center;
+    background: var(--secondary-focus);
+    text-decoration: none;
+    align-self: center;
+    padding: .5rem;
+    width: 1rem;
+}
+
+.main .pagination-container .pagination-list .page-link.is-current {
+    background: var(--secondary-background);
+}
+
+/* /video list item */
+
+.footer {
+    grid-area: footer;
+    display: grid;
+    grid-template-columns: auto;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    text-align: center;
+}
+
+.footer > p {
+    text-align: center;
+}
+
+@media (min-width: 480px) {
+    .item-video {
+        font-size: 0.85rem;
+    }
+    .info-box {
+        grid-gap: 2px;
+    }
+    .title {
+        font-size: 1rem;
+    }
+    .subscriptions-import-options {
+        display: grid;
+        grid-template-columns: repeat(2, auto);
+        margin: auto;
+        align-items: center;
+        justify-items: center;
+        justify-content: center;
+        grid-column-gap: 0.5rem;
+    }
+    .subscriptions-export-options {
+        display: grid;
+        grid-template-columns: repeat(4, auto);
+        margin: auto;
+        align-items: center;
+        justify-items: center;
+        justify-content: center;
+        grid-column-gap: 0.5rem;
+    }
+}
+
+@media (min-width: 600px) {
+    .video-container {
+        display: grid;
+        grid-row-gap: 0.5rem;
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (min-width: 992px) {
+    body {
+        display: grid;
+        grid-template-columns: 0.3fr 2fr 1fr 0.3fr;
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas:
+            "header header header header"
+            "main   main   main   main"
+            "footer footer footer footer";
+    }
+    .form {
+        display: grid;
+        grid-gap: 1px;
+        grid-template-columns: 1fr 1.4fr 0.3fr 1.3fr;
+        grid-template-areas: ". search-box search-button dropdown";
+        grid-area: form;
+        position: relative;
+    }
+    .dropdown {
+        display: grid;
+        grid-gap: 1px;
+        grid-template-columns: 100px auto;
+        grid-template-areas:
+            "dropdown-label"
+            "dropdown-content";
+        grid-area: dropdown;
+        position: absolute;
+        z-index: 1;
+    }
+    #options-toggle-cbox:checked ~ .dropdown-content {
+        width: calc(100% + 100px);
+        max-height: 80vh;
+        overflow-y: scroll;
+    }
+    .import-export {
+        max-width: 50vw;
+    }
+
+    .sub-list-controls {
+        grid-template-columns: repeat(8, auto);
+        max-height: 1rem;
+        grid-column-gap: 0.5rem;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .footer {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-column-gap: 2rem;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+}

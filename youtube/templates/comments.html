@@ -5,29 +5,30 @@
         <div class="comment">
             <a class="author-avatar" href="{{ comment['author_url'] }}" title="{{ comment['author'] }}">
                 {% if include_avatar %}
-                    <img class="author-avatar-img" src="{{ comment['author_avatar'] }}">
+                    <img class="author-avatar-img" alt="{{ comment['author'] }}" src="{{ comment['author_avatar'] }}">
                 {% endif %}
             </a>
             <address class="author-name">
                 <a class="author" href="{{ comment['author_url'] }}" title="{{ comment['author'] }}">{{ comment['author'] }}</a>
             </address>
             <a class="permalink" href="{{ comment['permalink'] }}" title="permalink">
-                <time datetime="">{{ comment['time_published'] }}</time>
+                <span>{{ comment['time_published'] }}</span>
             </a>
+
             {% if timestamp_links %}
-                <span class="text">{{ common_elements.text_runs(comment['text'])|timestamps|safe }}</span>
+                <span class="comment-text">{{ common_elements.text_runs(comment['text'])|timestamps|safe }}</span>
             {% else %}
-                <span class="text">{{ common_elements.text_runs(comment['text']) }}</span>
+                <span class="comment-text">{{ common_elements.text_runs(comment['text']) }}</span>
             {% endif %}
 
-            <span class="likes">{{ comment['likes_text'] if comment['approx_like_count'] else ''}}</span>
-            <div class="bottom-row">
+            <span class="comment-likes">{{ comment['likes_text'] if comment['approx_like_count'] else ''}}</span>
+            <div class="button-row">
                 {% if comment['reply_count'] %}
                     {% if settings.use_comments_js and comment['replies_url'] %}
-                        <details class="replies" src="{{ comment['replies_url'] }}">
+                        <details class="replies" data-src="{{ comment['replies_url'] }}">
                             <summary>{{ comment['view_replies_text'] }}</summary>
                             <a href="{{ comment['replies_url'] }}" class="replies-open-new-tab" target="_blank">Open in new tab</a>
-                            <div class="comment_page">loading..</div>
+                            <div class="comment_page">loading...</div>
                         </details>
                     {% elif comment['replies_url'] %}
                         <a href="{{ comment['replies_url'] }}" class="replies">{{ comment['view_replies_text'] }}</a>
@@ -37,7 +38,6 @@
                 {% endif %}
             </div>
         </div>
-
     </div>
 {% endmacro %}
 
@@ -61,8 +61,5 @@
             <a class="page-button more-comments" href="{{ comments_info['more_comments_url'] }}">More comments</a>
         {% endif %}
     {% endif %}
+
 {% endmacro %}
-
-
-
-

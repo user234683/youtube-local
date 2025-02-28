@@ -1,13 +1,13 @@
 import youtube
 from youtube import yt_app
 from youtube import util, comments, local_playlist, yt_data_extract
+from youtube.util import time_utc_isoformat
 import settings
 
 from flask import request
 import flask
 
 import json
-import html
 import gevent
 import os
 import math
@@ -171,7 +171,6 @@ def get_video_sources(info, target_resolution):
     }
 
 
-
 def make_caption_src(info, lang, auto=False, trans_lang=None):
     label = lang
     if auto:
@@ -185,12 +184,14 @@ def make_caption_src(info, lang, auto=False, trans_lang=None):
         'on': False,
     }
 
+
 def lang_in(lang, sequence):
     '''Tests if the language is in sequence, with e.g. en and en-US considered the same'''
     if lang is None:
         return False
     lang = lang[0:2]
     return lang in (l[0:2] for l in sequence)
+
 
 def lang_eq(lang1, lang2):
     '''Tests if two iso 639-1 codes are equal, with en and en-US considered the same.
@@ -199,15 +200,17 @@ def lang_eq(lang1, lang2):
         return False
     return lang1[0:2] == lang2[0:2]
 
+
 def equiv_lang_in(lang, sequence):
     '''Extracts a language in sequence which is equivalent to lang.
     e.g. if lang is en, extracts en-GB from sequence.
-    Necessary because if only a specific variant like en-GB is available, can't ask Youtube for simply en. Need to get the available variant.'''
+    Necessary because if only a specific variant like en-GB is available, can't ask YouTube for simply en. Need to get the available variant.'''
     lang = lang[0:2]
     for l in sequence:
         if l[0:2] == lang:
             return l
     return None
+
 
 def get_subtitle_sources(info):
     '''Returns these sources, ordered from least to most intelligible:
@@ -295,6 +298,7 @@ def get_ordered_music_list_attributes(music_list):
 
     return ordered_attributes
 
+
 def save_decrypt_cache():
     try:
         f = open(os.path.join(settings.data_dir, 'decrypt_function_cache.json'), 'w')
@@ -304,6 +308,7 @@ def save_decrypt_cache():
 
     f.write(json.dumps({'version': 1, 'decrypt_cache':decrypt_cache}, indent=4, sort_keys=True))
     f.close()
+
 
 def decrypt_signatures(info, video_id):
     '''return error string, or False if no errors'''
@@ -334,10 +339,12 @@ def _add_to_error(info, key, additional_message):
     else:
         info[key] = additional_message
 
+
 def fetch_player_response(client, video_id):
     return util.call_youtube_api(client, 'player', {
         'videoId': video_id,
     })
+
 
 def fetch_watch_page_info(video_id, playlist_id, index):
     # bpctr=9999999999 will bypass are-you-sure dialogs for controversial
@@ -364,8 +371,6 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     tasks = (
         # Get video metadata from here
         gevent.spawn(fetch_watch_page_info, video_id, playlist_id, index),
-
-
         gevent.spawn(fetch_player_response, 'android_vr', video_id)
     )
     gevent.joinall(tasks)
@@ -425,7 +430,7 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
             and info['formats'] and info['formats'][0]['url']):
         try:
             response = util.head(info['formats'][0]['url'],
-                report_text='Checked for URL access')
+                                 report_text='Checked for URL access')
         except urllib3.exceptions.HTTPError:
             print('Error while checking for URL access:\n')
             traceback.print_exc()
@@ -441,9 +446,10 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
             print('Error: exceeded max redirects while checking video URL')
     return info
 
+
 def video_quality_string(format):
     if format['vcodec']:
-        result =str(format['width'] or '?') + 'x' + str(format['height'] or '?')
+        result = str(format['width'] or '?') + 'x' + str(format['height'] or '?')
         if format['fps']:
             result += ' ' + str(format['fps']) + 'fps'
         return result
@@ -493,6 +499,7 @@ def format_bytes(bytes):
     suffix = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'][exponent]
     converted = float(bytes) / float(1024 ** exponent)
     return '%.2f%s' % (converted, suffix)
+
 
 @yt_app.route('/ytl-api/storyboard.vtt')
 def get_storyboard_vtt():
@@ -596,7 +603,7 @@ def get_watch_page(video_id=None):
     comments_info, info = tasks[0].value, tasks[1].value
 
     if info['error']:
-        return flask.render_template('error.html', error_message = info['error'])
+        return flask.render_template('error.html', error_message=info['error'])
 
     video_info = {
         'duration':  util.seconds_to_timestamp(info['duration'] or 0),
@@ -608,6 +615,7 @@ def get_watch_page(video_id=None):
 
     # prefix urls, and other post-processing not handled by yt_data_extract
     for item in info['related_videos']:
+        item['thumbnail'] = "https://i.ytimg.com/vi/{}/hqdefault.jpg".format(item['id']) # set HQ relateds thumbnail videos
         util.prefix_urls(item)
         util.add_extra_html_info(item)
     for song in info['music_list']:
@@ -640,7 +648,6 @@ def get_watch_page(video_id=None):
         fmt['url'] = fmt['url'].replace(
             '/videoplayback',
             '/videoplayback/name/' + filename)
-
 
     download_formats = []
 
@@ -817,8 +824,9 @@ def get_transcript(caption_path):
         msg = ('Error retrieving captions: ' + str(e) + '\n\n'
             + 'The caption url may have expired.')
         print(msg)
-        return flask.Response(msg,
-            status = e.code,
+        return flask.Response(
+            msg,
+            status=e.code,
             mimetype='text/plain;charset=UTF-8')
 
     lines = captions.splitlines()
@@ -865,7 +873,4 @@ def get_transcript(caption_path):
             result += seg['begin'] + ' ' + seg['text'] + '\r\n'
 
     return flask.Response(result.encode('utf-8'),
-        mimetype='text/plain;charset=UTF-8')
-
-
-
+                          mimetype='text/plain;charset=UTF-8')

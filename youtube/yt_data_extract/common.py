@@ -109,7 +109,7 @@ def concat_or_none(*strings):
 def remove_redirect(url):
     if url is None:
         return None
-    if re.fullmatch(r'(((https?:)?//)?(www.)?youtube.com)?/redirect\?.*', url) is not None: # youtube puts these on external links to do tracking
+    if re.fullmatch(r'(((https?:)?//)?(www.)?youtube.com)?/redirect\?.*', url) is not None: # YouTube puts these on external links to do tracking
         query_string = url[url.find('?')+1: ]
         return urllib.parse.parse_qs(query_string)['q'][0]
     return url
@@ -133,14 +133,14 @@ def _recover_urls(runs):
     for run in runs:
         url = deep_get(run, 'navigationEndpoint', 'urlEndpoint', 'url')
         text = run.get('text', '')
-        # second condition is necessary because youtube makes other things into urls, such as hashtags, which we want to keep as text
+        # second condition is necessary because YouTube makes other things into urls, such as hashtags, which we want to keep as text
         if url is not None and (text.startswith('http://') or text.startswith('https://')):
             url = remove_redirect(url)
             run['url'] = url
-            run['text'] = url # youtube truncates the url text, use actual url instead
+            run['text'] = url # YouTube truncates the url text, use actual url instead
 
 def extract_str(node, default=None, recover_urls=False):
-    '''default is the value returned if the extraction fails. If recover_urls is true, will attempt to fix Youtube's truncation of url text (most prominently seen in descriptions)'''
+    '''default is the value returned if the extraction fails. If recover_urls is true, will attempt to fix YouTube's truncation of url text (most prominently seen in descriptions)'''
     if isinstance(node, str):
         return node
 

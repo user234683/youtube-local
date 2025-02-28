@@ -2,48 +2,13 @@
 {% extends "base.html" %}
 {% import "common_elements.html" as common_elements %}
 {% block style %}
-    main > *{
-        width: 800px;
-        max-width: 100%;
-        margin: auto;
-    }
-
-    .playlist-metadata{
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: space-between;
-
-
-        margin: 15px auto;
-        padding: 7px;
-        background-color: var(--interface-color);
-    }
-        .playlist-title{
-        }
-        #export-options{
-            justify-self: end;
-        }
-
-    #video-remove-container{
-        display: flex;
-        justify-content: space-between;
-        margin: 0px auto 15px auto;
-    }
-        #playlist-remove-button{
-            white-space: nowrap;
-        }
-
-    #results{
-        display: grid;
-        grid-auto-rows: 0fr;
-        grid-row-gap: 10px;
-    }
+    <link href="/youtube.com/static/message_box.css" rel="stylesheet">
+    <link href="/youtube.com/static/local_playlist.css" rel="stylesheet">
 {% endblock style %}
 
 {% block main %}
     <div class="playlist-metadata">
-        <h2 class="playlist-title">{{ playlist_name }}</h2>
+        <h2 class="play-title">{{ playlist_name }}</h2>
 
         <div id="export-options">
             <form id="playlist-export" method="post">
@@ -56,18 +21,29 @@
             </form>
         </div>
     </div>
+
     <form id="playlist-remove" action="/youtube.com/edit_playlist" method="post" target="_self"></form>
-    <div id="video-remove-container">
-        <button type="submit" name="action" value="remove_playlist" form="playlist-remove" formaction="" onclick="return confirm('You are about to permanently delete {{ playlist_name }}\n\nOnce a playlist is permanently deleted, it cannot be recovered.');">Remove playlist</button>
+    <div class="playlist-metadata" id="video-remove-container">
+        <button id="removePlayList" type="submit" name="action" value="remove_playlist" form="playlist-remove" formaction="">Remove playlist</button>
         <input type="hidden" name="playlist_page" value="{{ playlist_name }}" form="playlist-edit">
-        <button type="submit" id="playlist-remove-button" name="action" value="remove" form="playlist-edit" formaction="">Remove from playlist</button>
+        <button class="play-action" type="submit" id="playlist-remove-button" name="action" value="remove" form="playlist-edit" formaction="">Remove from playlist</button>
     </div>
-    <div id="results">
+    <div id="results" class="video-container">
         {% for video_info in videos %}
             {{ common_elements.item(video_info) }}
         {% endfor %}
     </div>
-    <nav class="page-button-row">
-        {{ common_elements.page_buttons(num_pages, '/https://www.youtube.com/playlists/' + playlist_name, parameters_dictionary) }}
-    </nav>
+    <script>
+     // @license magnet:?xt=urn:btih:1f739d935676111cfff4b4693e3816e664797050&dn=gpl-3.0.txt GPL-v3-or-Later
+     const deletePlayList = document.getElementById('removePlayList');
+     deletePlayList.addEventListener('click', (event) => {
+         return confirm('You are about to permanently delete {{ playlist_name }}\n\nOnce a playlist is permanently deleted, it cannot be recovered.')
+     });
+     // @license-end
+    </script>
+    <footer class="pagination-container">
+        <nav class="pagination-list">
+            {{ common_elements.page_buttons(num_pages, '/https://www.youtube.com/playlists/' + playlist_name, parameters_dictionary) }}
+        </nav>
+    </footer>
 {% endblock main %}

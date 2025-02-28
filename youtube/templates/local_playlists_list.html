@@ -2,21 +2,7 @@
 {% extends "base.html" %}
 
 {% block style %}
-main{
-    display: flex;
-    justify-content: center;
-}
-    ul{
-        background-color: var(--interface-color);
-        margin-top: 20px;
-        padding: 20px;
-        width: 400px;
-        max-width: 100%;
-        align-self: start;
-    }
-        li{
-            margin-bottom: 10px;
-        }
+    <link href="/youtube.com/static/home.css" rel="stylesheet"/>
 {% endblock style %}
 
 {% block main %}
@@ -26,9 +12,3 @@ main{
         {% endfor %}
     </ul>
 {% endblock main %}
-
-
-
-
-
-

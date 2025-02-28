@@ -1,1 +1,5 @@
+# Include all production requirements
+-r requirements.txt
+
+# Development requirements
 pytest>=6.2.1

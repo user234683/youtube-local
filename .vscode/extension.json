@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "editorconfig.editorconfig",
+    "shardulm94.trailing-spaces",
+    "ybaumes.highlight-trailing-white-spaces",
+    "jasonnutter.vscode-codeowners"
+  ]
+}

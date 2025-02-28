@@ -1,66 +1,22 @@
-body{
-    --interface-color: #333333;
-    --text-color: #cccccc;
-    --background-color: #000000;
-    --video-background-color: #080808;
-    --link-color-rgb: 34, 170, 255;
-    --visited-link-color-rgb: 119, 85, 255;
+:root {
+    --background:           #121113;
+    --text:                 #FFFFFF;
+    --secondary-hover:      #222222;
+    --secondary-focus:      #121113;
+    --secondary-inverse:    #FFFFFF;
+    --primary-background:   #242424;
+    --secondary-background: #222222;
+    --thumb-background:     #222222;
+    --link:                 #00B0FF;
+    --link-visited:         #40C4FF;
+    --border-bg:            #222222;
+    --border-bg-settings:   #000000;
+    --border-bg-license:    #000000;
+    --buttom:               #121113;
+    --buttom-text:          #FFFFFF;
+    --button-border:        #222222;
+    --buttom-hover:         #222222;
+    --search-text:          #FFFFFF;
+    --time-background:      #121113;
+    --time-text:            #FFFFFF;
 }
-
-a:link {
-    color: rgb(var(--link-color-rgb));
-}
-
-a:visited {
-    color: rgb(var(--visited-link-color-rgb));
-}
-
-a:not([href]){
-    color: var(--text-color);
-}
-
-.comment .permalink{
-    color: #ffffff;
-}
-
-.setting-item{
-    background-color: #444444;
-}
-
-
-.muted{
-    background-color: #111111;
-    color: gray;
-}
-
-.muted a:link {
-    color: #10547f;
-}
-
-.button,
-input,
-select,
-button[type=submit]{
-    color: var(--text-color);
-    background-color: #444444;
-    border: 1px solid var(--text-color);
-    border-radius: 3px;
-    padding: 2px 3px;
-}
-.button:hover,
-input:hover,
-select:hover,
-button[type=submit]:hover{
-    background-color: #222222;
-}
-
-input[type="checkbox"]{
-    -webkit-filter: invert(85%) hue-rotate(18deg) brightness(1.7);
-            filter: invert(85%) hue-rotate(18deg) brightness(1.7);
-} 
-input[type="checkbox"]:checked{
-    -webkit-filter: none;
-            filter: none;
-}
-
-

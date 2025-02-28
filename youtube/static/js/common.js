@@ -1,15 +1,19 @@
-Q = document.querySelector.bind(document);
-QA = document.querySelectorAll.bind(document);
+const Q = document.querySelector.bind(document);
+const QA = document.querySelectorAll.bind(document);
+const QId = document.getElementById.bind(document);
+let seconds,
+    minutes,
+    hours;
 function text(msg) { return document.createTextNode(msg); }
 function clearNode(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 function toTimestamp(seconds) {
-  var seconds = Math.floor(seconds);
+  seconds = Math.floor(seconds);
 
-  var minutes = Math.floor(seconds/60);
-  var seconds = seconds % 60;
+  minutes = Math.floor(seconds/60);
+  seconds = seconds % 60;
 
-  var hours = Math.floor(minutes/60);
-  var minutes = minutes % 60;
+  hours = Math.floor(minutes/60);
+  minutes = minutes % 60;
 
   if (hours) {
     return `0${hours}:`.slice(-3) + `0${minutes}:`.slice(-3) + `0${seconds}`.slice(-2);
@@ -17,10 +21,9 @@ function toTimestamp(seconds) {
   return `0${minutes}:`.slice(-3) + `0${seconds}`.slice(-2);
 }
 
-
-var cur_track_idx = 0;
+let cur_track_idx = 0;
 function getActiveTranscriptTrackIdx() {
-    let textTracks = Q("video").textTracks;
+    let textTracks = QId("js-video-player").textTracks;
     if (!textTracks.length) return;
     for (let i=0; i < textTracks.length; i++) {
         if (textTracks[i].mode == "showing") {
@@ -30,15 +33,15 @@ function getActiveTranscriptTrackIdx() {
     }
     return cur_track_idx;
 }
-function getActiveTranscriptTrack() { return Q("video").textTracks[getActiveTranscriptTrackIdx()]; }
+function getActiveTranscriptTrack() { return QId("js-video-player").textTracks[getActiveTranscriptTrackIdx()]; }
 
 function getDefaultTranscriptTrackIdx() {
-  let textTracks = Q("video").textTracks;
+  let textTracks = QId("js-video-player").textTracks;
   return textTracks.length - 1;
 }
 
 function doXhr(url, callback=null) {
-    var xhr = new XMLHttpRequest();
+    let xhr = new XMLHttpRequest();
     xhr.open("GET", url);
     xhr.onload = (e) => {
       callback(e.currentTarget.response);
@@ -49,7 +52,7 @@ function doXhr(url, callback=null) {
 
 // https://stackoverflow.com/a/30810322
 function copyTextToClipboard(text) {
-  var textArea = document.createElement("textarea");
+  let textArea = document.createElement("textarea");
 
   //
   // *** This styling is an extra step which is likely not required. ***
@@ -97,8 +100,8 @@ function copyTextToClipboard(text) {
   textArea.select();
 
   try {
-    var successful = document.execCommand('copy');
-    var msg = successful ? 'successful' : 'unsuccessful';
+    let successful = document.execCommand('copy');
+    let msg = successful ? 'successful' : 'unsuccessful';
     console.log('Copying text command was ' + msg);
   } catch (err) {
     console.log('Oops, unable to copy');
