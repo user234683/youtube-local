@@ -1,0 +1,39 @@
+/* Prevent this div from blocking right-click menu for video
+e.g. Firefox playback speed options */
+.plyr__poster {
+    display: none;
+}
+
+/* plyr fix */
+.plyr:-moz-full-screen video {
+    max-height: initial;
+}
+
+.plyr:-webkit-full-screen video {
+    max-height: initial;
+}
+
+.plyr:-ms-fullscreen video {
+    max-height: initial;
+}
+
+.plyr:fullscreen video {
+    max-height: initial;
+}
+
+.plyr__preview-thumb__image-container {
+    width: 158px;
+    height: 90px;
+}
+
+.plyr__preview-thumb {
+    bottom: 100%;
+}
+
+.plyr__menu__container [role="menu"],
+.plyr__menu__container [role="menucaptions"] {
+    /* Set vertical scroll */
+    /* issue https://github.com/sampotts/plyr/issues/1420 */
+    max-height: 320px;
+    overflow-y: auto;
+}

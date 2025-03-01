@@ -12,3 +12,4 @@ latest-dist.zip
 *.7z
 *.zip
 *venv*
+flycheck_*

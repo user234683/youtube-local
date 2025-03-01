@@ -3,15 +3,10 @@
 
 {% if not slim %}
     {% extends "base.html" %}
-
     {% block style %}
-        .comments-area{
-            margin: auto;
-            max-width:640px;
-        }
+        <link href="/youtube.com/static/comments.css" rel="stylesheet">
     {% endblock style %}
 {% endif %}
-
 
 {% block main %}
     <section class="comments-area">
@@ -26,7 +21,6 @@
                 <span>Sorted by {{ comments_info['sort_text'] }}</span>
             </section>
         {% endif %}
-
 
         {% if not comments_info['is_replies'] %}
             <div class="comment-links">
@@ -51,5 +45,3 @@
         <script src="/youtube.com/static/js/comments.js"></script>
     {% endif %}
 {% endblock main %}
-
-

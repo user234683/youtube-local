@@ -511,7 +511,7 @@ def _extract_formats(info, player_response):
         # update with information from big table
         hardcoded_itag_info = _formats.get(str(itag), {})
         for key, value in hardcoded_itag_info.items():
-            conservative_update(fmt, key, value) # prefer info from Youtube
+            conservative_update(fmt, key, value) # prefer info from YouTube
         fmt['quality'] = hardcoded_itag_info.get('height')
         conservative_update(
             fmt, 'quality',

@@ -60,3 +60,8 @@
 * You'll want to have a utility or IDE that can perform full text search on a repository, since this is crucial for navigating unfamiliar codebases to figure out where certain strings appear or where things get defined.
 
 * If you're confused what the purpose of a particular line/section of code is, you can use the "git blame" feature on github (click the line number and then the three dots) to view the commit where the line of code was created and check the commit message. This will give you an idea of how it was put together.
+
+
+## OpenRC init
+
+You see [configuration with OpenRC](basic-script-openrc/README.md)

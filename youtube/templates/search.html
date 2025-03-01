@@ -3,44 +3,32 @@
 {% extends "base.html" %}
 {% import "common_elements.html" as common_elements %}
 {% block style %}
-    main > * {
-        max-width: 800px;
-        margin: auto;
-    }
-        #result-info{
-            margin-top: 10px;
-            margin-bottom: 10px;
-            padding-left: 10px;
-            padding-right: 10px;
-        }
-            #number-of-results{
-                font-weight:bold;
-            }
-        .item-list{
-            padding-left: 10px;
-            padding-right: 10px;
-        }
-            .badge{
-                background-color:#cccccc;
-            }
+    <link href="/youtube.com/static/message_box.css" rel="stylesheet">
+    <link href="/youtube.com/static/search.css" rel="stylesheet">
 {% endblock style %}
 
 {% block main %}
-            <div id="result-info">
-                <div id="number-of-results">Approximately {{ '{:,}'.format(estimated_results) }} results ({{ '{:,}'.format(estimated_pages) }} pages)</div>
-{% if corrections['type'] == 'showing_results_for' %}
-                <div>Showing results for <a>{{ common_elements.text_runs(corrections['corrected_query_text']) }}</a></div>
-                <div>Search instead for <a href="{{ corrections['original_query_url'] }}">{{ corrections['original_query_text'] }}</a></div>
-{% elif corrections['type'] == 'did_you_mean' %}
-                <div>Did you mean <a href="{{ corrections['corrected_query_url'] }}">{{ common_elements.text_runs(corrections['corrected_query_text']) }}</a></div>
-{% endif %}
-            </div>
-            <div class="item-list">
-                {% for info in results %}
-                    {{ common_elements.item(info, description=true) }}
-                {% endfor %}
-            </div>
-            <nav class="page-button-row">
-                {{ common_elements.page_buttons(estimated_pages, '/https://www.youtube.com/results', parameters_dictionary) }}
-            </nav>
+    <div class="result-info" id="result-info">
+        <div id="number-of-results">Approximately {{ '{:,}'.format(estimated_results) }} results ({{ '{:,}'.format(estimated_pages) }} pages)</div>
+        {% if corrections['type'] == 'showing_results_for' %}
+            <div>Showing results for <a>{{ common_elements.text_runs(corrections['corrected_query_text']) }}</a></div>
+            <div>Search instead for <a href="{{ corrections['original_query_url'] }}">{{ corrections['original_query_text'] }}</a></div>
+        {% elif corrections['type'] == 'did_you_mean' %}
+            <div>Did you mean <a href="{{ corrections['corrected_query_url'] }}">{{ common_elements.text_runs(corrections['corrected_query_text']) }}</a></div>
+        {% endif %}
+    </div>
+
+    <!-- video item -->
+    <div class="video-container">
+        {% for info in results %}
+            {{ common_elements.item(info, description=true) }}
+        {% endfor %}
+    </div>
+    <hr/>
+    <!-- /video item -->
+    <footer class="pagination-container">
+        <nav class="pagination-list">
+            {{ common_elements.page_buttons(estimated_pages, '/https://www.youtube.com/results', parameters_dictionary) }}
+        </nav>
+    </footer>
 {% endblock main %}

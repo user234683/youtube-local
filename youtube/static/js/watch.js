@@ -1,24 +1,16 @@
-var video = document.querySelector('video');
+const video = document.getElementById('js-video-player');
 
-function setVideoDimensions(height, width){
-    var body = document.querySelector('body');
-    body.style.setProperty('--video_height', String(height));
-    body.style.setProperty('--video_width', String(width));
-    if (height < 240)
-        body.style.setProperty('--plyr-control-spacing-num', '3');
-    else
-        body.style.setProperty('--plyr-control-spacing-num', '10');
-    var theaterWidth = Math.max(640, data['video_duration'] || 0, width);
-    body.style.setProperty('--theater_video_target_width', String(theaterWidth));
-
-    // This will set the correct media query
-    document.querySelector('#video-container').className = 'h' + height;
+// if the value set by user is -1, the volume option is omitted, as it only accepts value b/w 0 and 1
+// https://github.com/sampotts/plyr#options
+if (data.settings.default_volume !== -1) {
+    video.volume = data.settings.default_volume / 100;
 }
+
 function changeQuality(selection) {
-    var currentVideoTime = video.currentTime;
-    var videoPaused = video.paused;
-    var videoSpeed = video.playbackRate;
-    var srcInfo;
+    let currentVideoTime = video.currentTime;
+    let videoPaused = video.paused;
+    let videoSpeed = video.playbackRate;
+    let srcInfo;
     if (avMerge)
         avMerge.close();
     if (selection.type == 'uni'){
@@ -28,7 +20,6 @@ function changeQuality(selection) {
         srcInfo = data['pair_sources'][selection.index];
         avMerge = new AVMerge(video, srcInfo, currentVideoTime);
     }
-    setVideoDimensions(srcInfo.height, srcInfo.width);
     video.currentTime = currentVideoTime;
     if (!videoPaused){
         video.play();
@@ -37,30 +28,30 @@ function changeQuality(selection) {
 }
 
 // Initialize av-merge
-var avMerge;
+let avMerge;
 if (data.using_pair_sources) {
-    var srcPair = data['pair_sources'][data['pair_idx']];
+    let srcPair = data['pair_sources'][data['pair_idx']];
+    // Do it dynamically rather than as the default in jinja
+    // in case javascript is disabled
     avMerge = new AVMerge(video, srcPair, 0);
 }
 
 // Quality selector
-var qualitySelector = document.querySelector('#quality-select')
-if (qualitySelector)
-    qualitySelector.addEventListener(
-        'change', function(e) {
-            changeQuality(JSON.parse(this.value))
-        }
-    );
+const qs = document.getElementById('quality-select');
+if (qs) {
+  qs.addEventListener('change', function(e) {
+    changeQuality(JSON.parse(this.value))
+  });
+}
 
 // Set up video start time from &t parameter
-if (data.time_start != 0 && video)
-    video.currentTime = data.time_start;
+if (data.time_start != 0 && video) {video.currentTime = data.time_start};
 
 // External video speed control
-var speedInput = document.querySelector('#speed-control');
+let speedInput = document.getElementById('speed-control');
 speedInput.addEventListener('keyup', (event) => {
     if (event.key === 'Enter') {
-        var speed = parseFloat(speedInput.value);
+        let speed = parseFloat(speedInput.value);
         if(!isNaN(speed)){
             video.playbackRate = speed;
         }
@@ -76,7 +67,7 @@ if (data.playlist && data.playlist['id'] !== null) {
     // IntersectionObserver isn't supported in pre-quantum
     // firefox versions, but the alternative of making it
     // manually is a performance drain, so oh well
-    var observer = new IntersectionObserver(lazyLoad, {
+    let observer = new IntersectionObserver(lazyLoad, {
 
       // where in relation to the edge of the viewport, we are observing
       rootMargin: "100px",
@@ -101,7 +92,7 @@ if (data.playlist && data.playlist['id'] !== null) {
     };
 
     // Tell our observer to observe all img elements with a "lazy" class
-    var lazyImages = document.querySelectorAll('img.lazy');
+    let lazyImages = document.querySelectorAll('img.lazy');
     lazyImages.forEach(img => {
       observer.observe(img);
     });
@@ -146,7 +137,7 @@ if (data.settings.related_videos_mode !== 0 || data.playlist !== null) {
     }
 
     // check the checkbox if autoplay is on
-    let checkbox = document.querySelector('#autoplay-toggle');
+    let checkbox = document.querySelector('.autoplay-toggle');
     if(autoplayEnabled){
         checkbox.checked = true;
     }

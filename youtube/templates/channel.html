@@ -7,118 +7,31 @@
 {% extends "base.html" %}
 {% import "common_elements.html" as common_elements %}
 {% block style %}
-    main{
-        padding-left: 0px;
-        padding-right: 0px;
-    }
-    .channel-metadata{
-        display: flex;
-        align-items: center;
-    }
-        .avatar{
-            height:200px;
-            width:200px;
-        }
-        .summary{
-            margin-left: 5px;
-            /* Prevent uninterupted words in description overflowing the page: https://daverupert.com/2017/09/breaking-the-grid/ */
-            min-width: 0px;
-        }
-            .short-description{
-                line-height: 1em;
-                max-height: 6em;
-                overflow: hidden;
-            }
-
-    .channel-tabs{
-        display: flex;
-        flex-wrap: wrap;
-        justify-content:start;
-
-        background-color: var(--interface-color);
-        padding: 3px;
-        padding-left: 6px;
-    }
-    #links-metadata{
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: start;
-        padding-bottom: 8px;
-        padding-left: 6px;
-        margin-bottom: 10px;
-    }
-        #links-metadata > *{
-            margin-top: 8px;
-            margin-left: 10px;
-        }
-        #number-of-results{
-            font-weight:bold;
-        }
-    .content{
-    }
-    .search-content{
-        max-width: 800px;
-        margin-left: 10px;
-    }
-        .item-grid{
-            padding-left: 20px;
-        }
-        .item-list{
-            max-width:800px;
-            margin: auto;
-        }
-        .page-button-row{
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .next-previous-button-row{
-            margin-left: auto;
-            margin-right: auto;
-        }
-    .tab{
-        padding: 5px 0px;
-        width: 200px;
-    }
-    .channel-info{
-    }
-    .channel-info ul{
-        padding-left: 40px;
-    }
-    .channel-info h3{
-        margin-left: 40px;
-    }
-    .channel-info .description{
-        white-space: pre-wrap;
-        min-width: 0;
-        margin-left: 40px;
-    }
-    .medium-item img{
-        max-width: 168px;
-    }
-
-    @media (max-width:500px){
-        .channel-metadata{
-            flex-direction: column;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-    }
+    <link href="/youtube.com/static/message_box.css" rel="stylesheet">
+    <link href="/youtube.com/static/channel.css" rel="stylesheet">
 {% endblock style %}
 
 {% block main %}
-    <div class="channel-metadata">
-        <img class="avatar" src="{{ avatar }}" width="200px" height="200px">
+
+    <div class="author-container">
+        <div class="author">
+            <img alt="{{ channel_name }}" src="{{ avatar }}">
+            <h2>{{ channel_name }}</h2>
+        </div>
         <div class="summary">
-            <h2 class="title">{{ channel_name }}</h2>
-            <p class="short-description">{{ short_description }}</p>
+            <p>{{ short_description }}</p>
+        </div>
+        <div class="subscribe">
             <form method="POST" action="/youtube.com/subscriptions" class="subscribe-unsubscribe">
-                <input type="submit" value="{{ 'Unsubscribe' if subscribed else 'Subscribe' }}">
+                <input class="btn-subscribe" type="submit" value="{{ 'Unsubscribe' if subscribed else 'Subscribe' }}">
                 <input type="hidden" name="channel_id" value="{{ channel_id }}">
                 <input type="hidden" name="channel_name" value="{{ channel_name }}">
                 <input type="hidden" name="action" value="{{ 'unsubscribe' if subscribed else 'subscribe' }}">
             </form>
         </div>
     </div>
+    <hr/>
+
     <nav class="channel-tabs">
         {% for tab_name in ('Videos', 'Shorts', 'Streams', 'Playlists', 'About') %}
             {% if tab_name.lower() == current_tab %}
@@ -154,7 +67,7 @@
             <div class="description">{{ common_elements.text_runs(description) }}</div>
             <hr>
             <ul>
-                {% for text, url in links%}
+                {% for text, url in links %}
                     {% if url %}
                         <li><a href="{{ url }}">{{ text }}</a></li>
                     {% else %}
@@ -164,8 +77,9 @@
             </ul>
         </div>
     {% else %}
-        <div class="content {{ current_tab + '-content'}}">
-            <div id="links-metadata">
+
+        <!-- new-->
+        <div id="links-metadata">
                 {% if current_tab in ('videos', 'shorts', 'streams') %}
                     {% set sorts = [('1', 'views'), ('2', 'oldest'), ('3', 'newest'), ('4', 'newest - no shorts'),] %}
                     <div id="number-of-results">{{ number_of_videos }} videos</div>
@@ -193,16 +107,18 @@
                         <a class="sort-button" href="{{ channel_url + '/' + current_tab + '?sort=' + sort_number }}">{{ 'Sort by ' + sort_name }}</a>
                     {% endif %}
                 {% endfor %}
-            </div>
+        </div>
 
-            <nav class="{{ 'item-list' if current_tab == 'search' else 'item-grid' }}">
+        <div class="video-container {{ current_tab + '-content'}}">
                 {% for item_info in items %}
                     {{ common_elements.item(item_info, include_author=false) }}
                 {% endfor %}
-            </nav>
+        </div>
+        <hr/>
 
+        <footer class="pagination-container">
             {% if current_tab in ('videos', 'shorts', 'streams') %}
-                <nav class="page-button-row">
+                <nav class="pagination-list">
                     {{ common_elements.page_buttons(number_of_pages, channel_url + '/' + current_tab, parameters_dictionary, include_ends=(current_sort.__str__() in '34')) }}
                 </nav>
             {% elif current_tab == 'playlists' or current_tab == 'search' %}
@@ -210,6 +126,8 @@
                     {{ common_elements.next_previous_buttons(is_last_page, channel_url + '/' + current_tab, parameters_dictionary) }}
                 </nav>
             {% endif %}
-        </div>
+        </footer>
+        <!-- /new-->
     {% endif %}
+
 {% endblock main %}
