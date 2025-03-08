@@ -1,13 +1,13 @@
 from youtube import proto, util, yt_data_extract
-from youtube.util import concat_or_none
+from youtube.util import (
+    concat_or_none,
+    strip_non_ascii
+)
 from youtube import yt_app
 import settings
 
 import json
 import base64
-import urllib
-import re
-import traceback
 
 import flask
 from flask import request
@@ -25,12 +25,13 @@ from flask import request
 # *Old ASJN's continue to work, and start at the same comment even if new comments have been posted since
 # *The ASJN has no relation with any of the data in the response it came from
 
+
 def make_comment_ctoken(video_id, sort=0, offset=0, lc='', secret_key=''):
     video_id = proto.as_bytes(video_id)
     secret_key = proto.as_bytes(secret_key)
 
 
-    page_info = proto.string(4,video_id) + proto.uint(6, sort)
+    page_info = proto.string(4, video_id) + proto.uint(6, sort)
     offset_information = proto.nested(4, page_info) + proto.uint(5, offset)
     if secret_key:
         offset_information = proto.string(1, secret_key) + offset_information
@@ -39,7 +40,7 @@ def make_comment_ctoken(video_id, sort=0, offset=0, lc='', secret_key=''):
     if lc:
         page_params += proto.string(6, proto.percent_b64encode(proto.string(15, lc)))
 
-    result = proto.nested(2, page_params) + proto.uint(3,6) + proto.nested(6, offset_information)
+    result = proto.nested(2, page_params) + proto.uint(3, 6) + proto.nested(6, offset_information)
     return base64.urlsafe_b64encode(result).decode('ascii')
 
 
@@ -68,23 +69,26 @@ def request_comments(ctoken, replies=False):
 
 
 def single_comment_ctoken(video_id, comment_id):
-    page_params = proto.string(2, video_id) + proto.string(6, proto.percent_b64encode(proto.string(15, comment_id)))
+    page_params = proto.string(2, video_id) + proto.string(
+        6, proto.percent_b64encode(proto.string(15, comment_id)))
 
-    result = proto.nested(2, page_params) + proto.uint(3,6)
+    result = proto.nested(2, page_params) + proto.uint(3, 6)
     return base64.urlsafe_b64encode(result).decode('ascii')
-
 
 
 def post_process_comments_info(comments_info):
     for comment in comments_info['comments']:
+        comment['author'] = strip_non_ascii(comment['author']) if comment.get('author') else ""
         comment['author_url'] = concat_or_none(
             '/', comment['author_url'])
         comment['author_avatar'] = concat_or_none(
             settings.img_prefix, comment['author_avatar'])
 
-        comment['permalink'] = concat_or_none(util.URL_ORIGIN, '/watch?v=',
-            comments_info['video_id'], '&lc=', comment['id'])
-
+        comment['permalink'] = concat_or_none(
+            util.URL_ORIGIN, '/watch?v=',
+            comments_info['video_id'],
+            '&lc=', comment['id']
+        )
 
         reply_count = comment['reply_count']
         comment['replies_url'] = None
@@ -98,7 +102,8 @@ def post_process_comments_info(comments_info):
                 print('Error setting ctoken value:')
                 print(err)
                 comment['replies_url'] = None
-            comment['replies_url'] = concat_or_none(util.URL_ORIGIN,
+            comment['replies_url'] = concat_or_none(
+                util.URL_ORIGIN,
                 '/comments?replies=1&ctoken=' + ctoken)
 
         if reply_count == 0:
@@ -107,7 +112,6 @@ def post_process_comments_info(comments_info):
             comment['view_replies_text'] = '1 reply'
         else:
             comment['view_replies_text'] = str(reply_count) + ' replies'
-
 
         if comment['approx_like_count'] == '1':
             comment['likes_text'] = '1 like'
@@ -131,8 +135,8 @@ def post_process_comments_info(comments_info):
                 ctoken = new_ctoken
         else:
             replies_param = ''
-        comments_info['more_comments_url'] = concat_or_none(util.URL_ORIGIN,
-            '/comments?ctoken=', ctoken, replies_param)
+        comments_info['more_comments_url'] = concat_or_none(
+            util.URL_ORIGIN, '/comments?ctoken=', ctoken, replies_param)
 
     if comments_info['offset'] is None:
         comments_info['page_number'] = None
@@ -142,11 +146,12 @@ def post_process_comments_info(comments_info):
     if not comments_info['is_replies']:
         comments_info['sort_text'] = 'top' if comments_info['sort'] == 0 else 'newest'
 
-
-    comments_info['video_url'] = concat_or_none(util.URL_ORIGIN,
-        '/watch?v=', comments_info['video_id'])
-    comments_info['video_thumbnail'] = concat_or_none(settings.img_prefix, 'https://i.ytimg.com/vi/',
-        comments_info['video_id'], '/mqdefault.jpg')
+    comments_info['video_url'] = concat_or_none(
+        util.URL_ORIGIN, '/watch?v=', comments_info['video_id'])
+    comments_info['video_thumbnail'] = concat_or_none(
+        settings.img_prefix, 'https://i.ytimg.com/vi/',
+        comments_info['video_id'], '/hqdefault.jpg'
+    )
 
 
 def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
@@ -179,22 +184,21 @@ def video_comments(video_id, sort=0, offset=0, lc='', secret_key=''):
             return {}
     except util.FetchError as e:
         if e.code == '429' and settings.route_tor:
-            comments_info['error'] = 'Error: Youtube blocked the request because the Tor exit node is overutilized.'
+            comments_info['error'] = 'Error: YouTube blocked the request because the Tor exit node is overutilized.'
             if e.error_message:
                 comments_info['error'] += '\n\n' + e.error_message
             comments_info['error'] += '\n\nExit node IP address: %s' % e.ip
         else:
-            comments_info['error'] = traceback.format_exc()
+            comments_info['error'] = 'YouTube blocked the request. Error: %s' % str(e)
 
     except Exception as e:
-        comments_info['error'] = traceback.format_exc()
+        comments_info['error'] = 'YouTube blocked the request. Error: %s' % str(e)
 
     if comments_info.get('error'):
         print('Error retrieving comments for ' + str(video_id) + ':\n' +
               comments_info['error'])
 
     return comments_info
-
 
 
 @yt_app.route('/comments')
@@ -220,8 +224,8 @@ def get_comments_page():
         other_sort_text = 'Sort by ' + ('newest' if comments_info['sort'] == 0 else 'top')
         comments_info['comment_links'] = [(other_sort_text, other_sort_url)]
 
-    return flask.render_template('comments_page.html',
-        comments_info = comments_info,
-        slim = request.args.get('slim', False)
+    return flask.render_template(
+        'comments_page.html',
+        comments_info=comments_info,
+        slim=request.args.get('slim', False)
     )
-

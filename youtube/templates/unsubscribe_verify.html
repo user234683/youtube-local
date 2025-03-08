@@ -1,17 +1,19 @@
 {% set page_title = 'Unsubscribe?' %}
 {% extends "base.html" %}
+{% block style %}
+    <link href="/youtube.com/static/unsubscribe.css" rel="stylesheet"/>
+{% endblock style %}
 
 {% block main %}
-    <span>Are you sure you want to unsubscribe from these channels?</span>
+    <p>Are you sure you want to unsubscribe from these channels?</p>
     <form class="subscriptions-import-form" action="/youtube.com/subscription_manager" method="POST">
         {% for channel_id, channel_name in unsubscribe_list %}
             <input type="hidden" name="channel_ids" value="{{ channel_id }}">
         {% endfor %}
-
         <input type="hidden" name="action" value="unsubscribe">
         <input type="submit" value="Yes, unsubscribe">
     </form>
-    <ul>
+    <ul class="list-channel">
         {% for channel_id, channel_name in unsubscribe_list %}
             <li><a href="{{ '/https://www.youtube.com/channel/' + channel_id }}" title="{{ channel_name }}">{{ channel_name }}</a></li>
         {% endfor %}

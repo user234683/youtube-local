@@ -1,196 +1,300 @@
-.video-metadata{
+body {
+    display: grid;
+    grid-gap: 20px;
+    grid-template-areas:
+        "header"
+        "main"
+        "footer";
+    /* Fix height */
+    height: 100vh;
+    grid-template-rows: auto 1fr auto;
+    /* fix top and bottom */
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
+
+h1, h2, h3, h4, h5, h6, div, button {
+    margin: 0;
+    padding: 0;
+}
+
+img {
+    width: 100%;
+    height: auto;
+}
+
+a:link {
+    color: var(--link);
+}
+
+a:visited {
+    color: var(--link-visited);
+}
+
+input[type="text"],
+input[type="search"] {
+    background: var(--background);
+    border: 1px solid var(--button-border);
+    border-radius: 5px;
+    padding: 0.4rem 0.4rem;
+    font-size: 15px;
+    color: var(--search-text);
+    outline: none;
+    box-shadow: none;
+}
+
+input[type='search'] {
+    border-bottom: 1px solid var(--button-border);
+    border-top: 0px;
+    border-left: 0px;
+    border-right: 0px;
+    border-radius: 0px;
+}
+
+header {
+    display: grid;
+    grid-gap: 1px;
+    grid-template-areas:
+        "home"
+        "form";
+    grid-area: header;
+}
+
+.home {
+    grid-area: home;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 1rem;
+    margin-top: 1rem;
+}
+
+.form {
+    display: grid;
+    grid-gap: 4px;
+    grid-template-areas:
+        "search-box"
+        "search-button"
+        "dropdown";
+    grid-area: form;
+}
+
+.search-box {
+    grid-area: search-box;
+}
+.search-button {
+    grid-area: search-button;
+
+    cursor: pointer;
+    padding-bottom: 6px;
+    padding-left: .75em;
+    padding-right: .75em;
+    padding-top: 6px;
+    text-align: center;
+    white-space: nowrap;
+    background-color: var(--buttom);
+    border: 1px solid var(--button-border);
+    color: var(--buttom-text);
+    border-radius: 5px;
+}
+.search-button:hover {
+    background-color: var(--buttom-hover);
+}
+
+.dropdown {
+    display: grid;
+    grid-gap: 1px;
+    grid-template-areas:
+        "dropdown-label"
+        "dropdown-content";
+    grid-area: dropdown;
+    padding-right: 4rem;
+}
+.dropdown-label {
+    grid-area: dropdown-label;
+
+    padding-bottom: 6px;
+    padding-left: .75em;
+    padding-right: .75em;
+    padding-top: 6px;
+    text-align: center;
+    white-space: nowrap;
+    background-color: var(--buttom);
+    border: 1px solid var(--button-border);
+    color: var(--buttom-text);
+    border-radius: 5px;
+}
+.dropdown-label:hover {
+    background-color: var(--buttom-hover);
+}
+
+/* ------------- Menu Mobile without JS ---------------- */
+/* input hidden */
+.opt-box {
+    display: none;
+}
+.dropdown-content {
+    display: none;
+    grid-area: dropdown-content;
+}
+label[for=options-toggle-cbox] {
+    cursor: pointer;
+    -webkit-touch-callout: none;
+      -webkit-user-select: none;
+       -khtml-user-select: none;
+         -moz-user-select: none;
+          -ms-user-select: none;
+              user-select: none;
+}
+
+#options-toggle-cbox:checked ~ .dropdown-content {
+    display: inline-grid;
+    white-space: nowrap;
+}
+/*- ----------- End Menu Mobile without JS ------------- */
+
+.main {
+    grid-area: main;
+    margin: 0 auto;
+    max-width: 80ch;
+}
+
+/* comments */
+.comments-area {
+    display: grid;
+    grid-row-gap: 0.5rem;
+}
+
+.comments-area textarea {
+    resize: vertical;
+}
+
+.video-metadata {
     display: grid;
     grid-template-columns: auto 1fr;
-    grid-template-rows: auto auto 1fr;
+    grid-column-gap: 0.5rem;
+    grid-template-rows: auto auto 1fr auto;
     grid-template-areas:
-        "video-metadata-thumbnail-box title"
-        "video-metadata-thumbnail-box page"
-        "video-metadata-thumbnail-box sort";
-    margin-bottom: 10px;
+        "video-metadata-thumbnail-box ."
+        "video-metadata-thumbnail-box ."
+        "video-metadata-thumbnail-box .";
 }
-    .video-metadata > .video-metadata-thumbnail-box{
-        grid-area: video-metadata-thumbnail-box;
-        /* https://www.smashingmagazine.com/2020/03/setting-height-width-images-important-again/ */
-        position: relative;
-        width:320px;
-        max-width:100%;
-    }
-    .video-metadata > .video-metadata-thumbnail-box:before{
-        display: block;
-        content: "";
-        height: 0px;
-        padding-top: calc(180/320*100%);
-    }
-        .video-metadata-thumbnail-box img{
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-    .video-metadata > .title{
-        word-wrap:break-word;
-        grid-area: title;
-    }
-    .video-metadata > h2{
-        grid-area: page;
-        font-size: 0.875rem;
-    }
-    .video-metadata > span{
-        grid-area: sort;
-    }
 
-.comment-form{
+.video-metadata > h2 {
+    font-size: 0.875rem;
+}
+
+.video-metadata-thumbnail-box {
+    grid-area: video-metadata-thumbnail-box;
+}
+
+.comment-form {
     display: grid;
-    align-content: start;
-    justify-items: start;
-    align-items: start;
+    grid-row-gap: 0.5rem;
 }
-    #comment-account-options{
-        display:grid;
-        grid-auto-flow: column;
-        grid-column-gap: 10px;
-        margin-top:10px;
-        margin-bottom:10px;
-    }
-        #comment-account-options a{
-            margin-left:10px;
-        }
 
-.comments-area{
-    display:grid;
+.post-comment-button {
+    justify-self: end;
 }
-    .comments-area textarea{
-        resize: vertical;
-        justify-self:stretch;
-    }
-    .post-comment-button{
-        margin-top:10px;
-        justify-self:end;
-    }
-    .comment-links{
-        display:grid;
-        grid-auto-flow: column;
-        grid-column-gap: 10px;
-        justify-content:start;
-    }
 
-.comments{
-    margin-top:10px;
-    grid-row-gap: 10px;
+.comments {
     display: grid;
-    align-content:start;
+    grid-row-gap: 0.5rem;
 }
 
-.comment{
-    display:grid;
-    grid-template-columns: repeat(3, auto) 1fr;
+.comment {
+    display: grid;
+    grid-template-columns: repeat(3, auto) 3fr;
     grid-template-rows: repeat(4, auto);
+    grid-column-gap: 0.4rem;
     grid-template-areas:
-        "author-avatar author-name   permalink     ."
-        "author-avatar comment-text  comment-text  comment-text"
-        "author-avatar comment-likes comment-likes comment-likes"
-        ".             bottom-row    bottom-row    bottom-row";
-    background-color: var(--interface-color);
-    justify-content: start;
+        "author-avatar author-name permalink ."
+        "author-avatar comment-text comment-text comment-text"
+        ". comment-likes comment-likes comment-likes"
+        ". button-row button-row button-row";
+    background: var(--secondary-background);
 }
 
-    .comment .author-avatar{
-        grid-area: author-avatar;
-        align-self: start;
-        margin-right: 5px;
-        height:32px;
-        width:32px;
-    }
-        .comment .author-avatar-img{
-            max-height: 100%;
-        }
+.author-avatar { grid-area: author-avatar; }
+.author-name { grid-area: author-name; }
+.permalink { grid-area: permalink; }
+.comment-text { grid-area: comment-text; }
+.comment-likes { grid-area: comment-likes; }
+.button-row { grid-area: button-row; }
 
-    .comment .author-name{
-        grid-area: author-name;
-        margin-right:15px;
-        white-space: nowrap;
-        overflow:hidden;
-    }
-
-    .comment .text{
-        grid-area: comment-text;
-        white-space: pre-wrap;
-        min-width: 0;
-        word-wrap: break-word;
-    }
-
-    .comment .permalink{
-        grid-area: permalink;
-        white-space: nowrap;
-    }
-
-
-    .comment .likes{
-        grid-area: comment-likes;
-        font-weight:bold;
-        white-space: nowrap;
-    }
-
-    .comment .bottom-row{
-        grid-area: bottom-row;
-        justify-self:start;
-    }
-
-details.replies > summary{
-    background-color: var(--interface-color);
-    border-style: outset;
-    border-width: 1px;
-    font-weight: bold;
-    padding: 2px;
-}
-
-.replies-open-new-tab{
-    display: inline-block;
-    margin-top: 5px;
-}
-
-details.replies .comment{
-    max-width: 600px;
-}
-
-.more-comments{
-    justify-self:center;
-    margin-top:10px;
+.more-comments {
+    justify-self: center;
+    margin-top: 10px;
     margin-bottom: 10px;
+    background: var(--secondary-background);
+    padding: 5px;
+
+    /* disable text selection */
+    -webkit-touch-callout: none;
+      -webkit-user-select: none;
+       -khtml-user-select: none;
+         -moz-user-select: none;
+          -ms-user-select: none;
+              user-select: none;
 }
 
-@media (max-width:500px){
-    .video-metadata{
-        grid-template-columns: 1fr;
-        grid-template-rows: 1fr auto auto auto;
+.footer {
+    grid-area: footer;
+    display: grid;
+    grid-template-columns: auto;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    text-align: center;
+}
+
+.footer > p {
+    text-align: center;
+}
+
+@media (min-width: 780px) {
+    body {
+        display: grid;
+        grid-template-columns: 0.3fr 2fr 1fr 0.3fr;
+        grid-template-rows: auto 1fr auto;
         grid-template-areas:
-            "video-metadata-thumbnail-box"
-            "title"
-            "page"
-            "sort";
+            "header header header header"
+            "main   main   main   main"
+            "footer footer footer footer";
     }
-    .video-metadata > .video-metadata-thumbnail-box{
-        grid-area: video-metadata-thumbnail-box;
-        /* Switching these is required. Otherwise it breaks for some reason. CSS is terrible */
+    .form {
+        display: grid;
+        grid-gap: 1px;
+        grid-template-columns: 1fr 1.4fr 0.3fr 1.3fr;
+        grid-template-areas: ". search-box search-button dropdown";
+        grid-area: form;
+        position: relative;
+    }
+    .dropdown {
+        display: grid;
+        grid-gap: 1px;
+        grid-template-columns: minmax(50px, 120px);
+        grid-template-areas:
+            "dropdown-label"
+            "dropdown-content";
+        grid-area: dropdown;
+        z-index: 1;
+        position: absolute;
+    }
+    #options-toggle-cbox:checked ~ .dropdown-content {
+        padding: 0rem 3rem 1rem 1rem;
         width: 100%;
-        max-width: 320px;
+        max-height: 45vh;
+        overflow-y: scroll;
     }
-    .comment{
-        grid-template-columns: auto 1fr;
-        grid-template-rows: repeat(5, auto);
-        grid-template-areas:
-            "author-avatar author-name"
-            "author-avatar comment-text"
-            "author-avatar comment-likes"
-            "author-avatar permalink"
-            ".             bottom-row";
+
+    .footer {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-column-gap: 2rem;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
     }
-        .comment .author-name{
-            margin-right: 0px;
-        }
-        .comment .permalink{
-            justify-self: start;
-            margin-bottom: 10px;
-        }
 }

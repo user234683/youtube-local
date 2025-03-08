@@ -1,20 +1,18 @@
 # youtube-local
 
-![screenshot](https://user-images.githubusercontent.com/28744867/64483429-8a890780-d1b6-11e9-8423-6956ff7c588d.png)
+![screenshot](https://github.com/user-attachments/assets/5b817096-407d-4715-b094-ffa3a42f8e3f)
 youtube-local is a browser-based client written in Python for watching Youtube anonymously and without the lag of the slow page used by Youtube. One of the primary features is that all requests are routed through Tor, except for the video file at googlevideo.com. This is analogous to what HookTube (defunct) and Invidious do, except that you do not have to trust a third-party to respect your privacy. The assumption here is that Google won't put the effort in to incorporate the video file requests into their tracking, as it's not worth pursuing the incredibly small number of users who care about privacy (Tor video routing is also provided as an option). Tor has high latency, so this will not be as fast network-wise as regular Youtube. However, using Tor is optional; when not routing through Tor, video pages may load faster than they do with Youtube's page depending on your browser.
 
 The Youtube API is not used, so no keys or anything are needed. It uses the same requests as the Youtube webpage.
 
 ## Screenshots
-[Gray theme](https://user-images.githubusercontent.com/28744867/64483431-8e1c8e80-d1b6-11e9-999c-14d36ddd582f.png)
+[Gray theme](https://github.com/user-attachments/assets/e3b54c80-ea4d-4b15-966b-539d9413d215)
 
-[Dark theme](https://user-images.githubusercontent.com/28744867/64483432-8fe65200-d1b6-11e9-90bd-32869542e32e.png)
+[Dark theme](https://github.com/user-attachments/assets/411cd29b-6beb-4e10-9e04-ed6c192c792a)
 
-[Non-Theater mode](https://user-images.githubusercontent.com/28744867/64483433-92e14280-d1b6-11e9-9b56-2ef5d64c372f.png)
+[Channel](https://github.com/user-attachments/assets/6947c041-e77a-4899-a37d-be708f451e84)
 
-[Channel](https://user-images.githubusercontent.com/28744867/64483436-95dc3300-d1b6-11e9-8efc-b19b1f1f3bcf.png)
-
-[Downloads](https://user-images.githubusercontent.com/28744867/64483437-a2608b80-d1b6-11e9-9e5a-4114391b7304.png)
+[Downloads](https://github.com/user-attachments/assets/1e898922-7225-4b6f-b9d3-471b853b2f56)
 
 ## Features
 * Standard pages of Youtube: search, channels, playlists
@@ -93,7 +91,7 @@ If pip isn't installed, first try installing it from the package manager:
 pkg install py39-pip
 ```
 
-Some packages are unable to compile with pip, install them manually: 
+Some packages are unable to compile with pip, install them manually:
 ```
 pkg install py39-gevent py39-sqlite3
 ```
@@ -103,7 +101,7 @@ Download the tarball under the Releases page and extract it. `cd` into the direc
 pip install -r requirements.txt
 ```
 
-**Note**: You may have to start the server redirecting its output to /dev/null to avoid I/O errors: 
+**Note**: You may have to start the server redirecting its output to /dev/null to avoid I/O errors:
 ```
 python3 ./server.py > /dev/null 2>&1 &
 ```

@@ -1,0 +1,293 @@
+body {
+    display: grid;
+    grid-gap: 20px;
+    grid-template-areas:
+        "header"
+        "main"
+        "footer";
+    /* Fix height */
+    height: 100vh;
+    grid-template-rows: auto 1fr auto;
+    /* fix top and bottom */
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
+
+a:link {
+    color: var(--link);
+}
+
+a:visited {
+    color: var(--link-visited);
+}
+
+input[type="text"],
+input[type="search"] {
+    background: var(--background);
+    border: 1px solid var(--button-border);
+    border-radius: 5px;
+    padding: 0.4rem 0.4rem;
+    font-size: 15px;
+    color: var(--search-text);
+    outline: none;
+    box-shadow: none;
+}
+
+input[type='search'] {
+    border-bottom: 1px solid var(--button-border);
+    border-top: 0px;
+    border-left: 0px;
+    border-right: 0px;
+    border-radius: 0px;
+}
+
+header {
+    display: grid;
+    grid-gap: 1px;
+    grid-template-areas:
+        "home"
+        "form";
+    grid-area: header;
+}
+
+.home {
+    grid-area: home;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 1rem;
+    margin-top: 1rem;
+}
+
+.form {
+    display: grid;
+    grid-gap: 4px;
+    grid-template-areas:
+        "search-box"
+        "search-button"
+        "dropdown";
+    grid-area: form;
+}
+
+.search-box {
+    grid-area: search-box;
+}
+.search-button {
+    grid-area: search-button;
+
+    cursor: pointer;
+    padding-bottom: 6px;
+    padding-left: .75em;
+    padding-right: .75em;
+    padding-top: 6px;
+    text-align: center;
+    white-space: nowrap;
+    background-color: var(--buttom);
+    border: 1px solid var(--button-border);
+    color: var(--buttom-text);
+    border-radius: 5px;
+}
+.search-button:hover {
+    background-color: var(--buttom-hover);
+}
+
+.dropdown {
+    display: grid;
+    grid-gap: 1px;
+    grid-template-areas:
+        "dropdown-label"
+        "dropdown-content";
+    grid-area: dropdown;
+}
+.dropdown-label {
+    grid-area: dropdown-label;
+
+    padding-bottom: 6px;
+    padding-left: .75em;
+    padding-right: .75em;
+    padding-top: 6px;
+    text-align: center;
+    white-space: nowrap;
+    background-color: var(--buttom);
+    border: 1px solid var(--button-border);
+    color: var(--buttom-text);
+    border-radius: 5px;
+}
+.dropdown-label:hover {
+    background-color: var(--buttom-hover);
+}
+
+/* ------------- Menu Mobile without JS ---------------- */
+/* input hidden */
+.opt-box {
+    display: none;
+}
+.dropdown-content {
+    display: none;
+    grid-area: dropdown-content;
+}
+label[for=options-toggle-cbox] {
+    cursor: pointer;
+    -webkit-touch-callout: none;
+      -webkit-user-select: none;
+       -khtml-user-select: none;
+         -moz-user-select: none;
+          -ms-user-select: none;
+              user-select: none;
+}
+
+#options-toggle-cbox:checked ~ .dropdown-content {
+    display: block;
+    white-space: nowrap;
+    background: var(--secondary-background);
+    padding: 0.5rem 1rem;
+}
+/*- ----------- End Menu Mobile without JS ------------- */
+
+.main {
+    grid-area: main;
+    margin: 0 auto;
+    max-width: 80ch;
+}
+
+.code-error {
+    background: var(--secondary-background);
+    padding: 1rem;
+}
+
+.footer {
+    grid-area: footer;
+    display: grid;
+    grid-template-columns: auto;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    text-align: center;
+}
+
+.footer > p {
+    text-align: center;
+}
+
+/* ---- ---- Table ---- ---- */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table caption {
+    margin: 1rem 0;
+    width: 100%;
+}
+
+.table td,.table th {
+    padding: 10px 10px;
+    border: 1px solid var(--border-bg-license);
+    text-align: center;
+}
+
+.table th {
+    background-color: var(--secondary-background);
+    color: var(--text);
+}
+
+.table tbody tr:nth-child(even) {
+    background-color: var(--secondary-focus);
+}
+
+.table tbody tr:nth-child(2n+1) {
+    background-color: var(--primary-background);
+}
+
+.table thead tr th:nth-last-child(1) {
+    padding: 0;
+}
+
+.table tbody tr td:nth-last-child(1) > button {
+    color: var(--text);
+    width: 40px;
+    height: 30px;
+    background-color: var(--secondary-background);
+    border: 1px solid var(--secondary-background);
+    cursor: pointer;
+}
+
+.table tbody tr td:nth-last-child(1) > a {
+    color: var(--text);
+    cursor: pointer;
+    padding: 2px 10px;
+}
+
+/* ---- ---- End table ---- ---- */
+
+/* ---- Table responsive ---- */
+@media (max-width: 580px) {
+    .table thead {
+        display: none;
+    }
+
+    .table tr{
+        margin-bottom:15px;
+    }
+
+    .table,
+    .table tbody,
+    .table tr,
+    .table td {
+        display: block;
+        width: auto;
+        text-align: justify;
+    }
+
+    .table td::before {
+        content: attr(data-label) ": ";
+        font-weight: bold;
+    }
+}
+/* End table responsive */
+
+@media (min-width: 780px) {
+    body {
+        display: grid;
+        grid-template-columns: 0.3fr 2fr 1fr 0.3fr;
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas:
+            "header header header header"
+            "main   main   main   main"
+            "footer footer footer footer";
+    }
+    .form {
+        display: grid;
+        grid-gap: 1px;
+        grid-template-columns: 1fr 1.4fr 0.3fr 1.3fr;
+        grid-template-areas: ". search-box search-button dropdown";
+        grid-area: form;
+        position: relative;
+    }
+    .dropdown {
+        display: grid;
+        grid-gap: 1px;
+        grid-template-columns: minmax(50px, 120px);
+        grid-template-areas:
+            "dropdown-label"
+            "dropdown-content";
+        grid-area: dropdown;
+        z-index: 1;
+        position: absolute;
+    }
+    #options-toggle-cbox:checked ~ .dropdown-content {
+        padding: 0rem 3rem 1rem 1rem;
+        width: 100%;
+        max-height: 45vh;
+        overflow-y: scroll;
+    }
+    .footer {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-column-gap: 2rem;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+}

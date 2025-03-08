@@ -28,6 +28,7 @@ thumbnails_directory = os.path.join(settings.data_dir, "subscription_thumbnails"
 
 database_path = os.path.join(settings.data_dir, "subscriptions.sqlite")
 
+
 def open_database():
     if not os.path.exists(settings.data_dir):
         os.makedirs(settings.data_dir)
@@ -76,10 +77,12 @@ def open_database():
     # https://stackoverflow.com/questions/19522505/using-sqlite3-in-python-with-with-keyword
     return contextlib.closing(connection)
 
+
 def with_open_db(function, *args, **kwargs):
     with open_database() as connection:
         with connection as cursor:
             return function(cursor, *args, **kwargs)
+
 
 def _is_subscribed(cursor, channel_id):
     result = cursor.execute('''SELECT EXISTS(
@@ -90,11 +93,13 @@ def _is_subscribed(cursor, channel_id):
                                )''', [channel_id]).fetchone()
     return bool(result[0])
 
+
 def is_subscribed(channel_id):
     if not os.path.exists(database_path):
         return False
 
     return with_open_db(_is_subscribed, channel_id)
+
 
 def _subscribe(channels):
     ''' channels is a list of (channel_id, channel_name) '''
@@ -103,7 +108,7 @@ def _subscribe(channels):
         with connection as cursor:
             channel_ids_to_check = [channel[0] for channel in channels if not _is_subscribed(cursor, channel[0])]
 
-            rows = ( (channel_id, channel_name, 0, 0) for channel_id, channel_name in channels)
+            rows = ((channel_id, channel_name, 0, 0) for channel_id, channel_name in channels)
             cursor.executemany('''INSERT OR IGNORE INTO subscribed_channels (yt_channel_id, channel_name, time_last_checked, next_check_time)
                                   VALUES (?, ?, ?, ?)''', rows)
 
@@ -112,6 +117,7 @@ def _subscribe(channels):
         # otherwise the autochecker (other thread) tries checking the channel before it's in the database
         channel_names.update(channels)
         check_channels_if_necessary(channel_ids_to_check)
+
 
 def delete_thumbnails(to_delete):
     for thumbnail in to_delete:
@@ -123,6 +129,7 @@ def delete_thumbnails(to_delete):
         except Exception:
             print('Failed to delete thumbnail: ' + thumbnail)
             traceback.print_exc()
+
 
 def _unsubscribe(cursor, channel_ids):
     ''' channel_ids is a list of channel_ids '''
@@ -140,7 +147,8 @@ def _unsubscribe(cursor, channel_ids):
     gevent.spawn(delete_thumbnails, to_delete)
     cursor.executemany("DELETE FROM subscribed_channels WHERE yt_channel_id=?", ((channel_id, ) for channel_id in channel_ids))
 
-def _get_videos(cursor, number_per_page, offset, tag = None):
+
+def _get_videos(cursor, number_per_page, offset, tag=None):
     '''Returns a full page of videos with an offset, and a value good enough to be used as the total number of videos'''
     # We ask for the next 9 pages from the database
     # Then the actual length of the results tell us if there are more than 9 pages left, and if not, how many there actually are
@@ -183,8 +191,6 @@ def _get_videos(cursor, number_per_page, offset, tag = None):
     return videos, pseudo_number_of_videos
 
 
-
-
 def _get_subscribed_channels(cursor):
     for item in cursor.execute('''SELECT channel_name, yt_channel_id, muted
                                   FROM subscribed_channels
@@ -206,7 +212,6 @@ def _remove_tags(cursor, channel_ids, tags):
                            )''', pairs)
 
 
-
 def _get_tags(cursor, channel_id):
     return [row[0] for row in cursor.execute('''SELECT tag
                                                 FROM tag_associations
@@ -214,8 +219,10 @@ def _get_tags(cursor, channel_id):
                                                     SELECT id FROM subscribed_channels WHERE yt_channel_id = ?
                                                 )''', (channel_id,))]
 
+
 def _get_all_tags(cursor):
     return [row[0] for row in cursor.execute('''SELECT DISTINCT tag FROM tag_associations''')]
+
 
 def _get_channel_names(cursor, channel_ids):
     ''' returns list of (channel_id, channel_name) '''
@@ -224,7 +231,7 @@ def _get_channel_names(cursor, channel_ids):
         row = cursor.execute('''SELECT channel_name
                                 FROM subscribed_channels
                                 WHERE yt_channel_id = ?''', (channel_id,)).fetchone()
-        result.append( (channel_id, row[0]) )
+        result.append((channel_id, row[0]))
     return result
 
 
@@ -249,11 +256,14 @@ def _channels_with_tag(cursor, tag, order=False, exclude_muted=False, include_mu
 
     return cursor.execute(statement, [tag]).fetchall()
 
+
 def _schedule_checking(cursor, channel_id, next_check_time):
     cursor.execute('''UPDATE subscribed_channels SET next_check_time = ? WHERE yt_channel_id = ?''', [int(next_check_time), channel_id])
 
+
 def _is_muted(cursor, channel_id):
     return bool(cursor.execute('''SELECT muted FROM subscribed_channels WHERE yt_channel_id=?''', [channel_id]).fetchone()[0])
+
 
 units = collections.OrderedDict([
     ('year', 31536000),   # 365*24*3600
@@ -264,6 +274,8 @@ units = collections.OrderedDict([
     ('minute', 60),
     ('second', 1),
 ])
+
+
 def youtube_timestamp_to_posix(dumb_timestamp):
     ''' Given a dumbed down timestamp such as 1 year ago, 3 hours ago,
          approximates the unix time (seconds since 1/1/1970) '''
@@ -276,6 +288,7 @@ def youtube_timestamp_to_posix(dumb_timestamp):
     if quantifier > 1:
         unit = unit[:-1]    # remove s from end
     return now - quantifier*units[unit]
+
 
 def posix_to_dumbed_down(posix_time):
     '''Inverse of youtube_timestamp_to_posix.'''
@@ -295,11 +308,13 @@ def posix_to_dumbed_down(posix_time):
     else:
         raise Exception()
 
+
 def exact_timestamp(posix_time):
     result = time.strftime('%I:%M %p %m/%d/%y', time.localtime(posix_time))
     if result[0] == '0':    # remove 0 infront of hour (like 01:00 PM)
         return result[1:]
     return result
+
 
 try:
     existing_thumbnails = set(os.path.splitext(name)[0] for name in os.listdir(thumbnails_directory))
@@ -316,6 +331,7 @@ checking_channels = set()
 # Just to use for printing channel checking status to console without opening database
 channel_names = dict()
 
+
 def check_channel_worker():
     while True:
         channel_id = check_channels_queue.get()
@@ -326,10 +342,10 @@ def check_channel_worker():
         finally:
             checking_channels.remove(channel_id)
 
-for i in range(0,5):
+
+for i in range(0, 5):
     gevent.spawn(check_channel_worker)
 # ----------------------------
-
 
 
 # --- Auto checking system - Spaghetti code ---
@@ -358,7 +374,7 @@ def autocheck_dispatcher():
 
             if time_until_earliest_job > 0: # it can become less than zero (in the past) when it's set to go off while the dispatcher is doing something else at that moment
                 try:
-                    new_job = autocheck_job_application.get(timeout = time_until_earliest_job)  # sleep for time_until_earliest_job time, but allow to be interrupted by new jobs
+                    new_job = autocheck_job_application.get(timeout=time_until_earliest_job)  # sleep for time_until_earliest_job time, but allow to be interrupted by new jobs
                 except gevent.queue.Empty: # no new jobs
                     pass
                 else: # new job, add it to the list
@@ -371,7 +387,10 @@ def autocheck_dispatcher():
             check_channels_queue.put(earliest_job['channel_id'])
             del autocheck_jobs[earliest_job_index]
 
+
 dispatcher_greenlet = None
+
+
 def start_autocheck_system():
     global autocheck_job_application
     global autocheck_jobs
@@ -400,9 +419,11 @@ def start_autocheck_system():
                 autocheck_jobs.append({'channel_id': row[0], 'channel_name': row[1], 'next_check_time': next_check_time})
     dispatcher_greenlet = gevent.spawn(autocheck_dispatcher)
 
+
 def stop_autocheck_system():
     if dispatcher_greenlet is not None:
         dispatcher_greenlet.kill()
+
 
 def autocheck_setting_changed(old_value, new_value):
     if new_value:
@@ -410,12 +431,14 @@ def autocheck_setting_changed(old_value, new_value):
     else:
         stop_autocheck_system()
 
-settings.add_setting_changed_hook('autocheck_subscriptions',
-    autocheck_setting_changed)
+
+settings.add_setting_changed_hook(
+    'autocheck_subscriptions',
+    autocheck_setting_changed
+)
 if settings.autocheck_subscriptions:
     start_autocheck_system()
 # ----------------------------
-
 
 
 def check_channels_if_necessary(channel_ids):
@@ -423,6 +446,7 @@ def check_channels_if_necessary(channel_ids):
         if channel_id not in checking_channels:
             checking_channels.add(channel_id)
             check_channels_queue.put(channel_id)
+
 
 def _get_atoma_feed(channel_id):
     url = 'https://www.youtube.com/feeds/videos.xml?channel_id=' + channel_id
@@ -435,6 +459,7 @@ def _get_atoma_feed(channel_id):
         if e.code == '502':
             return str(e)
         raise
+
 
 def _get_channel_videos_first_page(channel_id, channel_status_name):
     try:
@@ -459,7 +484,7 @@ def _get_channel_videos_first_page(channel_id, channel_status_name):
     except util.FetchError as e:
         if e.code == '429' and settings.route_tor:
             error_message = ('Error checking channel ' + channel_status_name
-                + ': Youtube blocked the request because the'
+                + ': YouTube blocked the request because the'
                 + ' Tor exit node is overutilized. Try getting a new exit node'
                 + ' by using the New Identity button in the Tor Browser.')
             if e.ip:
@@ -470,6 +495,7 @@ def _get_channel_videos_first_page(channel_id, channel_status_name):
             print('Error checking channel', channel_status_name + ':', str(e))
             return None
         raise
+
 
 def _get_upstream_videos(channel_id):
     try:
@@ -576,14 +602,14 @@ def _get_upstream_videos(channel_id):
 
 
     if len(videos) == 0:
-        average_upload_period = 4*7*24*3600 # assume 1 month for channel with no videos
+        average_upload_period = 4*7*24*3600  # assume 1 month for channel with no videos
     elif len(videos) < 5:
         average_upload_period = int((time.time() - videos[len(videos)-1]['time_published'])/len(videos))
     else:
         average_upload_period = int((time.time() - videos[4]['time_published'])/5) # equivalent to averaging the time between videos for the last 5 videos
 
     # calculate when to check next for auto checking
-    # add some quantization and randomness to make pattern analysis by Youtube slightly harder
+    # add some quantization and randomness to make pattern analysis by YouTube slightly harder
     quantized_upload_period = average_upload_period - (average_upload_period % (4*3600)) + 4*3600   # round up to nearest 4 hours
     randomized_upload_period = quantized_upload_period*(1 + secrets.randbelow(50)/50*0.5) # randomly between 1x and 1.5x
     next_check_delay = randomized_upload_period/10    # check at 10x the channel posting rate. might want to fine tune this number
@@ -661,7 +687,6 @@ def _get_upstream_videos(channel_id):
                         video_item['description'],
                     ))
 
-
             cursor.executemany('''INSERT OR IGNORE INTO videos (
                                       sql_channel_id,
                                       video_id,
@@ -673,7 +698,7 @@ def _get_upstream_videos(channel_id):
                                       description
                                   )
                                   VALUES ((SELECT id FROM subscribed_channels WHERE yt_channel_id=?), ?, ?, ?, ?, ?, ?, ?)''', rows)
-            cursor.executemany('''UPDATE videos SET 
+            cursor.executemany('''UPDATE videos SET
                                       title=?,
                                       duration=?,
                                       time_published=?,
@@ -694,7 +719,6 @@ def _get_upstream_videos(channel_id):
         print('1 new video from ' + channel_status_name)
     else:
         print(str(number_of_new_videos) + ' new videos from ' + channel_status_name)
-
 
 
 def check_all_channels():
@@ -730,22 +754,20 @@ def check_specific_channels(channel_ids):
     channel_names.update(channel_id_name_list)
     check_channels_if_necessary(channel_ids)
 
-
 CHANNEL_ID_RE = re.compile(r'UC[-_\w]{22}')
 @yt_app.route('/import_subscriptions', methods=['POST'])
 def import_subscriptions():
 
     # check if the post request has the file part
     if 'subscriptions_file' not in request.files:
-        #flash('No file part')
+        # flash('No file part')
         return flask.redirect(util.URL_ORIGIN + request.full_path)
     file = request.files['subscriptions_file']
     # if user does not select file, browser also
     # submit an empty part without filename
     if file.filename == '':
-        #flash('No selected file')
+        # flash('No selected file')
         return flask.redirect(util.URL_ORIGIN + request.full_path)
-
 
     mime_type = file.mimetype
 
@@ -793,11 +815,10 @@ def import_subscriptions():
                 if (outline_element.tag != 'outline') or ('xmlUrl' not in outline_element.attrib):
                     continue
 
-
                 channel_name = outline_element.attrib['text']
                 channel_rss_url = outline_element.attrib['xmlUrl']
                 channel_id = channel_rss_url[channel_rss_url.find('channel_id=')+11:].strip()
-                channels.append( (channel_id, channel_name) )
+                channels.append((channel_id, channel_name))
 
         except (AssertionError, IndexError, defusedxml.ElementTree.ParseError) as e:
             return '400 Bad Request: Unable to read opml xml file, or the file is not the expected format', 400
@@ -813,13 +834,13 @@ def import_subscriptions():
             else:
                 print('WARNING: Unknown row format:', row)
     else:
-            error = 'Unsupported file format: ' + mime_type
-            error += (' . Only subscription.json, subscriptions.csv files'
-                      ' (from Google Takeouts)'
-                      ' and XML OPML files exported from Youtube\'s'
-                      ' subscription manager page are supported')
-            return (flask.render_template('error.html', error_message=error),
-                    400)
+        error = 'Unsupported file format: ' + mime_type
+        error += (' . Only subscription.json, subscriptions.csv files'
+                  ' (from Google Takeouts)'
+                  ' and XML OPML files exported from YouTube\'s'
+                  ' subscription manager page are supported')
+        return (flask.render_template('error.html', error_message=error),
+                400)
 
     _subscribe(channels)
 
@@ -906,7 +927,7 @@ def get_subscription_manager_page():
                             'tags': [t for t in _get_tags(cursor, channel_id) if t != tag],
                         })
 
-                    tag_groups.append( (tag, sub_list) )
+                    tag_groups.append((tag, sub_list))
 
                 # Channels with no tags
                 channel_list = cursor.execute('''SELECT yt_channel_id, channel_name, muted
@@ -926,7 +947,7 @@ def get_subscription_manager_page():
                             'tags': [],
                         })
 
-                    tag_groups.append( ('No tags', sub_list) )
+                    tag_groups.append(('No tags', sub_list))
             else:
                 sub_list = []
                 for channel_name, channel_id, muted in _get_subscribed_channels(cursor):
@@ -938,19 +959,19 @@ def get_subscription_manager_page():
                         'tags': _get_tags(cursor, channel_id),
                     })
 
-
-
-
     if group_by_tags:
-        return flask.render_template('subscription_manager.html',
-            group_by_tags = True,
-            tag_groups = tag_groups,
+        return flask.render_template(
+            'subscription_manager.html',
+            group_by_tags=True,
+            tag_groups=tag_groups,
         )
     else:
-        return flask.render_template('subscription_manager.html',
-            group_by_tags = False,
-            sub_list = sub_list,
+        return flask.render_template(
+            'subscription_manager.html',
+            group_by_tags=False,
+            sub_list=sub_list,
         )
+
 
 def list_from_comma_separated_tags(string):
     return [tag.strip() for tag in string.split(',') if tag.strip()]
@@ -970,7 +991,7 @@ def post_subscription_manager_page():
                 _unsubscribe(cursor, request.values.getlist('channel_ids'))
             elif action == 'unsubscribe_verify':
                 unsubscribe_list = _get_channel_names(cursor, request.values.getlist('channel_ids'))
-                return flask.render_template('unsubscribe_verify.html', unsubscribe_list = unsubscribe_list)
+                return flask.render_template('unsubscribe_verify.html', unsubscribe_list=unsubscribe_list)
 
             elif action == 'mute':
                 cursor.executemany('''UPDATE subscribed_channels
@@ -984,6 +1005,7 @@ def post_subscription_manager_page():
                 flask.abort(400)
 
     return flask.redirect(util.URL_ORIGIN + request.full_path, 303)
+
 
 @yt_app.route('/subscriptions', methods=['GET'])
 @yt_app.route('/feed/subscriptions', methods=['GET'])
@@ -1001,7 +1023,6 @@ def get_subscriptions_page():
 
             tags = _get_all_tags(cursor)
 
-
             subscription_list = []
             for channel_name, channel_id, muted in _get_subscribed_channels(cursor):
                 subscription_list.append({
@@ -1011,15 +1032,17 @@ def get_subscriptions_page():
                     'muted': muted,
                 })
 
-    return flask.render_template('subscriptions.html',
-        header_playlist_names = local_playlist.get_playlist_names(),
-        videos = videos,
-        num_pages = math.ceil(number_of_videos_in_db/60),
-        parameters_dictionary = request.args,
-        tags = tags,
-        current_tag = tag,
-        subscription_list = subscription_list,
+    return flask.render_template(
+        'subscriptions.html',
+        header_playlist_names=local_playlist.get_playlist_names(),
+        videos=videos,
+        num_pages=math.ceil(number_of_videos_in_db/60),
+        parameters_dictionary=request.args,
+        tags=tags,
+        current_tag=tag,
+        subscription_list=subscription_list,
     )
+
 
 @yt_app.route('/subscriptions', methods=['POST'])
 @yt_app.route('/feed/subscriptions', methods=['POST'])
@@ -1066,7 +1089,7 @@ def serve_subscription_thumbnail(thumbnail):
             f.close()
             return flask.Response(image, mimetype='image/jpeg')
 
-    url = "https://i.ytimg.com/vi/" + video_id + "/mqdefault.jpg"
+    url = f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
     try:
         image = util.fetch_url(url, report_text="Saved thumbnail: " + video_id)
     except urllib.error.HTTPError as e:
@@ -1075,17 +1098,10 @@ def serve_subscription_thumbnail(thumbnail):
     try:
         f = open(thumbnail_path, 'wb')
     except FileNotFoundError:
-        os.makedirs(thumbnails_directory, exist_ok = True)
+        os.makedirs(thumbnails_directory, exist_ok=True)
         f = open(thumbnail_path, 'wb')
     f.write(image)
     f.close()
     existing_thumbnails.add(video_id)
 
     return flask.Response(image, mimetype='image/jpeg')
-
-
-
-
-
-
-

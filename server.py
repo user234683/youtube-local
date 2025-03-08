@@ -22,8 +22,6 @@ import sys
 import time
 
 
-
-
 def youtu_be(env, start_response):
     id = env['PATH_INFO'][1:]
     env['PATH_INFO'] = '/watch'
@@ -32,6 +30,7 @@ def youtu_be(env, start_response):
     else:
         env['QUERY_STRING'] += '&v=' + id
     yield from yt_app(env, start_response)
+
 
 RANGE_RE = re.compile(r'bytes=(\d+-(?:\d+)?)')
 def parse_range(range_header, content_length):
@@ -49,6 +48,7 @@ def parse_range(range_header, content_length):
     else:
         end_byte = int(end)
     return start_byte, end_byte
+
 
 def proxy_site(env, start_response, video=False):
     send_headers = {
@@ -101,7 +101,7 @@ def proxy_site(env, start_response, video=False):
 
         content_length = int(dict(response_headers).get('Content-Length', 0))
         if response.status >= 400:
-            print('Error: Youtube returned "%d %s" while routing %s' % (
+            print('Error: YouTube returned "%d %s" while routing %s' % (
                 response.status, response.reason, url.split('?')[0]))
 
         total_received = 0
@@ -120,7 +120,7 @@ def proxy_site(env, start_response, video=False):
             content_part = response.read(32*8192)
             total_received += len(content_part)
             if not content_part:
-                # Sometimes Youtube closes the connection before sending all of
+                # Sometimes YouTube closes the connection before sending all of
                 # the content. Retry with a range request for the missing
                 # content. See
                 # https://github.com/user234683/youtube-local/issues/40
@@ -137,7 +137,7 @@ def proxy_site(env, start_response, video=False):
                     fail_byte = start + total_received
                     send_headers['Range'] = 'bytes=%d-%d' % (fail_byte, end)
                     print(
-                        'Warning: Youtube closed the connection before byte',
+                        'Warning: YouTube closed the connection before byte',
                         str(fail_byte) + '.', 'Expected', start+content_length,
                         'bytes.'
                     )
@@ -153,29 +153,32 @@ def proxy_site(env, start_response, video=False):
             yield content_part
         cleanup_func(response)
         if retry:
-            # Youtube will return 503 Service Unavailable if you do a bunch
+            # YouTube will return 503 Service Unavailable if you do a bunch
             # of range requests too quickly.
             time.sleep(1)
             continue
         else:
             break
     else: # no break
-        print('Error: Youtube closed the connection before',
+        print('Error: YouTube closed the connection before',
               'providing all content. Retried three times:', url.split('?')[0])
+
 
 def proxy_video(env, start_response):
     yield from proxy_site(env, start_response, video=True)
 
+
 site_handlers = {
-    'youtube.com':yt_app,
-    'youtube-nocookie.com':yt_app,
-    'youtu.be':youtu_be,
+    'youtube.com': yt_app,
+    'youtube-nocookie.com': yt_app,
+    'youtu.be': youtu_be,
     'ytimg.com': proxy_site,
     'ggpht.com': proxy_site,
     'googleusercontent.com': proxy_site,
     'sponsor.ajay.app': proxy_site,
     'googlevideo.com': proxy_video,
 }
+
 
 def split_url(url):
     ''' Split https://sub.example.com/foo/bar.html into ('sub.example.com', '/foo/bar.html')'''
@@ -188,10 +191,10 @@ def split_url(url):
     return match.group(1), match.group(2)
 
 
-
 def error_code(code, start_response):
     start_response(code, ())
     return code.encode()
+
 
 def site_dispatch(env, start_response):
     client_address = env['REMOTE_ADDR']
@@ -213,7 +216,7 @@ def site_dispatch(env, start_response):
         method = env['REQUEST_METHOD']
         path = env['PATH_INFO']
 
-        if (method=="POST"
+        if (method == "POST"
                 and client_address not in ('127.0.0.1', '::1')
                 and not settings.allow_foreign_post_requests):
             yield error_code('403 Forbidden', start_response)
@@ -264,20 +267,27 @@ class FilteredRequestLog:
                             www[.]youtube[.]com/api/timedtext|
                             [-\w]+[.]googlevideo[.]com/).*"\ (200|206)
                             ''')
+
     def __init__(self):
         pass
+
     def write(self, s):
         if not self.filter_re.search(s):
             sys.stderr.write(s)
+
 
 if __name__ == '__main__':
     if settings.allow_foreign_addresses:
         server = WSGIServer(('0.0.0.0', settings.port_number), site_dispatch,
                             log=FilteredRequestLog())
+        ip_server = '0.0.0.0'
     else:
         server = WSGIServer(('127.0.0.1', settings.port_number), site_dispatch,
                             log=FilteredRequestLog())
-    print('Started httpserver on port' , settings.port_number)
+        ip_server = '127.0.0.1'
+
+    print('Starting httpserver at http://%s:%s/' %
+          (ip_server, settings.port_number))
     server.serve_forever()
 
 # for uwsgi, gunicorn, etc.

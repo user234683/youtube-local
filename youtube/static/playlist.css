@@ -1,0 +1,548 @@
+body {
+    display: grid;
+    grid-gap: 20px;
+    grid-template-areas:
+        "header"
+        "main"
+        "footer";
+    /* Fix height */
+    height: 100vh;
+    grid-template-rows: auto 1fr auto;
+    /* fix top and bottom */
+    margin-left: 1rem;
+    margin-right: 1rem;
+}
+
+img {
+    width: 100%;
+    height: auto;
+}
+
+a:link {
+    color: var(--link);
+}
+
+a:visited {
+    color: var(--link-visited);
+}
+
+input[type="text"],
+input[type="search"] {
+    background: var(--background);
+    border: 1px solid var(--button-border);
+    padding: 0.4rem 0.4rem;
+    font-size: 15px;
+    color: var(--search-text);
+    outline: none;
+    box-shadow: none;
+}
+
+input[type='search'] {
+    border-bottom: 1px solid var(--button-border);
+    border-top: 0px;
+    border-left: 0px;
+    border-right: 0px;
+    border-radius: 0px;
+}
+
+header {
+    display: grid;
+    grid-gap: 1px;
+    grid-template-areas:
+        "home"
+        "form"
+        "playlist";
+    grid-area: header;
+}
+
+.home {
+    grid-area: home;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 1rem;
+    margin-top: 1rem;
+}
+
+.form {
+    display: grid;
+    grid-gap: 4px;
+    grid-template-areas:
+        "search-box"
+        "search-button"
+        "dropdown";
+    grid-area: form;
+}
+
+.search-box {
+    grid-area: search-box;
+}
+.search-button {
+    grid-area: search-button;
+
+    cursor: pointer;
+    padding-bottom: 6px;
+    padding-left: .75em;
+    padding-right: .75em;
+    padding-top: 6px;
+    text-align: center;
+    white-space: nowrap;
+    background-color: var(--buttom);
+    border: 1px solid var(--button-border);
+    color: var(--buttom-text);
+    border-radius: 5px;
+}
+.search-button:hover {
+    background-color: var(--buttom-hover);
+}
+
+.dropdown {
+    display: grid;
+    grid-gap: 1px;
+    grid-template-areas:
+        "dropdown-label"
+        "dropdown-content";
+    grid-area: dropdown;
+}
+.dropdown-label {
+    grid-area: dropdown-label;
+
+    padding-bottom: 6px;
+    padding-left: .75em;
+    padding-right: .75em;
+    padding-top: 6px;
+    text-align: center;
+    white-space: nowrap;
+    background-color: var(--buttom);
+    border: 1px solid var(--button-border);
+    color: var(--buttom-text);
+    border-radius: 5px;
+}
+.dropdown-label:hover {
+    background-color: var(--buttom-hover);
+}
+
+/* playlist */
+.playlist {
+    display: grid;
+    grid-gap: 4px;
+    grid-template-areas:
+        "play-box"
+        "play-hidden"
+        "play-add"
+        "play-clean";
+    grid-area: playlist;
+}
+.play-box {
+    grid-area: play-box;
+}
+
+.play-hidden {
+    grid-area: play-hidden;
+}
+
+.play-add {
+    grid-area: play-add;
+    cursor: pointer;
+
+    padding-bottom: 6px;
+    padding-left: .75em;
+    padding-right: .75em;
+    padding-top: 6px;
+    text-align: center;
+    white-space: nowrap;
+    background-color: var(--buttom);
+    border: 1px solid var(--button-border);
+    color: var(--buttom-text);
+    border-radius: 5px;
+}
+.play-add:hover {
+    background-color: var(--buttom-hover);
+}
+
+.play-clean {
+    display: grid;
+    grid-area: play-clean;
+}
+
+.play-clean > button {
+    padding-bottom: 6px;
+    padding-left: .75em;
+    padding-right: .75em;
+    padding-top: 6px;
+    text-align: center;
+    white-space: nowrap;
+    background-color: var(--buttom);
+    border: 1px solid var(--button-border);
+    color: var(--buttom-text);
+    border-radius: 5px;
+}
+.play-clean > button:hover {
+    background-color: var(--buttom-hover);
+}
+/* /playlist */
+
+/* ------------- Menu Mobile without JS ---------------- */
+/* input hidden */
+.opt-box {
+    display: none;
+}
+.dropdown-content {
+    display: none;
+    grid-area: dropdown-content;
+}
+label[for=options-toggle-cbox] {
+    cursor: pointer;
+    -webkit-touch-callout: none;
+      -webkit-user-select: none;
+       -khtml-user-select: none;
+         -moz-user-select: none;
+          -ms-user-select: none;
+              user-select: none;
+}
+
+#options-toggle-cbox:checked ~ .dropdown-content {
+    display: block;
+    white-space: nowrap;
+    background: var(--secondary-background);
+    padding: 0.5rem 1rem;
+}
+/*- ----------- End Menu Mobile without JS ------------- */
+
+.main {
+    grid-area: main;
+    display: grid;
+    grid-row-gap: 1rem;
+}
+
+/* fix hr when is children of grid */
+hr {
+    width: 100%;
+}
+
+.playlist-metadata {
+    display: grid;
+    grid-template-columns: 1fr;
+    margin: auto;
+    grid-template-areas:
+        "author"
+        "summary"
+        "playlist-stats";
+}
+.author {
+    grid-area: author;
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    grid-column-gap: 1rem;
+    align-items: center;
+    justify-self: center;
+}
+.summary {
+    grid-area: summary;
+    justify-self: start;
+}
+.playlist-stats {
+    grid-area: playlist-stats;
+    justify-self: start;
+}
+
+/* Video list item */
+.video-container {
+    display: grid;
+    grid-row-gap: 0.5rem;
+}
+
+.item-box {
+    display: grid;
+    grid-template-columns: 1.9fr 0.1fr;
+    grid-template-rows: 1fr;
+    grid-gap: 1px;
+    grid-template-areas:
+        "item-video item-checkbox";
+}
+
+.item-video {
+    grid-area: item-video;
+
+    display: grid;
+    grid-template-columns: auto;
+    grid-template-rows: repeat(4, auto);
+    grid-row-gap: 0.4rem;
+    grid-template-areas:
+        "thumbnail-box"
+        "info-box";
+    align-items: center;
+
+    font-size: 0.7rem;
+}
+
+.item-video a {
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.thumbnail-box {
+    grid-area: thumbnail-box;
+    position: relative;
+}
+
+.thumbnail {
+    padding: 28.125%;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.thumbnail-img {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+    object-fit: cover;
+    background-color: var(--thumb-background);
+}
+
+.length {
+    position: absolute;
+    background-color: rgba(35, 35, 35, 0.75);
+    color: #fff;
+    border-radius: 2px;
+    padding: 2px;
+    font-size: 16px;
+    right: 0.25em;
+    bottom: -0.75em;
+}
+
+.playlist-item .thumbnail-info {
+    position: absolute;
+    right: 0px;
+    bottom: 0px;
+    height: 100%;
+    width: 50%;
+    text-align: center;
+    white-space: pre-line;
+    opacity: .8;
+    color: var(--text);
+    font-size: 0.8125rem;
+    background: var(--secondary-background);
+    padding: 0;
+}
+
+.playlist-item .thumbnail-info span {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-transform: none;
+}
+
+.info-box {
+      grid-area: info-box;
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto auto auto;
+      grid-gap: 1px;
+      grid-template-areas:
+          "."
+          "."
+          "."
+          "."
+          ".";
+}
+
+.title {
+    font-size: 0.8rem;
+    margin: 0px;
+    font-weight: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.info-box address {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.thumbnail-info {
+    background-color: var(--time-background);
+    color: #fff;
+    padding: 2px 5px;
+    text-transform: uppercase;
+    font-weight: 700;
+    font-size: 12px;
+    position: absolute;
+    right: 0;
+    bottom: .2rem;
+}
+
+.item-checkbox {
+    grid-area: item-checkbox;
+    justify-self: start;
+    align-self: center;
+    min-width: 30px;
+    margin: 0px;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-between;
+}
+
+.horizontal-stats {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.horizontal-stats > li {
+    display: inline;
+}
+
+.horizontal-stats > li:first-child::after {
+    content: " | ";
+}
+
+/* pagination */
+.main .pagination-container {
+    display: grid;
+    justify-content: center;
+}
+
+.main .pagination-container .pagination-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.main .pagination-container .pagination-list .page-link {
+    border-style: none;
+    font-weight: bold;
+    text-align: center;
+    background: var(--secondary-focus);
+    text-decoration: none;
+    align-self: center;
+    padding: .5rem;
+    margin: 0.2rem;
+    width: 1rem;
+}
+
+.main .pagination-container .pagination-list .page-link.is-current {
+    background: var(--secondary-background);
+}
+
+/* /video list item */
+
+.footer {
+    grid-area: footer;
+    display: grid;
+    grid-template-columns: auto;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    text-align: center;
+}
+
+.footer > p {
+    text-align: center;
+}
+
+@media (min-width: 480px) {
+    .item-video {
+        font-size: 0.85rem;
+    }
+    .info-box {
+        grid-gap: 2px;
+    }
+    .title {
+        font-size: 1rem;
+    }
+}
+
+@media (min-width: 600px) {
+    .video-container {
+        display: grid;
+        grid-row-gap: 0.5rem;
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (min-width: 992px) {
+    body {
+        display: grid;
+        grid-template-columns: 0.3fr 2fr 1fr 0.3fr;
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas:
+            "header header header header"
+            "main   main   main   main"
+            "footer footer footer footer";
+    }
+    .form {
+        display: grid;
+        grid-gap: 1px;
+        grid-template-columns: 1fr 1.4fr 0.3fr 1.3fr;
+        grid-template-areas: ". search-box search-button dropdown";
+        grid-area: form;
+        position: relative;
+    }
+    .dropdown {
+        display: grid;
+        grid-gap: 1px;
+        grid-template-columns: 100px auto;
+        grid-template-areas:
+            "dropdown-label"
+            "dropdown-content";
+        grid-area: dropdown;
+        position: absolute;
+        z-index: 1;
+    }
+    #options-toggle-cbox:checked ~ .dropdown-content {
+        width: calc(100% + 100px);
+        max-height: 80vh;
+        overflow-y: scroll;
+    }
+    .playlist-metadata {
+        max-width: 50vw;
+    }
+
+    /* playlist */
+    .playlist {
+        display: grid;
+        grid-gap: 1px;
+        grid-template-columns: 1fr 1.4fr 0.3fr 1.3fr;
+        grid-template-areas: ". play-box play-add play-clean";
+        grid-area: playlist;
+    }
+    .play-clean {
+        grid-template-columns: 100px auto;
+    }
+    .play-clean > button {
+        padding-left: 0px;
+        padding-right: 0px;
+        padding-bottom: 6px;
+        padding-top: 6px;
+        text-align: center;
+        white-space: nowrap;
+        background-color: var(--buttom);
+        color: var(--buttom-text);
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .video-container {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        grid-row-gap: 1rem;
+        grid-column-gap: 1rem;
+    }
+
+    .footer {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-column-gap: 2rem;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+}

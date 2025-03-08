@@ -1,5 +1,7 @@
+from datetime import datetime
 import settings
-import socks, sockshandler
+import socks
+import sockshandler
 import gzip
 try:
     import brotli
@@ -54,18 +56,20 @@ import urllib3.contrib.socks
 
 URL_ORIGIN = "/https://www.youtube.com"
 
-connection_pool = urllib3.PoolManager(cert_reqs = 'CERT_REQUIRED')
+connection_pool = urllib3.PoolManager(cert_reqs='CERT_REQUIRED')
+
 
 class TorManager:
     MAX_TRIES = 3
     # Remember the 7-sec wait times, so make cooldown be two of those
     # (otherwise it will retry forever if 429s never end)
     COOLDOWN_TIME = 14
+
     def __init__(self):
         self.old_tor_connection_pool = None
         self.tor_connection_pool = urllib3.contrib.socks.SOCKSProxyManager(
             'socks5h://127.0.0.1:' + str(settings.tor_port) + '/',
-            cert_reqs = 'CERT_REQUIRED')
+            cert_reqs='CERT_REQUIRED')
         self.tor_pool_refresh_time = time.monotonic()
         settings.add_setting_changed_hook(
             'tor_port',
@@ -85,7 +89,7 @@ class TorManager:
 
         self.tor_connection_pool = urllib3.contrib.socks.SOCKSProxyManager(
             'socks5h://127.0.0.1:' + str(settings.tor_port) + '/',
-            cert_reqs = 'CERT_REQUIRED')
+            cert_reqs='CERT_REQUIRED')
         self.tor_pool_refresh_time = time.monotonic()
 
     def get_tor_connection_pool(self):
@@ -157,6 +161,7 @@ class TorManager:
         finally:
             self.new_identity_lock.release()
 
+
 tor_manager = TorManager()
 
 
@@ -186,6 +191,7 @@ class HTTPAsymmetricCookieProcessor(urllib.request.BaseHandler):
     https_request = http_request
     https_response = http_response
 
+
 class FetchError(Exception):
     def __init__(self, code, reason='', ip=None, error_message=None):
         if error_message:
@@ -199,7 +205,6 @@ class FetchError(Exception):
         self.error_message = error_message
 
 
-
 def decode_content(content, encoding_header):
     encodings = encoding_header.replace(' ', '').split(',')
     for encoding in reversed(encodings):
@@ -210,6 +215,7 @@ def decode_content(content, encoding_header):
         elif encoding == 'gzip':
             content = gzip.decompress(content)
     return content
+
 
 def fetch_url_response(url, headers=(), timeout=15, data=None,
                        cookiejar_send=None, cookiejar_receive=None,
@@ -292,6 +298,7 @@ def fetch_url_response(url, headers=(), timeout=15, data=None,
 
     return response, cleanup_func
 
+
 def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
               cookiejar_send=None, cookiejar_receive=None, use_tor=True,
               debug_name=None):
@@ -311,7 +318,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
         cleanup_func(response)  # release_connection for urllib3
         content = decode_content(
             content,
-            response.getheader('Content-Encoding', default='identity'))
+            response.headers.get('Content-Encoding', default='identity'))
 
         if (settings.debugging_save_responses
                 and debug_name is not None
@@ -344,7 +351,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
             if not use_tor:
                 raise FetchError('429', reason=response.reason, ip=ip)
 
-            print('Error: Youtube blocked the request because the Tor exit node is overutilized. Exit node IP address: %s' % ip)
+            print('Error: YouTube blocked the request because the Tor exit node is overutilized. Exit node IP address: %s' % ip)
 
             # get new identity
             error = tor_manager.new_identity(start_time)
@@ -361,11 +368,10 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
         break
 
     if report_text:
-        print(report_text, '    Latency:', round(response_time - start_time,3), '    Read time:', round(read_finish - response_time,3))
-
-
+        print(report_text, '    Latency:', round(response_time - start_time, 3), '    Read time:', round(read_finish - response_time,3))
 
     return content
+
 
 def head(url, use_tor=False, report_text=None, max_redirects=10):
     pool = get_pool(use_tor and settings.route_tor)
@@ -376,7 +382,9 @@ def head(url, use_tor=False, report_text=None, max_redirects=10):
     # According to the documentation for urlopen, a redirect counts as a retry
     # So there are 3 redirects max by default. Let's change that
     # to 10 since googlevideo redirects a lot.
-    retries = urllib3.Retry(3+max_redirects, redirect=max_redirects,
+    retries = urllib3.Retry(
+        3+max_redirects,
+        redirect=max_redirects,
         raise_on_redirect=False)
     headers = {'User-Agent': 'Python-urllib'}
     response = pool.request('HEAD', url, headers=headers, retries=retries)
@@ -384,7 +392,7 @@ def head(url, use_tor=False, report_text=None, max_redirects=10):
         print(
             report_text,
             '    Latency:',
-            round(time.monotonic() - start_time,3))
+            round(time.monotonic() - start_time, 3))
     return response
 
 mobile_user_agent = 'Mozilla/5.0 (Linux; Android 7.0; Redmi Note 4 Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Mobile Safari/537.36'
@@ -406,10 +414,6 @@ mobile_xhr_headers = (
 ) + mobile_ua
 
 
-
-
-
-
 class RateLimitedQueue(gevent.queue.Queue):
     ''' Does initial_burst (def. 30) at first, then alternates between waiting waiting_period (def. 5) seconds and doing subsequent_bursts (def. 10) queries. After 5 seconds with nothing left in the queue, resets rate limiting. '''
 
@@ -425,7 +429,6 @@ class RateLimitedQueue(gevent.queue.Queue):
         self.currently_empty = False
         self.empty_start = 0
         gevent.queue.Queue.__init__(self)
-
 
     def get(self):
         self.lock.acquire()     # blocks if another greenlet currently has the lock
@@ -458,9 +461,8 @@ class RateLimitedQueue(gevent.queue.Queue):
         return item
 
 
-
 def download_thumbnail(save_directory, video_id):
-    url = "https://i.ytimg.com/vi/" + video_id + "/mqdefault.jpg"
+    url = f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
     save_location = os.path.join(save_directory, video_id + ".jpg")
     try:
         thumbnail = fetch_url(url, report_text="Saved thumbnail: " + video_id)
@@ -470,11 +472,12 @@ def download_thumbnail(save_directory, video_id):
     try:
         f = open(save_location, 'wb')
     except FileNotFoundError:
-        os.makedirs(save_directory, exist_ok = True)
+        os.makedirs(save_directory, exist_ok=True)
         f = open(save_location, 'wb')
     f.write(thumbnail)
     f.close()
     return True
+
 
 def download_thumbnails(save_directory, ids):
     if not isinstance(ids, (list, tuple)):
@@ -488,14 +491,11 @@ def download_thumbnails(save_directory, ids):
     gevent.joinall([gevent.spawn(download_thumbnail, save_directory, ids[j]) for j in range(i*5 + 5, len(ids))])
 
 
-
-
-
-
 def dict_add(*dicts):
     for dictionary in dicts[1:]:
         dicts[0].update(dictionary)
     return dicts[0]
+
 
 def video_id(url):
     url_parts = urllib.parse.urlparse(url)
@@ -504,12 +504,13 @@ def video_id(url):
 
 # default, sddefault, mqdefault, hqdefault, hq720
 def get_thumbnail_url(video_id):
-    return settings.img_prefix + "https://i.ytimg.com/vi/" + video_id + "/mqdefault.jpg"
+    return f"{settings.img_prefix}https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+
 
 def seconds_to_timestamp(seconds):
     seconds = int(seconds)
-    hours, seconds = divmod(seconds,3600)
-    minutes, seconds = divmod(seconds,60)
+    hours, seconds = divmod(seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
     if hours != 0:
         timestamp = str(hours) + ":"
         timestamp += str(minutes).zfill(2)  # zfill pads with zeros
@@ -518,7 +519,6 @@ def seconds_to_timestamp(seconds):
 
     timestamp += ":" + str(seconds).zfill(2)
     return timestamp
-
 
 
 def update_query_string(query_string, items):
@@ -540,11 +540,13 @@ def prefix_url(url):
     url = url.lstrip('/')     # some urls have // before them, which has a special meaning
     return '/' + url
 
+
 def left_remove(string, substring):
     '''removes substring from the start of string, if present'''
     if string.startswith(substring):
         return string[len(substring):]
     return string
+
 
 def concat_or_none(*strings):
     '''Concatenates strings. Returns None if any of the arguments are None'''
@@ -567,6 +569,7 @@ def prefix_urls(item):
         item['author_url'] = prefix_url(item['author_url'])
     except KeyError:
         pass
+
 
 def add_extra_html_info(item):
     if item['type'] == 'video':
@@ -616,7 +619,13 @@ replacement_map = collections.OrderedDict([
     ('*', '_'),
     ('\t', ' '),
 ])
-DOS_names = {'con', 'prn', 'aux', 'nul', 'com0', 'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9', 'lpt0', 'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9'}
+
+DOS_names = {'con', 'prn', 'aux', 'nul', 'com0', 'com1', 'com2', 'com3',
+             'com4', 'com5', 'com6', 'com7', 'com8', 'com9', 'lpt0',
+             'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7',
+             'lpt8', 'lpt9'}
+
+
 def to_valid_filename(name):
     '''Changes the name so it's valid on Windows, Linux, and Mac'''
     # See https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
@@ -654,6 +663,7 @@ def to_valid_filename(name):
         name = '_' + name
 
     return name
+
 
 # https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/youtube.py#L72
 INNERTUBE_CLIENTS = {
@@ -702,8 +712,6 @@ INNERTUBE_CLIENTS = {
         'INNERTUBE_CONTEXT_CLIENT_NAME': 3,
         'REQUIRE_JS_PLAYER': False,
     },
-
-
 
     'ios': {
         'INNERTUBE_API_KEY': 'AIzaSyB-63vPrdThhKuerbB2N_l7Kwwcxj6yUAc',
@@ -828,3 +836,17 @@ def call_youtube_api(client, api, data):
         report_text='Fetched ' + client + ' youtubei ' + api
     ).decode('utf-8')
     return response
+
+
+def strip_non_ascii(string):
+    ''' Returns the string without non ASCII characters'''
+    if string is None:
+        return ""
+    stripped = (c for c in string if 0 < ord(c) < 127)
+    return ''.join(stripped)
+
+
+def time_utc_isoformat(string):
+    t = datetime.strptime(string, '%Y-%m-%d')
+    t = t.astimezone().isoformat()
+    return t

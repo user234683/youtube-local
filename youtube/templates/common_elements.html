@@ -15,52 +15,58 @@
 {% endmacro %}
 
 {% macro item(info, description=false, horizontal=true, include_author=true, include_badges=true, lazy_load=false) %}
-    <div class="item-box {{ info['type'] + '-item-box' }} {{'horizontal-item-box' if horizontal else 'vertical-item-box'}} {{'has-description' if description else 'no-description'}}">
+    <article class="item-box">
         {% if info['error'] %}
             {{ info['error'] }}
         {% else %}
-            <div class="item {{ info['type'] + '-item' }}">
+            <div class="item-video {{ info['type'] + '-item' }}">
                 <a class="thumbnail-box" href="{{ info['url'] }}" title="{{ info['title'] }}">
-                    {% if lazy_load %}
-                        <img class="thumbnail-img lazy" data-src="{{ info['thumbnail'] }}">
-                    {% else %}
-                        <img class="thumbnail-img" src="{{ info['thumbnail'] }}">
-                    {% endif %}
-                    {% if info['type'] != 'channel' %}
-                        <div class="thumbnail-info">
-                            <span>{{ (info['video_count']|commatize + ' videos') if info['type'] == 'playlist' else info['duration'] }}</span>
-                        </div>
-                    {% endif %}
+                    <div class="thumbnail {% if info['type'] == 'channel' %} channel {% endif %}">
+                        {% if lazy_load %}
+                            <img class="thumbnail-img lazy" alt="&#x20;" data-src="{{ info['thumbnail'] }}">
+                        {% elif info['type'] == 'channel' %}
+                            <img class="thumbnail-img channel" alt="&#x20;" src="{{ info['thumbnail'] }}">
+                        {% else %}
+                            <img class="thumbnail-img" alt="&#x20;" src="{{ info['thumbnail'] }}">
+                        {% endif %}
+
+                        {% if info['type'] != 'channel' %}
+                            <p class="length">{{ (info['video_count']|commatize + ' videos') if info['type'] == 'playlist' else info['duration'] }}</p>
+                        {% endif %}
+                    </div>
                 </a>
-                <div class="item-metadata">
-                    <div class="title"><a class="title" href="{{ info['url'] }}" title="{{ info['title'] }}">{{ info['title'] }}</a></div>
+                <h4 class="title"><a href="{{ info['url'] }}" title="{{ info['title'] }}">{{ info['title'] }}</a></h4>
 
-                    {% if include_author %}
-                        {% if info.get('author_url') %}
-                            <address title="{{ info['author'] }}">By <a href="{{ info['author_url'] }}">{{ info['author'] }}</a></address>
-                        {% else %}
-                            <address title="{{ info['author'] }}"><b>{{ info['author'] }}</b></address>
-                        {% endif %}
-                    {% endif %}
-                    <ul class="stats {{'horizontal-stats' if horizontal else 'vertical-stats'}}">
-                        {% if info['type'] == 'channel' %}
-                            <li><span>{{ info['approx_subscriber_count'] }} subscribers</span></li>
-                            <li><span>{{ info['video_count']|commatize }} videos</span></li>
-                        {% else %}
-                            {% if info.get('approx_view_count') %}
-                                <li><span class="views">{{ info['approx_view_count'] }} views</span></li>
-                            {% endif %}
-                            {% if info.get('time_published') %}
-                                <li><time>{{ info['time_published'] }}</time></li>
+                {% if include_author %}
+                    {% set author_description = info['author'] %}
+                    {% set AUTHOR_DESC_LENGTH = 35 %}
+                    {% if author_description != None %}
+                        {% if author_description|length >= AUTHOR_DESC_LENGTH %}
+                            {% set author_description = author_description[:AUTHOR_DESC_LENGTH].split(' ')[:-1]|join(' ') %}
+                            {% if not author_description[-1] in ['.', '?', ':', '!'] %}
+                                {% set author_more = author_description + '…' %}
+                                {% set author_description = author_more|replace('"','') %}
                             {% endif %}
                         {% endif %}
-                    </ul>
-
-                    {% if description %}
-                        <span class="description">{{ text_runs(info.get('description', '')) }}</span>
                     {% endif %}
-                    {% if include_badges %}
-                        <span class="badges">{{ info['badges']|join(' | ') }}</span>
+                    {% if info.get('author_url') %}
+                        <address title="{{ info['author'] }}"><b><a href="{{ info['author_url'] }}">{{ author_description }}</a></b></address>
+                    {% else %}
+                        <address title="{{ info['author'] }}"><b>{{ author_description }}</b></address>
+                    {% endif %}
+                {% endif %}
+
+                <div class="stats {{'horizontal-stats' if horizontal else 'vertical-stats'}}">
+                    {% if info['type'] == 'channel' %}
+                        <div>{{ info['approx_subscriber_count'] }} subscribers</div>
+                        <div>{{ info['video_count']|commatize }} videos</div>
+                    {% else %}
+                        {% if info.get('time_published') %}
+                            <span>{{ info['time_published'] }}</span>
+                        {% endif %}
+                        {% if info.get('approx_view_count') %}
+                            <div class="views">{{ info['approx_view_count'] }} views</div>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -68,8 +74,7 @@
                 <input class="item-checkbox" type="checkbox" name="video_info_list" value="{{ info['video_info'] }}" form="playlist-edit">
             {% endif %}
         {% endif %}
-    </div>
-
+    </article>
 {% endmacro %}
 
 {% macro page_buttons(estimated_pages, url, parameters_dictionary, include_ends=false) %}
@@ -85,22 +90,22 @@
 
     {% if include_ends and page_start is gt(1) %}
         {% set _ = parameters_dictionary.__setitem__('page', 1) %}
-        <a class="page-button first-page-button" href="{{ url + '?' + parameters_dictionary|urlencode }}">{{ 1 }}</a>
+        <a class="page-link first-page-button" href="{{ url + '?' + parameters_dictionary|urlencode }}">{{ 1 }}</a>
     {% endif %}
 
     {% for page in range(page_start, page_end+1) %}
         {% if page == current_page %}
-            <div class="page-button">{{ page }}</div>
+            <a class="page-link is-current">{{ page }}</a>
         {% else %}
             {# https://stackoverflow.com/questions/36886650/how-to-add-a-new-entry-into-a-dictionary-object-while-using-jinja2 #}
             {% set _ = parameters_dictionary.__setitem__('page', page) %}
-            <a class="page-button" href="{{ url + '?' + parameters_dictionary|urlencode }}">{{ page }}</a>
+            <a class="page-link" href="{{ url + '?' + parameters_dictionary|urlencode }}">{{ page }}</a>
         {% endif %}
     {% endfor %}
 
     {% if include_ends and page_end is lt(estimated_pages) %}
         {% set _ = parameters_dictionary.__setitem__('page', estimated_pages) %}
-        <a class="page-button last-page-button" href="{{ url + '?' + parameters_dictionary|urlencode }}">{{ estimated_pages }}</a>
+        <a class="page-link last-page-button" href="{{ url + '?' + parameters_dictionary|urlencode }}">{{ estimated_pages }}</a>
     {% endif %}
 
 {% endmacro %}
@@ -110,13 +115,13 @@
     {% set parameters_dictionary = parameters_dictionary.to_dict() %}
 
     {% if current_page != 1 %}
-            {% set _ = parameters_dictionary.__setitem__('page', current_page - 1) %}
-            <a class="page-button previous-page" href="{{ url + '?' + parameters_dictionary|urlencode }}">Previous page</a>
+        {% set _ = parameters_dictionary.__setitem__('page', current_page - 1) %}
+        <a class="page-link previous-page" href="{{ url + '?' + parameters_dictionary|urlencode }}">Previous page</a>
     {% endif %}
 
     {% if not is_last_page %}
-            {% set _ = parameters_dictionary.__setitem__('page', current_page + 1) %}
-            <a class="page-button next-page" href="{{ url + '?' + parameters_dictionary|urlencode }}">Next page</a>
+        {% set _ = parameters_dictionary.__setitem__('page', current_page + 1) %}
+        <a class="page-link next-page" href="{{ url + '?' + parameters_dictionary|urlencode }}">Next page</a>
     {% endif %}
 {% endmacro %}
 
@@ -124,12 +129,12 @@
     {% set parameters_dictionary = parameters_dictionary.to_dict() %}
 
     {% if prev_ctoken %}
-            {% set _ = parameters_dictionary.__setitem__('ctoken', prev_ctoken) %}
-            <a class="page-button previous-page" href="{{ url + '?' + parameters_dictionary|urlencode }}">Previous page</a>
+        {% set _ = parameters_dictionary.__setitem__('ctoken', prev_ctoken) %}
+        <a class="page-link previous-page" href="{{ url + '?' + parameters_dictionary|urlencode }}">Previous page</a>
     {% endif %}
 
     {% if next_ctoken %}
-            {% set _ = parameters_dictionary.__setitem__('ctoken', next_ctoken) %}
-            <a class="page-button next-page" href="{{ url + '?' + parameters_dictionary|urlencode }}">Next page</a>
+        {% set _ = parameters_dictionary.__setitem__('ctoken', next_ctoken) %}
+        <a class="page-link next-page" href="{{ url + '?' + parameters_dictionary|urlencode }}">Next page</a>
     {% endif %}
 {% endmacro %}

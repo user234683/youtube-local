@@ -1,9 +1,9 @@
-var details_tt, select_tt, table_tt;
+let details_tt, select_tt, table_tt;
 
 function renderCues() {
-  var selectedTrack = Q("video").textTracks[select_tt.selectedIndex];
-  let cuesList = [...selectedTrack.cues];
-  var is_automatic = cuesList[0].text.startsWith(" \n");
+  const selectedTrack = QId("js-video-player").textTracks[select_tt.selectedIndex];
+  const cuesList = [...selectedTrack.cues];
+  const is_automatic = cuesList[0].text.startsWith(" \n");
 
   // Firefox ignores cues starting with a blank line containing a space
   // Automatic captions contain such a blank line in the first cue
@@ -38,7 +38,7 @@ function renderCues() {
     a.href = "javascript:;";  // TODO: replace this with ?t parameter
     if (title) a.title = title;
     a.addEventListener("click", (e) => {
-      Q("video").currentTime = startTime;
+      QId("js-video-player").currentTime = startTime;
     })
     return a;
   }
@@ -65,8 +65,8 @@ function renderCues() {
   else {
     forEachCue((startTime, txt) => {
       span = document.createElement("span");
-      var idx = txt.indexOf(" ", 1);
-      var [firstWord, rest] = [txt.slice(0, idx), txt.slice(idx)];
+      let idx = txt.indexOf(" ", 1);
+      let [firstWord, rest] = [txt.slice(0, idx), txt.slice(idx)];
 
       span.appendChild(createTimestampLink(startTime, firstWord, toTimestamp(startTime)));
       if (rest) span.appendChild(text(rest + " "));
@@ -75,25 +75,25 @@ function renderCues() {
     rows = table_tt.childNodes;
   }
 
-  var lastActiveRow = null;
+  let lastActiveRow = null;
+  let row;
   function colorCurRow(e) {
     // console.log("cuechange:", e);
-    var activeCueIdx = cuesList.findIndex((c) => c == selectedTrack.activeCues[0]);
-    var activeRowIdx = is_automatic ? Math.floor(activeCueIdx / 2) : activeCueIdx;
+    let activeCueIdx = cuesList.findIndex((c) => c == selectedTrack.activeCues[0]);
+    let activeRowIdx = is_automatic ? Math.floor(activeCueIdx / 2) : activeCueIdx;
 
     if (lastActiveRow) lastActiveRow.style.backgroundColor = "";
     if (activeRowIdx < 0) return;
-    var row = rows[activeRowIdx];
+    row = rows[activeRowIdx];
     row.style.backgroundColor = "#0cc12e42";
     lastActiveRow = row;
   }
-  colorCurRow();
   selectedTrack.addEventListener("cuechange", colorCurRow);
 }
 
 function loadCues() {
-  let textTracks = Q("video").textTracks;
-  let selectedTrack = textTracks[select_tt.selectedIndex];
+  const textTracks = QId("js-video-player").textTracks;
+  const selectedTrack = textTracks[select_tt.selectedIndex];
 
   // See https://developer.mozilla.org/en-US/docs/Web/API/TextTrack/mode
   // This code will (I think) make sure that the selected track's cues
@@ -111,7 +111,7 @@ function loadCues() {
     selectedTrack.mode = selected_track_target_mode;
   }
 
-  var intervalID = setInterval(() => {
+  let intervalID = setInterval(() => {
     if (selectedTrack.cues && selectedTrack.cues.length) {
       clearInterval(intervalID);
       renderCues();
@@ -120,7 +120,7 @@ function loadCues() {
 }
 
 window.addEventListener('DOMContentLoaded', function() {
-  let textTracks = Q("video").textTracks;
+  const textTracks = QId("js-video-player").textTracks;
   if (!textTracks.length) return;
 
   details_tt = Q("details#transcript-details");
@@ -133,11 +133,11 @@ window.addEventListener('DOMContentLoaded', function() {
   select_tt.addEventListener("change", loadCues);
 
   table_tt = Q("table#transcript-table");
-  table_tt.appendChild(text("loading.."));
+  table_tt.appendChild(text("loading..."));
 
   textTracks.addEventListener("change", (e) => {
     // console.log(e);
-    var idx = getActiveTranscriptTrackIdx();  // sadly not provided by 'e'
+    let idx = getActiveTranscriptTrackIdx();  // sadly not provided by 'e'
     if (textTracks[idx].mode == "showing") {
       select_tt.selectedIndex = idx;
       loadCues();

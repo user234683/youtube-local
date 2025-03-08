@@ -63,7 +63,7 @@ def get_search_json(query, page, autocorrect, sort, filters):
 def get_search_page():
     query = request.args.get('search_query') or request.args.get('query')
     if query is None:
-        return flask.render_template('base.html', title='Search')
+        return flask.render_template('home.html', title='Search')
     elif query.startswith('https://www.youtube.com') or query.startswith('https://www.youtu.be'):
          return flask.redirect(f'/{query}')
 
@@ -78,7 +78,7 @@ def get_search_page():
 
     search_info = yt_data_extract.extract_search_info(polymer_json)
     if search_info['error']:
-        return flask.render_template('error.html', error_message = search_info['error'])
+        return flask.render_template('error.html', error_message=search_info['error'])
 
     for extract_item_info in search_info['items']:
         util.prefix_urls(extract_item_info)
@@ -95,19 +95,26 @@ def get_search_page():
         no_autocorrect_query_url = util.URL_ORIGIN + '/results?' + urllib.parse.urlencode(no_autocorrect_query_string, doseq=True)
         corrections['original_query_url'] = no_autocorrect_query_url
 
-    return flask.render_template('search.html',
-        header_playlist_names = local_playlist.get_playlist_names(),
-        query = query,
-        estimated_results = search_info['estimated_results'],
-        estimated_pages = search_info['estimated_pages'],
-        corrections = search_info['corrections'],
-        results = search_info['items'],
-        parameters_dictionary = request.args,
+    return flask.render_template(
+        'search.html',
+        header_playlist_names=local_playlist.get_playlist_names(),
+        query=query,
+        estimated_results=search_info['estimated_results'],
+        estimated_pages=search_info['estimated_pages'],
+        corrections=search_info['corrections'],
+        results=search_info['items'],
+        parameters_dictionary=request.args,
     )
+
 
 @yt_app.route('/opensearch.xml')
 def get_search_engine_xml():
     with open(os.path.join(settings.program_directory, 'youtube/opensearch.xml'), 'rb') as f:
-        content = f.read().replace(b'$host_url',
-                                   request.host_url.rstrip('/').encode())
+        if settings.app_public:
+            host_url = '%s' % settings.app_url
+        else:
+            host_url = '%s:%s' % (settings.app_url, settings.port_number)
+        content = f.read().replace(
+            b'$host_url', str(host_url).encode()
+        )
         return flask.Response(content, mimetype='application/xml')

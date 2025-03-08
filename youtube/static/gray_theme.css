@@ -1,20 +1,22 @@
-body{
-    --interface-color: #dadada;
-    --text-color: #222222;
-    --background-color: #bcbcbc;
-    --video-background-color: #dadada;
-    --link-color-rgb: 0, 0, 238;
-    --visited-link-color-rgb: 85, 26, 139;
-}
-
-.comment .permalink{
-    color: #000000;
-}
-
-.setting-item{
-    background-color: #eeeeee;
-}
-
-.muted{
-    background-color: #888888;
+:root {
+    --background:            #2D3743;
+    --text:                  #FFFFFF;
+    --secondary-hover:       #73828C;
+    --secondary-focus:       rgba(115, 130, 140, 0.125);
+    --secondary-inverse:     #FFFFFF;
+    --primary-background:    #2D3743;
+    --secondary-background:  #102027;
+    --thumb-background:      #35404D;
+    --link:                  #22AAFF;
+    --link-visited:          #7755FF;
+    --border-bg:             #FFFFFF;
+    --border-bg-settings:    #FFFFFF;
+    --border-bg-license:     #FFFFFF;
+    --buttom:                #2D3743;
+    --buttom-text:           #FFFFFF;
+    --button-border:         #102027;
+    --buttom-hover:          #102027;
+    --search-text:           #FFFFFF;
+    --time-background:       #212121;
+    --time-text:             #FFFFFF;
 }

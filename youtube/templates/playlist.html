@@ -2,85 +2,40 @@
 {% extends "base.html" %}
 {% import "common_elements.html" as common_elements %}
 {% block style %}
-    main > * {
-        max-width: 800px;
-        margin:auto;
-    }
-
-    .playlist-metadata{
-        display:grid;
-        grid-template-columns: 0fr 1fr;
-        grid-template-areas:
-            "thumbnail title"
-            "thumbnail author"
-            "thumbnail stats"
-            "thumbnail description";
-    }
-        .playlist-thumbnail{
-            grid-area: thumbnail;
-            width:250px;
-            margin-right: 10px;
-        }
-        .playlist-title{ grid-area: title }
-        .playlist-author{ grid-area: author }
-        .playlist-stats{ grid-area: stats }
-        .playlist-description{
-            grid-area: description;
-            min-width:0px;
-            white-space: pre-line;
-        }
-
-    #results{
-        margin-top:10px;
-
-        display: grid;
-        grid-auto-rows: 0fr;
-        grid-row-gap: 10px;
-
-    }
-        .thumbnail-box{     /* overides rule in shared.css */
-            height: 90px !important;
-            width: 120px !important;
-        }
-    @media (max-width:600px){
-        .playlist-metadata{
-            grid-template-columns: 1fr;
-            grid-template-areas:
-                "thumbnail"
-                "title"
-                "author"
-                "stats"
-                "description";
-            justify-items: center;
-        }
-    }
+    <link href="/youtube.com/static/message_box.css" rel="stylesheet">
+    <link href="/youtube.com/static/playlist.css" rel="stylesheet">
 {% endblock style %}
 
 {% block main %}
+
     <div class="playlist-metadata">
-        <img class="playlist-thumbnail" src="{{ thumbnail }}">
-        <h2 class="playlist-title">{{ title }}</h2>
-        <a class="playlist-author" href="{{ author_url }}">{{ author }}</a>
+        <div class="author">
+            <img alt="{{ title }}" src="{{ thumbnail }}">
+            <h2>{{ title }}</h2>
+        </div>
+        <div class="summary">
+            <a class="playlist-author" href="{{ author_url }}">{{ author }}</a>
+        </div>
         <div class="playlist-stats">
             <div>{{ video_count|commatize }} videos</div>
             <div>{{ view_count|commatize }} views</div>
             <div>Last updated {{ time_published }}</div>
         </div>
-        <div class="playlist-description">{{ common_elements.text_runs(description) }}</div>
     </div>
+    <hr/>
 
-    <div id="results">
+
+    <div id="results" class="video-container">
         {% for info in video_list %}
             {{ common_elements.item(info) }}
         {% endfor %}
     </div>
-    <nav class="page-button-row">
-        {{ common_elements.page_buttons(num_pages, '/https://www.youtube.com/playlist', parameters_dictionary) }}
-    </nav>
+    <hr/>
+
+    <footer class="pagination-container">
+        <nav class="pagination-list">
+            {{ common_elements.page_buttons(num_pages, '/https://www.youtube.com/playlist', parameters_dictionary) }}
+        </nav>
+    </footer>
+
 {% endblock main %}
-
-
-
-
-
-

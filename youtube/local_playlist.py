@@ -15,6 +15,7 @@ from flask import request
 playlists_directory = os.path.join(settings.data_dir, "playlists")
 thumbnails_directory = os.path.join(settings.data_dir, "playlist_thumbnails")
 
+
 def video_ids_in_playlist(name):
     try:
         with open(os.path.join(playlists_directory, name + ".txt"), 'r', encoding='utf-8') as file:
@@ -22,6 +23,7 @@ def video_ids_in_playlist(name):
         return set(json.loads(video)['id'] for video in videos.splitlines())
     except FileNotFoundError:
         return set()
+
 
 def add_to_playlist(name, video_info_list):
     if not os.path.exists(playlists_directory):
@@ -39,7 +41,6 @@ def add_to_playlist(name, video_info_list):
 
 def add_extra_info_to_videos(videos, playlist_name):
     '''Adds extra information necessary for rendering the video item HTML
-
     Downloads missing thumbnails'''
     try:
         thumbnails = set(os.listdir(os.path.join(thumbnails_directory,
@@ -99,6 +100,7 @@ def get_playlist_names():
         if ext == '.txt':
             yield name
 
+
 def remove_from_playlist(name, video_info_list):
     ids = [json.loads(video)['id'] for video in video_info_list]
     with open(os.path.join(playlists_directory, name + ".txt"), 'r', encoding='utf-8') as file:
@@ -133,12 +135,13 @@ def get_local_playlist_page(playlist_name=None):
         page = int(request.args.get('page', 1))
         offset = 50*(page - 1)
         videos, num_videos = get_local_playlist_videos(playlist_name, offset=offset, amount=50)
-        return flask.render_template('local_playlist.html',
-            header_playlist_names = get_playlist_names(),
-            playlist_name = playlist_name,
-            videos = videos,
-            num_pages = math.ceil(num_videos/50),
-            parameters_dictionary = request.args,
+        return flask.render_template(
+            'local_playlist.html',
+            header_playlist_names=get_playlist_names(),
+            playlist_name=playlist_name,
+            videos=videos,
+            num_pages=math.ceil(num_videos/50),
+            parameters_dictionary=request.args,
         )
 
 
@@ -191,7 +194,9 @@ def edit_playlist():
     else:
         flask.abort(400)
 
+
 @yt_app.route('/data/playlist_thumbnails/<playlist_name>/<thumbnail>')
 def serve_thumbnail(playlist_name, thumbnail):
     # .. is necessary because flask always uses the application directory at ./youtube, not the working directory
-    return flask.send_from_directory(os.path.join('..', thumbnails_directory, playlist_name), thumbnail)
+    return flask.send_from_directory(
+        os.path.join('..', thumbnails_directory, playlist_name), thumbnail)

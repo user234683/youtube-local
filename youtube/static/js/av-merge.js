@@ -41,7 +41,7 @@ function AVMerge(video, srcInfo, startTime){
     }
 
     // Find supported video and audio sources
-    for (var src of srcInfo['videos']) {
+    for (let src of srcInfo['videos']) {
         if (MediaSource.isTypeSupported(src['mime_codec'])) {
             reportDebug('Using video source', src['mime_codec'],
                         src['quality_string'], 'itag', src['itag']);
@@ -49,7 +49,7 @@ function AVMerge(video, srcInfo, startTime){
             break;
         }
     }
-    for (var src of srcInfo['audios']) {
+    for (let src of srcInfo['audios']) {
         if (MediaSource.isTypeSupported(src['mime_codec'])) {
             reportDebug('Using audio source', src['mime_codec'],
                         src['quality_string'], 'itag', src['itag']);
@@ -207,9 +207,9 @@ Stream.prototype.setup = async function(){
             'Initialization+index segments',
         ).then(
             (buffer) => {
-                var init_end = this.initRange.end - this.initRange.start + 1;
-                var index_start = this.indexRange.start - this.initRange.start;
-                var index_end = this.indexRange.end - this.initRange.start + 1;
+                let init_end = this.initRange.end - this.initRange.start + 1;
+                let index_start = this.indexRange.start - this.initRange.start;
+                let index_end = this.indexRange.end - this.initRange.start + 1;
                 this.setupInitSegment(buffer.slice(0, init_end));
                 this.setupSegmentIndex(buffer.slice(index_start, index_end));
             }
@@ -250,7 +250,7 @@ Stream.prototype.setupSegmentIndex = async function(indexSegment){
                 entry.referencedSize = entry.end - entry.start + 1;
         }
     } else {
-        var box = unbox(indexSegment);
+        let box = unbox(indexSegment);
         this.sidx = sidx_parse(box.data, this.indexRange.end+1);
     }
     this.fetchSegmentIfNeeded(this.getSegmentIdx(this.startTime));
@@ -292,8 +292,8 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
 
         // Count how many bytes are in buffer to update buffering target,
         // updating .have as well for when we need to delete segments
-        var bytesInBuffer = 0;
-        for (var i = 0; i < this.sidx.entries.length; i++) {
+        let bytesInBuffer = 0;
+        for (let i = 0; i < this.sidx.entries.length; i++) {
             if (this.segmentInBuffer(i))
                 bytesInBuffer += this.sidx.entries[i].referencedSize;
             else if (this.sidx.entries[i].have) {
@@ -309,11 +309,11 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
 
         // Delete 10 segments (arbitrary) from buffer, making sure
         // not to delete current one
-        var currentSegment = this.getSegmentIdx(this.video.currentTime);
-        var numDeleted = 0;
-        var i = 0;
+        let currentSegment = this.getSegmentIdx(this.video.currentTime);
+        let numDeleted = 0;
+        let i = 0;
         const DELETION_TARGET = 10;
-        var toDelete = []; // See below for why we have to schedule it
+        let toDelete = []; // See below for why we have to schedule it
         this.reportDebug('Deleting segments from beginning of buffer.');
         while (numDeleted < DELETION_TARGET && i < currentSegment) {
             if (this.sidx.entries[i].have) {
@@ -337,9 +337,9 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
         // When calling .remove, the sourceBuffer will go into updating=true
         // state, and remove cannot be called until it is done. So we have
         // to delete on the updateend event for subsequent ones.
-        var removeFinishedEvent;
-        var deletedStuff = (toDelete.length !== 0)
-        var deleteSegment = () => {
+        let removeFinishedEvent;
+        let deletedStuff = (toDelete.length !== 0)
+        let deleteSegment = () => {
             if (toDelete.length === 0) {
                 removeFinishedEvent.remove();
                 // If QuotaExceeded happened for current segment, retry the
@@ -373,19 +373,19 @@ Stream.prototype.appendSegment = function(segmentIdx, chunk) {
 }
 Stream.prototype.getSegmentIdx = function(videoTime) {
     // get an estimate
-    var currentTick = videoTime * this.sidx.timeScale;
-    var firstSegmentDuration = this.sidx.entries[0].subSegmentDuration;
-    var index = 1 + Math.floor(currentTick / firstSegmentDuration);
-    var index = clamp(index, 0, this.sidx.entries.length - 1);
+    let currentTick = videoTime * this.sidx.timeScale;
+    let firstSegmentDuration = this.sidx.entries[0].subSegmentDuration;
+    let index = 1 + Math.floor(currentTick / firstSegmentDuration);
+    index = clamp(index, 0, this.sidx.entries.length - 1);
 
-    var increment = 1;
+    let increment = 1;
     if (currentTick < this.sidx.entries[index].tickStart){
         increment = -1;
     }
 
     // go up or down to find correct index
     while (index >= 0 && index < this.sidx.entries.length) {
-        var entry = this.sidx.entries[index];
+        let entry = this.sidx.entries[index];
         if (entry.tickStart <= currentTick && (entry.tickEnd+1) > currentTick){
             return index;
         }
@@ -399,11 +399,11 @@ Stream.prototype.checkBuffer = async function() {
         return;
     }
     // Find the first unbuffered segment, i
-    var currentSegmentIdx = this.getSegmentIdx(this.video.currentTime);
-    var bufferedBytesAhead = 0;
-    var i;
+    let currentSegmentIdx = this.getSegmentIdx(this.video.currentTime);
+    let bufferedBytesAhead = 0;
+    let i;
     for (i = currentSegmentIdx; i < this.sidx.entries.length; i++) {
-        var entry = this.sidx.entries[i];
+        let entry = this.sidx.entries[i];
         // check if we had it before, but it was deleted by the browser
         if (entry.have && !this.segmentInBuffer(i)) {
             this.reportDebug('segment', i, 'deleted by browser');
@@ -431,9 +431,9 @@ Stream.prototype.checkBuffer = async function() {
     }
 }
 Stream.prototype.segmentInBuffer = function(segmentIdx) {
-    var entry = this.sidx.entries[segmentIdx];
+    let entry = this.sidx.entries[segmentIdx];
     // allow for 0.01 second error
-    var timeStart = entry.tickStart/this.sidx.timeScale + 0.01;
+    let timeStart = entry.tickStart/this.sidx.timeScale + 0.01;
 
     /* Some of YouTube's mp4 fragments are malformed, with half-frame
     playback gaps. In this video at 240p (timeScale = 90000 ticks/second)
@@ -460,14 +460,15 @@ Stream.prototype.segmentInBuffer = function(segmentIdx) {
     quality switching, YouTube likely encodes their formats to line up nicely.
     Either there is a bug in their encoder, or this is intentional. Allow for
     up to 1 frame-time of error to work around this issue. */
+    let endError;
     if (this.streamType == 'video')
-        var endError = 1/(this.avMerge.videoSource.fps || 30);
+        endError = 1/(this.avMerge.videoSource.fps || 30);
     else
-        var endError = 0.01
-    var timeEnd = (entry.tickEnd+1)/this.sidx.timeScale - endError;
+        endError = 0.01
+    let timeEnd = (entry.tickEnd+1)/this.sidx.timeScale - endError;
 
-    var timeRanges = this.sourceBuffer.buffered;
-    for (var i=0; i < timeRanges.length; i++) {
+    let timeRanges = this.sourceBuffer.buffered;
+    for (let i=0; i < timeRanges.length; i++) {
         if (timeRanges.start(i) <= timeStart && timeEnd <= timeRanges.end(i)) {
             return true;
         }
@@ -508,7 +509,7 @@ Stream.prototype.fetchSegmentIfNeeded = function(segmentIdx) {
     this.fetchSegment(segmentIdx);
 }
 Stream.prototype.handleSeek = function() {
-    var segmentIdx = this.getSegmentIdx(this.video.currentTime);
+    let segmentIdx = this.getSegmentIdx(this.video.currentTime);
     this.fetchSegmentIfNeeded(segmentIdx);
 }
 Stream.prototype.reportDebug = function(...args) {
@@ -529,8 +530,8 @@ Stream.prototype.reportError = function(...args) {
 // http://lofi.limo/blog/retry-xmlhttprequest-carefully
 function fetchRange(url, start, end, debugInfo) {
     return new Promise((resolve, reject) => {
-        var retryCount = 0;
-        var xhr = new XMLHttpRequest();
+        let retryCount = 0;
+        let xhr = new XMLHttpRequest();
         function onFailure(err, message, maxRetries=5){
             message = debugInfo + ': ' + message + ' - Err: ' + String(err);
             retryCount++;
@@ -558,7 +559,7 @@ function fetchRange(url, start, end, debugInfo) {
             if (xhr.status >= 200 && xhr.status < 300) {
                 resolve(xhr.response);
             } else {
-                onFailure(e, 
+                onFailure(e,
                     'Status '
                     + String(xhr.status) + ' ' + String(xhr.statusText)
                 );
@@ -576,15 +577,15 @@ function fetchRange(url, start, end, debugInfo) {
 }
 
 function debounce(func, wait, immediate) {
-    var timeout;
+    let timeout;
     return function() {
-        var context = this;
-        var args = arguments;
-        var later = function() {
+        let context = this;
+        let args = arguments;
+        let later = function() {
             timeout = null;
             if (!immediate) func.apply(context, args);
         };
-        var callNow = immediate && !timeout;
+        let callNow = immediate && !timeout;
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
         if (callNow) func.apply(context, args);
@@ -620,7 +621,7 @@ function reportDebug(...args){
 }
 
 function byteArrayToIntegerLittleEndian(unsignedByteArray){
-    var result = 0;
+    let result = 0;
     for (byte of unsignedByteArray){
         result = result*256;
         result += byte
@@ -628,7 +629,7 @@ function byteArrayToIntegerLittleEndian(unsignedByteArray){
     return result;
 }
 function byteArrayToFloat(byteArray) {
-    var view = new DataView(byteArray.buffer);
+    let view = new DataView(byteArray.buffer);
     if (byteArray.length == 4)
         return view.getFloat32(byteArray.byteOffset);
     else
@@ -639,14 +640,14 @@ function ByteParser(data){
     this.data = new Uint8Array(data);
 }
 ByteParser.prototype.readInteger = function(nBytes){
-    var result = byteArrayToIntegerLittleEndian(
+    let result = byteArrayToIntegerLittleEndian(
         this.data.slice(this.curIndex, this.curIndex + nBytes)
     );
     this.curIndex += nBytes;
     return result;
 }
 ByteParser.prototype.readBufferBytes = function(nBytes){
-    var result = this.data.slice(this.curIndex, this.curIndex + nBytes);
+    let result = this.data.slice(this.curIndex, this.curIndex + nBytes);
     this.curIndex += nBytes;
     return result;
 }
@@ -675,7 +676,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.*/
 function sidx_parse (data, offset) {
-	var bp = new ByteParser(data),
+	let bp = new ByteParser(data),
 		version = bp.readInteger(1),
 		flags = bp.readInteger(3),
 		referenceId = bp.readInteger(4),
@@ -686,9 +687,9 @@ function sidx_parse (data, offset) {
 		entryCount = bp.readInteger(2),
 		entries = [];
 
-    var totalBytesOffset = firstOffset + offset;
-    var totalTicks = 0;
-	for (var i = entryCount; i > 0; i=i-1 ) {
+    let totalBytesOffset = firstOffset + offset;
+    let totalTicks = 0;
+	for (let i = entryCount; i > 0; i=i-1 ) {
         let referencedSize = bp.readInteger(4),
 			subSegmentDuration = bp.readInteger(4),
 			unused = bp.readBufferBytes(4)
@@ -721,7 +722,7 @@ function sidx_parse (data, offset) {
 
 // BEGIN iso-bmff-parser-stream/lib/unbox.js (same license), modified
 function unbox(buf) {
-	var bp = new ByteParser(buf),
+	let bp = new ByteParser(buf),
 		bufferLength = buf.length,
 		length,
 		typeData,
@@ -752,7 +753,7 @@ function unbox(buf) {
 
 
 function extractWebmInitializationInfo(initializationSegment) {
-    var result = {
+    let result = {
         timeScale: null,
         cuesOffset: null,
         duration: null,
@@ -780,9 +781,9 @@ function extractWebmInitializationInfo(initializationSegment) {
     return result;
 }
 function parseWebmCues(indexSegment, initInfo) {
-    var entries = [];
-    var currentEntry = {};
-    var cuesOffset = initInfo.cuesOffset;
+    let entries = [];
+    let currentEntry = {};
+    let cuesOffset = initInfo.cuesOffset;
     (new EbmlDecoder()).readTags(indexSegment, (tagType, tag) => {
         if (tag.name == 'CueTime') {
             const tickStart = byteArrayToIntegerLittleEndian(tag.data);
@@ -858,7 +859,7 @@ EbmlDecoder.prototype.readTags = function(chunk, onParsedTag) {
 }
 EbmlDecoder.prototype.getSchemaInfo = function(tag) {
     if (Number.isInteger(tag) && schema.has(tag)) {
-        var name, type;
+        let name, type;
         [name, type] = schema.get(tag);
         return {name, type};
     }

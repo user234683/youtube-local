@@ -1,89 +1,7 @@
 {% set page_title = 'Subscription Manager' %}
 {% extends "base.html" %}
 {% block style %}
-    .import-export{
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        padding-top: 10px;
-    }
-        .subscriptions-import-export-form{
-            background-color: var(--interface-color);
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            max-width: 600px;
-            padding:10px;
-            margin-left: 10px;
-            margin-bottom: 10px;
-        }
-            .subscriptions-import-export-form h2{
-                font-size: 1.25rem;
-                margin-bottom: 10px;
-            }
-
-            .import-export-submit-button{
-                margin-top:15px;
-                align-self: flex-end;
-            }
-
-
-        .subscriptions-export-links{
-            margin: 0px 0px 0px 20px;
-            background-color: var(--interface-color);
-            list-style: none;
-            max-width: 300px;
-            padding:10px;
-        }
-
-    .sub-list-controls{
-        background-color: var(--interface-color);
-        padding:15px;
-        padding-top: 0px;
-        padding-left: 5px;
-    }
-        .sub-list-controls > *{
-            margin-left: 10px;
-            margin-top: 15px;
-        }
-
-
-    .tag-group-list{
-        list-style: none;
-        margin-left: 10px;
-        margin-right: 10px;
-        padding: 0px;
-    }
-        .tag-group{
-            border-style: solid;
-            margin-bottom: 10px;
-        }
-
-    .sub-list{
-        list-style: none;
-        padding:10px;
-        column-width: 300px;
-        column-gap: 40px;
-    }
-        .sub-list-item{
-            display:flex;
-            margin-bottom: 10px;
-            break-inside:avoid;
-        }
-        .sub-list-item:not(.muted){
-            background-color: var(--interface-color);
-        }
-            .tag-list{
-                margin-left:15px;
-                font-weight:bold;
-            }
-            .sub-list-item-name{
-                margin-left:15px;
-            }
-            .sub-list-checkbox{
-                height: 1.5em;
-                min-width: 1.5em;   // need min-width otherwise browser doesn't respect the width and squishes the checkbox down when there's too many tags
-            }
+    <link href="/youtube.com/static/subscription_manager.css" rel="stylesheet">
 {% endblock style %}
 
 
@@ -97,19 +15,19 @@
     {% endfor %}
 {% endmacro %}
 
-
-
 {% block main %}
     <div class="import-export">
-        <form class="subscriptions-import-export-form" enctype="multipart/form-data" action="/youtube.com/import_subscriptions" method="POST">
+        <form class="subscriptions-import-form" enctype="multipart/form-data" action="/youtube.com/import_subscriptions" method="POST">
             <h2>Import subscriptions</h2>
-            <input type="file" id="subscriptions-import" accept="application/json, application/xml, text/x-opml, text/csv" name="subscriptions_file" required>
-            <input type="submit" value="Import" class="import-export-submit-button">
+            <div class="subscriptions-import-options">
+                <input type="file" id="subscriptions-import" accept="application/json, application/xml, text/x-opml, text/csv" name="subscriptions_file" required>
+                <input type="submit" value="Import">
+            </div>
         </form>
 
-        <form class="subscriptions-import-export-form" action="/youtube.com/export_subscriptions" method="POST">
+        <form class="subscriptions-export-form" action="/youtube.com/export_subscriptions" method="POST">
             <h2>Export subscriptions</h2>
-            <div>
+            <div class="subscriptions-export-options">
                 <select id="export-type" name="export_format" title="Export format">
                     <option value="json_newpipe">JSON (NewPipe)</option>
                     <option value="json_google_takeout">JSON (Old Google Takeout Format)</option>
@@ -117,8 +35,8 @@
                 </select>
                 <label for="include-muted">Include muted</label>
                 <input id="include-muted" type="checkbox" name="include_muted" checked>
+                <input type="submit" value="Export">
             </div>
-            <input type="submit" value="Export" class="import-export-submit-button">
         </form>
     </div>
 
@@ -130,7 +48,7 @@
         {% else %}
             <a class="sort-button" href="/https://www.youtube.com/subscription_manager?group_by_tags=1">Group by tags</a>
         {% endif %}
-        <input type="text" name="tags" placeholder="Comma-separated tags">
+        <input type="text" name="tags">
         <button type="submit" name="action" value="add_tags">Add tags</button>
         <button type="submit" name="action" value="remove_tags">Remove tags</button>
         <button type="submit" name="action" value="unsubscribe_verify">Unsubscribe</button>

@@ -1,8 +1,8 @@
 # Build steps for Plyr (3.6.8)
 
-Tested on Debian.
+Tested on Hyperbola GNU with Linux-libre.
 
-First install yarn (Javascript package manager). Instructions [here](https://classic.yarnpkg.com/en/docs/install/).
+First install npm (node package manager).
 
 Clone the repo to a location of your choosing:
 ```
@@ -12,12 +12,12 @@ cd plyr
 
 Install Plyr's dependencies:
 ```
-yarn install
+npm install
 ```
 
-Build with gulp (which was hopefully installed by yarn):
+Build with npm:
 ```
-gulp build
+npm run build
 ```
 
 plyr.js and other files will be in the `dist` directory.

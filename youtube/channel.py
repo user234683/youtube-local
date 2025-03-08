@@ -84,6 +84,40 @@ def channel_ctoken_v5(channel_id, page, sort, tab, view=1):
 
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
 
+
+def channel_about_ctoken(channel_id):
+    return proto.make_protobuf(
+        ('base64p',
+         [
+          [2, 80226972,
+           [
+            [2, 2, channel_id],
+            [2, 3,
+             ('base64p',
+              [
+               [2, 110,
+                [
+                 [2, 3,
+                  [
+                   [2, 19,
+                    [
+                     [2, 1, b'66b0e9e9-0000-2820-9589-582429a83980'],
+                    ]
+                   ],
+                  ]
+                 ],
+                ]
+               ],
+              ]
+             )
+            ],
+           ]
+          ],
+         ]
+        )
+    )
+
+
 # https://github.com/user234683/youtube-local/issues/151
 def channel_ctoken_v4(channel_id, page, sort, tab, view=1):
     new_sort = (2 if int(sort) == 1 else 1)
@@ -145,7 +179,7 @@ def channel_ctoken_v3(channel_id, page, sort, tab, view=1):
         proto.string(1, proto.unpadded_b64encode(proto.uint(1,offset)))
     ))
 
-    tab = proto.string(2, tab )
+    tab = proto.string(2, tab)
     sort = proto.uint(3, int(sort))
 
     shelf_view = proto.uint(4, 0)
@@ -154,10 +188,11 @@ def channel_ctoken_v3(channel_id, page, sort, tab, view=1):
         proto.percent_b64encode(tab + sort + shelf_view + view + page_token)
     )
 
-    channel_id = proto.string(2, channel_id )
+    channel_id = proto.string(2, channel_id)
     pointless_nest = proto.string(80226972, channel_id + continuation_info)
 
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
+
 
 def channel_ctoken_v2(channel_id, page, sort, tab, view=1):
     # see https://github.com/iv-org/invidious/issues/1319#issuecomment-671732646
@@ -174,66 +209,37 @@ def channel_ctoken_v2(channel_id, page, sort, tab, view=1):
             )
     )))
 
-    tab = proto.string(2, tab )
+    tab = proto.string(2, tab)
     sort = proto.uint(3, int(sort))
-    #page = proto.string(15, str(page) )
+    #page = proto.string(15, str(page))
 
     shelf_view = proto.uint(4, 0)
     view = proto.uint(6, int(view))
-    continuation_info = proto.string(3,
+    continuation_info = proto.string(
+        3,
         proto.percent_b64encode(tab + sort + shelf_view + view + page_token)
     )
 
-    channel_id = proto.string(2, channel_id )
+    channel_id = proto.string(2, channel_id)
     pointless_nest = proto.string(80226972, channel_id + continuation_info)
 
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
 
+
 def channel_ctoken_v1(channel_id, page, sort, tab, view=1):
-    tab = proto.string(2, tab )
+    tab = proto.string(2, tab)
     sort = proto.uint(3, int(sort))
-    page = proto.string(15, str(page) )
+    page = proto.string(15, str(page))
     # example with shelves in videos tab: https://www.youtube.com/channel/UCNL1ZadSjHpjm4q9j2sVtOA/videos
     shelf_view = proto.uint(4, 0)
     view = proto.uint(6, int(view))
     continuation_info = proto.string(3, proto.percent_b64encode(tab + view + sort + shelf_view + page + proto.uint(23, 0)) )
 
-    channel_id = proto.string(2, channel_id )
+    channel_id = proto.string(2, channel_id)
     pointless_nest = proto.string(80226972, channel_id + continuation_info)
 
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
 
-def channel_about_ctoken(channel_id):
-    return proto.make_protobuf(
-        ('base64p',
-         [
-          [2, 80226972,
-           [
-            [2, 2, channel_id],
-            [2, 3,
-             ('base64p',
-              [
-               [2, 110,
-                [
-                 [2, 3,
-                  [
-                   [2, 19,
-                    [
-                     [2, 1, b'66b0e9e9-0000-2820-9589-582429a83980'],
-                    ]
-                   ],
-                  ]
-                 ],
-                ]
-               ],
-              ]
-             )
-            ],
-           ]
-          ],
-         ]
-        )
-    )
 
 def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1,
                     ctoken=None, print_status=True):
@@ -270,6 +276,7 @@ def get_channel_tab(channel_id, page="1", sort=3, tab='videos', view=1,
         data=json.dumps(data), debug_name='channel_tab', report_text=message)
 
     return content
+
 
 # cache entries expire after 30 minutes
 number_of_videos_cache = cachetools.TTLCache(128, 30*60)
@@ -347,6 +354,7 @@ def extract_metadata_for_caching(channel_info):
 def get_number_of_videos_general(base_url):
     return get_number_of_videos_channel(get_channel_id(base_url))
 
+
 def get_channel_search_json(channel_id, query, page):
     offset = proto.unpadded_b64encode(proto.uint(3, (page-1)*30))
     params = proto.string(2, 'search') + proto.string(15, offset)
@@ -381,6 +389,7 @@ def post_process_channel_info(info):
     info['avatar'] = util.prefix_url(info['avatar'])
     info['channel_url'] = util.prefix_url(info['channel_url'])
     for item in info['items']:
+        item['thumbnail'] = "https://i.ytimg.com/vi/{}/hqdefault.jpg".format(item['id'])
         util.prefix_urls(item)
         util.add_extra_html_info(item)
     if info['current_tab'] == 'about':
@@ -457,6 +466,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
             pl_json = tasks[0].value
             pl_info = yt_data_extract.extract_playlist_info(pl_json)
             number_of_videos = tasks[2].value
+
         info = pl_info
         info['channel_id'] = channel_id
         info['current_tab'] = 'videos'
@@ -494,7 +504,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         number_of_videos, polymer_json = tasks[0].value, tasks[1].value
 
     elif tab == 'about':
-        #polymer_json = util.fetch_url(base_url + '/about?pbj=1', headers_desktop, debug_name='gen_channel_about')
+        # polymer_json = util.fetch_url(base_url + '/about?pbj=1', headers_desktop, debug_name='gen_channel_about')
         channel_id = get_channel_id(base_url)
         ctoken = channel_about_ctoken(channel_id)
         polymer_json = util.call_youtube_api('web', 'browse', {
@@ -569,23 +579,26 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         **info
     )
 
+
 @yt_app.route('/channel/<channel_id>/')
 @yt_app.route('/channel/<channel_id>/<tab>')
 def get_channel_page(channel_id, tab='videos'):
     return get_channel_page_general_url('https://www.youtube.com/channel/' + channel_id, tab, request, channel_id)
+
 
 @yt_app.route('/user/<username>/')
 @yt_app.route('/user/<username>/<tab>')
 def get_user_page(username, tab='videos'):
     return get_channel_page_general_url('https://www.youtube.com/user/' + username, tab, request)
 
+
 @yt_app.route('/c/<custom>/')
 @yt_app.route('/c/<custom>/<tab>')
 def get_custom_c_page(custom, tab='videos'):
     return get_channel_page_general_url('https://www.youtube.com/c/' + custom, tab, request)
 
+
 @yt_app.route('/<custom>')
 @yt_app.route('/<custom>/<tab>')
 def get_toplevel_custom_page(custom, tab='videos'):
     return get_channel_page_general_url('https://www.youtube.com/' + custom, tab, request)
-

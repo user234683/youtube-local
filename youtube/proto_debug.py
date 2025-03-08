@@ -105,6 +105,7 @@ from math import ceil
 import base64
 import io
 
+
 def byte(n):
     return bytes((n,))
 
@@ -140,7 +141,10 @@ def varint_decode(encoded):
 def string(field_number, data):
     data = as_bytes(data)
     return _proto_field(2, field_number, varint_encode(len(data)) + data)
+
+
 nested = string
+
 
 def uint(field_number, value):
     return _proto_field(0, field_number, varint_encode(value))
@@ -148,7 +152,7 @@ def uint(field_number, value):
 
 def _proto_field(wire_type, field_number, data):
     ''' See https://developers.google.com/protocol-buffers/docs/encoding#structure '''
-    return varint_encode( (field_number << 3) | wire_type) + data
+    return varint_encode((field_number << 3) | wire_type) + data
 
 
 def percent_b64encode(data):
@@ -209,6 +213,8 @@ base64_enc_funcs = {
     'base64p': percent_b64encode,
     'base64?': base64.urlsafe_b64encode,
 }
+
+
 def _make_protobuf(data):
     # must be dict mapping field_number to [wire_type, value]
     if isinstance(data, dict):
@@ -236,6 +242,8 @@ def _make_protobuf(data):
 
 def make_protobuf(data):
     return _make_protobuf(data).decode('ascii')
+
+
 make_proto = make_protobuf
 
 
@@ -277,7 +285,7 @@ def b64_to_bytes(data):
     if isinstance(data, bytes):
         data = data.decode('ascii')
     data = data.replace("%3D", "=")
-    return base64.urlsafe_b64decode(data + "="*((4 - len(data)%4)%4) )
+    return base64.urlsafe_b64decode(data + "="*((4 - len(data) % 4) % 4))
 # --------------------------------------------------------------------
 
 
@@ -303,30 +311,40 @@ def get_b64_type(data):
 def enc(t):
     return base64.urlsafe_b64encode(t).decode('ascii')
 
+
 def uenc(t):
     return enc(t).replace("=", "%3D")
+
 
 def b64_to_ascii(t):
     return base64.urlsafe_b64decode(t).decode('ascii', errors='replace')
 
+
 def b64_to_bin(t):
     decoded = base64.urlsafe_b64decode(t)
-    #print(len(decoded)*8)
+    # print(len(decoded)*8)
     return " ".join(["{:08b}".format(x) for x in decoded])
+
 
 def bytes_to_bin(t):
     return " ".join(["{:08b}".format(x) for x in t])
+
+
 def bin_to_bytes(t):
     return int(t, 2).to_bytes((len(t) + 7) // 8, 'big')
 
+
 def bytes_to_hex(t):
     return ' '.join(hex(n)[2:].zfill(2) for n in t)
+
+
 tohex = bytes_to_hex
 fromhex = bytes.fromhex
 
 
 def aligned_ascii(data):
-    return ' '.join(' ' + chr(n) if n in range(32,128) else ' _' for n in data)
+    return ' '.join(' ' + chr(n) if n in range(32, 128) else ' _' for n in data)
+
 
 def parse_protobuf(data, mutable=False, spec=()):
     data_original = data
@@ -339,7 +357,7 @@ def parse_protobuf(data, mutable=False, spec=()):
             break
         wire_type = tag & 7
         field_number = tag >> 3
-        
+
         if wire_type == 0:
             value = read_varint(data)
         elif wire_type == 1:
@@ -358,6 +376,8 @@ def parse_protobuf(data, mutable=False, spec=()):
             yield [wire_type, field_number, value]
         else:
             yield (wire_type, field_number, value)
+
+
 read_protobuf = parse_protobuf
 
 
@@ -384,6 +404,7 @@ _b32rev = None
 
 bytes_types = (bytes, bytearray)  # Types acceptable as binary data
 
+
 def _bytes_from_decode_data(s):
     if isinstance(s, str):
         try:
@@ -397,7 +418,6 @@ def _bytes_from_decode_data(s):
     except TypeError:
         raise TypeError("argument should be a bytes-like object or ASCII "
                         "string, not %r" % s.__class__.__name__) from None
-
 
 
 def b32decode(s, casefold=False, map01=None):
@@ -469,6 +489,7 @@ def b32decode(s, casefold=False, map01=None):
             raise binascii.Error('Incorrect padding')
     return bytes(decoded)
 
+
 def dec32(data):
     if isinstance(data, bytes):
         data = data.decode('ascii')
@@ -520,7 +541,7 @@ def recursive_pb(data):
         return data
 
     try:
-        result = pb(data, mutable=True) 
+        result = pb(data, mutable=True)
     except Exception as e:
         return data
 
@@ -534,6 +555,7 @@ def recursive_pb(data):
 
 def indent_lines(lines, indent):
     return re.sub(r'^', ' '*indent, lines, flags=re.MULTILINE)
+
 
 def _pp(obj, indent):   # not my best work
     if isinstance(obj, tuple):
@@ -566,6 +588,7 @@ def _pp(obj, indent):   # not my best work
     else:
         return obj.__repr__()
 
+
 def pp(obj, indent=1):
     '''Pretty prints the recursive pb structure'''
     print(_pp(obj, indent))
@@ -586,5 +609,3 @@ mobile_headers = (
     ('X-YouTube-Client-Name', '2'),
     ('X-YouTube-Client-Version', '2.20180830'),
 ) + (('User-Agent', mobile_user_agent),)
-
-

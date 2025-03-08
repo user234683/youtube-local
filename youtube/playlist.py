@@ -20,9 +20,9 @@ def playlist_ctoken(playlist_id, offset, include_shorts=True):
     if not include_shorts:
         offset += proto.string(104, proto.uint(2, 1))
 
-    continuation_info = proto.string( 3, proto.percent_b64encode(offset) )
+    continuation_info = proto.string(3, proto.percent_b64encode(offset))
 
-    playlist_id = proto.string(2, 'VL' + playlist_id )
+    playlist_id = proto.string(2, 'VL' + playlist_id)
     pointless_nest = proto.string(80226972, playlist_id + continuation_info)
 
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
@@ -97,7 +97,7 @@ def get_playlist_page():
 
     info = yt_data_extract.extract_playlist_info(this_page_json)
     if info['error']:
-        return flask.render_template('error.html', error_message = info['error'])
+        return flask.render_template('error.html', error_message=info['error'])
 
     if page != '1':
         info['metadata'] = yt_data_extract.extract_playlist_metadata(first_page_json)
@@ -107,7 +107,7 @@ def get_playlist_page():
         util.prefix_urls(item)
         util.add_extra_html_info(item)
         if 'id' in item:
-            item['thumbnail'] = settings.img_prefix + 'https://i.ytimg.com/vi/' + item['id'] + '/default.jpg'
+            item['thumbnail'] = f"{settings.img_prefix}https://i.ytimg.com/vi/{item['id']}/hqdefault.jpg"
 
         item['url'] += '&list=' + playlist_id
         if item['index']:
@@ -117,11 +117,12 @@ def get_playlist_page():
     if video_count is None:
         video_count = 1000
 
-    return flask.render_template('playlist.html',
-        header_playlist_names = local_playlist.get_playlist_names(),
-        video_list = info.get('items', []),
-        num_pages = math.ceil(video_count/100),
-        parameters_dictionary = request.args,
+    return flask.render_template(
+        'playlist.html',
+        header_playlist_names=local_playlist.get_playlist_names(),
+        video_list=info.get('items', []),
+        num_pages=math.ceil(video_count/100),
+        parameters_dictionary=request.args,
 
         **info['metadata']
     ).encode('utf-8')
