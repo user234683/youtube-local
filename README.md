@@ -1,9 +1,9 @@
 # youtube-local
 
 ![screenshot](https://user-images.githubusercontent.com/28744867/64483429-8a890780-d1b6-11e9-8423-6956ff7c588d.png)
-youtube-local is a browser-based client written in Python for watching Youtube anonymously and without the lag of the slow page used by Youtube. One of the primary features is that all requests are routed through Tor, except for the video file at googlevideo.com. This is analogous to what HookTube (defunct) and Invidious do, except that you do not have to trust a third-party to respect your privacy. The assumption here is that Google won't put the effort in to incorporate the video file requests into their tracking, as it's not worth pursuing the incredibly small number of users who care about privacy (Tor video routing is also provided as an option). Tor has high latency, so this will not be as fast network-wise as regular Youtube. However, using Tor is optional; when not routing through Tor, video pages may load faster than they do with Youtube's page depending on your browser.
+youtube-local is a browser-based client written in Python for watching YouTube anonymously and without the lag of the slow page used by YouTube. One of the primary features is that all requests are routed through Tor, except for the video file at `googlevideo.com`. This is analogous to what HookTube (defunct) and Invidious do, except that you do not have to trust a third-party to respect your privacy. The assumption here is that Google won't put the effort in to incorporate the video file requests into their tracking, as it's not worth pursuing the incredibly small number of users who care about privacy (Tor video routing is also provided as an option). Tor has high latency, so this will not be as fast network-wise as regular YouTube. However, using Tor is optional; when not routing through Tor, video pages may load faster than they do with YouTube's page depending on your browser.
 
-The Youtube API is not used, so no keys or anything are needed. It uses the same requests as the Youtube webpage.
+The YouTube API is not used, so no keys or anything are needed. It uses the same requests as the YouTube webpage.
 
 ## Screenshots
 [Gray theme](https://user-images.githubusercontent.com/28744867/64483431-8e1c8e80-d1b6-11e9-999c-14d36ddd582f.png)
@@ -17,26 +17,26 @@ The Youtube API is not used, so no keys or anything are needed. It uses the same
 [Downloads](https://user-images.githubusercontent.com/28744867/64483437-a2608b80-d1b6-11e9-9e5a-4114391b7304.png)
 
 ## Features
-* Standard pages of Youtube: search, channels, playlists
+* Standard pages of YouTube: search, channels, playlists
 * Anonymity from Google's tracking by routing requests through Tor
-* Local playlists: These solve the two problems with creating playlists on Youtube: (1) they're datamined and (2) videos frequently get deleted by Youtube and lost from the playlist, making it very difficult to find a reupload as the title of the deleted video is not displayed.
+* Local playlists: These solve the two problems with creating playlists on YouTube: (1) they're datamined and (2) videos frequently get deleted by YouTube and lost from the playlist, making it very difficult to find a reupload as the title of the deleted video is not displayed
 * Themes: Light, Gray, and Dark
 * Subtitles
 * Easily download videos or their audio
 * No ads
 * View comments
-* Javascript not required
+* JavaScript not required
 * Theater and non-theater mode
-* Subscriptions that are independent from Youtube
-  * Can import subscriptions from Youtube
+* Subscriptions that are independent from YouTube
+  * Can import subscriptions from YouTube
   * Works by checking channels individually
-  * Can be set to automatically check channels.
+  * Can be set to automatically check channels
   * For efficiency of requests, frequency of checking is based on how quickly channel posts videos
-  * Can mute channels, so as to have a way to "soft" unsubscribe. Muted channels won't be checked automatically or when using the "Check all" button. Videos from these channels will be hidden.
+  * Can mute channels, so as to have a way to "soft" unsubscribe. Muted channels won't be checked automatically or when using the "Check all" button. Videos from these channels will be hidden
   * Can tag subscriptions to organize them or check specific tags
 * Fast page
   * No distracting/slow layout rearrangement
-  * No lazy-loading of comments; they are ready instantly.
+  * No lazy-loading of comments; they are ready instantly
 * Settings allow fine-tuned control over when/how comments or related videos are shown:
   1. Shown by default, with click to hide
   2. Hidden by default, with click to show
@@ -51,10 +51,10 @@ The Youtube API is not used, so no keys or anything are needed. It uses the same
 - [x] Information about video (geographic regions, region of Tor exit node, etc)
 - [ ] Ability to delete playlists
 - [ ] Auto-saving of local playlist videos
-- [ ] Import youtube playlist into a local playlist
+- [ ] Import YouTube playlist into a local playlist
 - [ ] Rearrange items of local playlist
 - [x] Video qualities other than 360p and 720p by muxing video and audio
-- [ ] Corrected .m4a downloads
+- [ ] Corrected M4A-format downloads
 - [x] Indicate if comments are disabled
 - [x] Indicate how many comments a video has
 - [ ] Featured channels page
@@ -65,7 +65,7 @@ The Youtube API is not used, so no keys or anything are needed. It uses the same
 - [ ] Subscriptions: Option to mark what has been watched
 - [ ] Subscriptions: Option to filter videos based on keywords in title or description
 - [ ] Subscriptions: Delete old entries and thumbnails
-- [ ] Support for more sites, such as Vimeo, Dailymotion, LBRY, etc.
+- [ ] Support for more sites, such as Vimeo, Dailymotion, LBRY, etc
 
 ## Installing
 
@@ -75,12 +75,12 @@ Download the zip file under the Releases page. Unzip it anywhere you choose.
 
 ### Linux/MacOS
 
-Download the tarball under the Releases page and extract it. `cd` into the directory and run
+Download the tarball under the Releases page and extract it, then enter the directory and run
 ```
 pip3 install -r requirements.txt
 ```
 
-**Note**: If pip isn't installed, first try installing it from your package manager. Make sure you install pip for python 3. For example, the package you need on debian is python3-pip rather than python-pip. If your package manager doesn't provide it, try to install it according to [this answer](https://unix.stackexchange.com/a/182467), but make sure you run `python3 get-pip.py` instead of `python get-pip.py`
+**Note**: If pip isn't installed, first try installing it from your package manager. Make sure you install pip for python 3. For example, the package you need on debian is `python3-pip` rather than `python-pip`. If your package manager doesn't provide it, try to install it according to [this answer](https://unix.stackexchange.com/a/182467), but make sure you run `python3 get-pip.py` instead of `python get-pip.py`
 
 - Arch users can use the [AUR package](https://aur.archlinux.org/packages/youtube-local-git) maintained by @ByJumperX4
 - RPM-based distros such as Fedora/OpenSUSE/RHEL/CentOS can use the [COPR package](https://copr.fedorainfracloud.org/coprs/anarcoco/youtube-local) maintained by @ByJumperX4
@@ -117,12 +117,12 @@ To run the program on windows, open `run.bat`. On Linux/MacOS, run `python3 serv
 To run it at startup on Windows, right click `run.bat` and click "Create Shortcut." Then, move the shortcut to the Startup folder. You can access the Startup folder by pressing `Windows Key + R` and typing `shell:startup`.
 
 
-Access youtube URLs by prefixing them with `http://localhost:8080/`, For instance, `http://localhost:8080/https://www.youtube.com/watch?v=vBgulDeV2RU`
-You can use an addon such as Redirector ([Firefox](https://addons.mozilla.org/en-US/firefox/addon/redirector/)|[Chrome](https://chrome.google.com/webstore/detail/redirector/ocgpenflpmgnfapjedencafcfakcekcd)) to automatically redirect Youtube URLs to youtube-local. I use the include pattern `^(https?://(?:[a-zA-Z0-9_-]*\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com)/.*)` and the redirect pattern `http://localhost:8080/$1` (Make sure you're using regular expression mode).
+Access YouTube URLs by prefixing them with `http://localhost:8080/`, For instance, `http://localhost:8080/https://www.youtube.com/watch?v=vBgulDeV2RU`
+You can use an addon such as Redirector ([Firefox](https://addons.mozilla.org/en-US/firefox/addon/redirector/)|[Chrome](https://chrome.google.com/webstore/detail/redirector/ocgpenflpmgnfapjedencafcfakcekcd)) to automatically redirect Youtube URLs to youtube-local. The include pattern `^(https?://(?:[a-zA-Z0-9_-]*\.)?(?:youtube\.com|youtu\.be|youtube-nocookie\.com)/.*)` and redirect pattern `http://localhost:8080/$1` can be used via regular expression mode.
 
 If you want embeds on the web to also redirect to youtube-local, make sure "Iframes" is checked under advanced options in your redirector rule.
 
-youtube-local can be added as a search engine in firefox to make searching more convenient. See [here](https://support.mozilla.org/en-US/kb/add-or-remove-search-engine-firefox) for information on firefox search plugins.
+youtube-local can be added as a search engine in Firefox to make searching more convenient. See [here](https://support.mozilla.org/en-US/kb/add-or-remove-search-engine-firefox) for information on Firefox search plugins.
 
 ### Portable mode
 
@@ -150,13 +150,13 @@ In general, Tor video routing will be slower (for instance, moving around in the
 
 ### Importing subscriptions
 
-1. Go to the [Google takeout manager](https://takeout.google.com/takeout/custom/youtube).
-2. Log in if asked.
-3. Click on "All data included", then on "Deselect all", then select only "subscriptions" and click "OK".
-4. Click on "Next step" and then on "Create export".
-5. Click on the "Download" button after it appears.
-6. From the downloaded takeout zip extract the .csv file. It is usually located under `YouTube and YouTube Music/subscriptions/subscriptions.csv`
-7. Go to the subscriptions manager in youtube-local. In the import area, select your .csv file, then press import.
+1. Go to the [Google takeout manager](https://takeout.google.com/takeout/custom/youtube)
+2. Log in if asked
+3. Click on "All data included", then on "Deselect all", then select only "subscriptions" and click "OK"
+4. Click on "Next step" and then on "Create export"
+5. Click on the "Download" button after it appears
+6. From the downloaded takeout ZIP, extract the CSV file. It is usually located under `YouTube and YouTube Music/subscriptions/subscriptions.csv`
+7. Go to the subscriptions manager in youtube-local. In the import area, select your .csv file, then press import
 
 Supported subscriptions import formats:
 - NewPipe subscriptions export JSON
