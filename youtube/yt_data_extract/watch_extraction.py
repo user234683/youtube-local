@@ -877,7 +877,7 @@ def requires_decryption(info):
 
 # adapted from youtube-dl and invidious:
 # https://github.com/omarroth/invidious/blob/master/src/invidious/helpers/signatures.cr
-decrypt_function_re = re.compile(r'function\([a-zA-Z]{1}\)\{(.{1}=.{1}\.split\(""\)[^\}{]+)return .{1}\.join\(""\)\}')
+decrypt_function_re = re.compile(r'\s*?([a-zA-Z0-9_\$]{1,})=function\([a-zA-Z]{1}\)\{(.{1}=.{1}\.split\([a-zA-Z0-9\-_\$\[\]"]+\)[^\}{]+)return .{1}\.join\([a-zA-Z0-9\-_\$\[\]"]+\)\}')
 # gives us e.g. rt, .xK, 5 from rt.xK(a,5) or rt, ["xK"], 5 from rt["xK"](a,5)
 # (var, operation, argument)
 var_op_arg_re = re.compile(r'([\w\$]+)(\.[\w\$]+|\["[^"]+"\])\([a-zA-Z]{1},(\d+)\)')
@@ -894,7 +894,7 @@ def extract_decryption_function(info, base_js):
         decrypt_function_js = decrypt_function_match.group()
         info['decrypt_function_js'] = decrypt_function_js
 
-    function_body = decrypt_function_match.group(1).split(';')[1:-1]
+    function_body = decrypt_function_match.group(2).split(';')[1:-1]
     if not function_body:
         return 'Empty decryption function body'
 
@@ -1055,6 +1055,7 @@ NSIG_FUNCTION_ARRAYS = [ r'''null\)&&\([a-zA-Z]=(?P<nfunc>[_a-zA-Z0-9$]+)\[(?P<i
 
 NSIG_FUNCTION_ENDINGS = [
     r'=\s*function(\(\w\)\s*\{[\S\s]*\{return.[a-zA-Z0-9_-]+_w8_.+?\}\s*return\s*\w+\.join\(""\)\};)',
+    r'=\s*function([\S\s]*?\}\s*return \w+?\.join\([^)]+\)\s*\};)',
     r'=\s*function([\S\s]*?\}\s*?return \w+?\.join\(\"\"\)\s*\};)',
     r'=\s*function([\S\s]*?\}\s*return [\W\w\\$]+?\.call\([\w\\$]+?,\"\"\)\s*\};)',
 ]
@@ -1085,17 +1086,45 @@ def extract_nsig_func(base_js):
     if nsig_func_body:
         nsig_func_name = 'decrypt_nsig'
         full_nsig_func = 'var ' + nsig_func_name + '=function' + nsig_func_body
-        return fixup_nsig_jscode(jscode=full_nsig_func)
+        return fixup_nsig_jscode(jscode=full_nsig_func, player_js=base_js)
     else:
         return None
 
-def fixup_nsig_jscode(jscode):
-    fixup_re = re.compile(r';\s*if\s*\(\s*typeof\s+[a-zA-Z0-9_$]+\s*===?\s*(["\'])undefined\1\s*\)\s*return\s+\w+;')
-    fixup_needed = re.search(fixup_re, jscode)
-    if not fixup_needed == None:
-        return re.sub(fixup_re, ';', jscode)
+def extract_player_js_global_var(jscode):
+    regex = r'''(?x)
+                (?P<q1>["\'])use\s+strict(?P=q1);\s*
+                (?P<code>
+                    var\s+(?P<name>[a-zA-Z0-9_$]+)\s*=\s*
+                    (?P<value>
+                        (?P<q2>["\'])(?:(?!(?P=q2)).|\\.)+(?P=q2)
+                        \.split\((?P<q3>["\'])(?:(?!(?P=q3)).)+(?P=q3)\)
+                        |\[\s*(?:(?P<q4>["\'])(?:(?!(?P=q4)).|\\.)*(?P=q4)\s*,?\s*)+\]
+                    )
+                )[;,]
+                '''
+    regex_search = re.search(re.compile(regex), jscode)
+    code, name, value = regex_search.group('code', 'name', 'value')
+    return code, name, value
+
+def fixup_nsig_jscode(jscode, player_js):
+    param_re = re.compile(r'function\s+[a-zA-Z0-9_$]+\s*\(([a-zA-Z0-9_$]+)\)')
+    param_search = re.search(param_re, jscode)
+    if param_search:
+        param_name = param_search.group(1)
+    global_var, varname, _ = extract_player_js_global_var(player_js)
+    if global_var:
+        print(f'Prepending n function code with global array variable {varname}')
+        result = global_var + '; ' + jscode
+        fixup_re = re.compile(rf''';\s*if\s*\(\s*typeof\s+[a-zA-Z0-9_$]+\s*===?\s*(?:"undefined"|'undefined'|{varname}\[\d+\])\s*\)\s*return\s+\w+;''')
     else:
-        return jscode
+        print('No global array variable found in player JS')
+        result = jscode
+        fixup_re = re.compile(r';\s*if\s*\(\s*typeof\s+[a-zA-Z0-9_$]+\s*===?\s*"undefined"\s*\)\s*return\s+\w+;')
+    if fixup_re.search(result):
+        result = re.sub(fixup_re, ';', result)
+    else:
+        print('nsig_func returned with no fixup')
+    return result
 
 def decrypt_n_signature(n_sig, jscode):
     dukpy_session = dukpy.JSInterpreter()
