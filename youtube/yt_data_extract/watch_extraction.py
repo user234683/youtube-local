@@ -1092,34 +1092,35 @@ def extract_nsig_func(base_js):
 
 def extract_player_js_global_var(jscode):
     regex = r'''(?x)
-                (?P<q1>["\'])use\s+strict(?P=q1);\s*
-                (?P<code>
-                    var\s+(?P<name>[a-zA-Z0-9_$]+)\s*=\s*
-                    (?P<value>
-                        (?P<q2>["\'])(?:(?!(?P=q2)).|\\.)+(?P=q2)
-                        \.split\((?P<q3>["\'])(?:(?!(?P=q3)).)+(?P=q3)\)
-                        |\[\s*(?:(?P<q4>["\'])(?:(?!(?P=q4)).|\\.)*(?P=q4)\s*,?\s*)+\]
-                    )
-                )[;,]
-                '''
+        'use\s+strict';\s*
+        (?P<code>
+            var\s+(?P<name>[a-zA-Z0-9_\$]+)\s*=\s*
+            (?P<value>
+                (?:"[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*')
+                \.split\((?:"[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*')\)
+                |\[(?:(?:"[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*')\s*,?\s*)*\]
+                |"[^"]*"\.split\("[^"]*"\)
+            )
+        )[;,]'''
     regex_search = re.search(re.compile(regex), jscode)
     code, name, value = regex_search.group('code', 'name', 'value')
     return code, name, value
 
 def fixup_nsig_jscode(jscode, player_js):
-    param_re = re.compile(r'function\s+[a-zA-Z0-9_$]+\s*\(([a-zA-Z0-9_$]+)\)')
+    param_re = re.compile(r'function\s+[a-zA-Z0-9_\$]+\s*\(([a-zA-Z0-9_\$]+)\)')
     param_search = re.search(param_re, jscode)
     if param_search:
         param_name = param_search.group(1)
     global_var, varname, _ = extract_player_js_global_var(player_js)
+    escaped_varname = re.escape(varname)
     if global_var:
-        print(f'Prepending n function code with global array variable {varname}')
+        print(f'Prepending n function code with global array variable {escaped_varname}')
         result = global_var + '; ' + jscode
-        fixup_re = re.compile(rf''';\s*if\s*\(\s*typeof\s+[a-zA-Z0-9_$]+\s*===?\s*(?:"undefined"|'undefined'|{varname}\[\d+\])\s*\)\s*return\s+\w+;''')
+        fixup_re = re.compile(rf''';\s*if\s*\(\s*typeof\s+[a-zA-Z0-9_\$]+\s*===?\s*(?:"undefined"|'undefined'|{escaped_varname}\[\d+\])\s*\)\s*return\s+\w+;''')
     else:
         print('No global array variable found in player JS')
         result = jscode
-        fixup_re = re.compile(r';\s*if\s*\(\s*typeof\s+[a-zA-Z0-9_$]+\s*===?\s*"undefined"\s*\)\s*return\s+\w+;')
+        fixup_re = re.compile(r';\s*if\s*\(\s*typeof\s+[a-zA-Z0-9_\$]+\s*===?\s*"undefined"\s*\)\s*return\s+\w+;')
     if fixup_re.search(result):
         result = re.sub(fixup_re, ';', result)
     else:
