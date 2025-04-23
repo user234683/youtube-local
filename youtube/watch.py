@@ -351,7 +351,7 @@ def decrypt_signatures(info, video_id):
         if err:
             return err
         decrypt_cache[player_name] = info['decryption_function']
-        save_decrypt_cache()
+        #save_decrypt_cache()
     err = yt_data_extract.decrypt_signatures(info)
     return err
 
