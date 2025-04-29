@@ -1038,7 +1038,7 @@ NSIG_FUNCTION_ARRAYS = [ r'''null\)&&\([a-zA-Z]=(?P<nfunc>[_a-zA-Z0-9$]+)\[(?P<i
 ]
 
 NSIG_FUNCTION_ENDINGS = [
-    r'=\s*function(\(\w\)\s*\{[\S\s]*\}catch\(\w\)\{return\s+.+?\+.+?\}return\s+.+?\};)',
+    r'=\s*function([\S\s]*?\}\s*return [A-Za-z0-9\$]+\[[A-Za-z0-9\$]+\[\d+\]\]\([A-Za-z0-9\$]+\[\d+\]\)\s*\};)',
     r'=\s*function(\(\w\)\s*\{[\S\s]*\{return.[a-zA-Z0-9_-]+_w8_.+?\}\s*return\s*\w+\.join\(""\)\};)',
     r'=\s*function([\S\s]*?\}\s*return \w+?\.join\([^)]+\)\s*\};)',
     r'=\s*function([\S\s]*?\}\s*?return \w+?\.join\(\"\"\)\s*\};)',
