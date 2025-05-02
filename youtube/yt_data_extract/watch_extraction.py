@@ -910,7 +910,7 @@ def extract_decryption_function(info, base_js):
         decrypt_function_match = re.search(re.compile(item), base_js_content)
         if decrypt_function_match:
             print(f'Match found: {n}')
-            sig_func_name = decrypt_function_match.group('sig')
+            sig_func_name = re.escape(decrypt_function_match.group('sig'))
             print(f'signature_function_name is {sig_func_name}')
             break
         else:
