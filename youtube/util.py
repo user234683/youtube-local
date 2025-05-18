@@ -1016,7 +1016,7 @@ def call_youtube_api(client, api, data):
             headers = ( *headers, visitor_data_header )
     data['context'] = context
     require_js_player = client_params.get('REQUIRE_JS_PLAYER')
-    if require_js_player:
+    if require_js_player and data.get('videoId'):
         print('js player is required for this client: ' + str(client))
         player_version = get_player_version(data['videoId'], headers=headers, ytcfg=ytcfg)
         player_url = 'https://www.youtube.com/s/player/' + player_version + '/player_ias.vflset/en_US/base.js'
