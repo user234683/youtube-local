@@ -928,7 +928,7 @@ def extract_decryption_function(info, base_js):
         sig_array_name = sig_array_name_match.group('array_name')
     else:
         return 'Could not find decryption signature array name'
-    sig_array_re = rf'var {sig_array_name}' + r'''\s*=[\S\s]*?\};'''
+    sig_array_re = rf'var {re.escape(sig_array_name)}' + r'''\s*=[\S\s]*?\};'''
     sig_array_match = re.search(re.compile(sig_array_re), base_js_content)
     if sig_array_match:
         sig_array = sig_array_match.group(0)
