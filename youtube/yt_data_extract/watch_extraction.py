@@ -922,7 +922,7 @@ def extract_decryption_function(info, base_js):
     else:
         return f'Could not find function definition for {sig_func_name}'
     global_var, var, _ = extract_player_js_global_var(base_js_content)
-    sig_array_name_re = r'(?P<array_name>\w{2})\[.+?\]\(\w,\d+\);'
+    sig_array_name_re = r'(?P<array_name>[\w\$]{2})\[.+?\]\(\w,\d+\);'
     sig_array_name_match = re.search(re.compile(sig_array_name_re), sig_js_code)
     if sig_array_name_match:
         sig_array_name = sig_array_name_match.group('array_name')
