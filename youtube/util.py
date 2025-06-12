@@ -867,10 +867,8 @@ def get_ytcfg(client):
             return None
     else:
         with open(ytcfg_file, 'r') as file:
-            print(f'Loading {ytcfg_file}')
             ytcfg = json.load(file)
             ytcfg_file_age = time.time() - os.path.getmtime(ytcfg_file)
-            print(f'{ytcfg_file} loaded: ' + str(len(ytcfg)))
             if ytcfg_file_age > 86400:
                 print(f'{ytcfg_file} is more than 24h old. Will get a new one on the next video load.')
                 file.close()
@@ -925,13 +923,11 @@ def get_visitor_data():
     if settings.use_po_token:
         if os.path.isfile(po_token_cache):
             with open(po_token_cache, 'r') as file:
-                print('Getting visitor_data from po_token_cache')
                 po_token_dict = json.load(file)
                 visitor_data = po_token_dict.get('visitorData')
             return visitor_data
     if os.path.isfile(visitor_data_cache):
         with open(visitor_data_cache, 'r') as file:
-            print('Getting visitor_data from cache')
             visitor_data = file.read()
         max_age = 12*3600
         file_age = time.time() - os.path.getmtime(visitor_data_cache)
