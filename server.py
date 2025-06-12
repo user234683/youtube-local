@@ -65,27 +65,7 @@ def proxy_site(env, start_response, video=False):
         'X-YouTube-Client-Name': client_params['INNERTUBE_CONTEXT_CLIENT_NAME'],
         'X-YouTube-Client-Version': client_context['client']['clientVersion'],
     }
-    visitor_data_file = os.path.join(settings.data_dir,'visitorData.txt')
-    visitor_data = None
-    if not settings.use_po_token:
-        if settings.use_visitor_data:
-            if os.path.exists(visitor_data_file):
-                try:
-                    with open(visitor_data_file, "r") as file:
-                        visitor_data = file.read()
-                        file.close()
-                except OSError:
-                    print('An OS error prevents accessing visitorData.txt file')
-        else:
-            po_token_cache = os.path.join(settings.data_dir, 'po_token_cache.txt')
-            if os.path.exists(po_token_cache):
-                try:
-                    with open(po_token_cache, "r") as file:
-                        po_token_dict = json.loads(file.read())
-                        visitor_data = po_token_dict.get('visitorData') or None
-                        file.close()
-                except OSError:
-                    print('An OS error prevents accessing po_token_cache.txt')
+    visitor_data = util.get_visitor_data()
 
     google_domains = [ 'youtube.com', 'youtube-nocookie.com', 'youtu.be', 'googlevideo.com', 'ytimg.com', 'ggpht.com', 'googleapis.com' ]
     for domain in google_domains:
