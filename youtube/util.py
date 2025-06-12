@@ -1070,9 +1070,9 @@ def call_youtube_api(client, api, data):
                         }
                     }
 
-    if po_token_data:
-        if not ytcfg:
-            data['serviceIntegrityDimensions'] = po_token_data
+    if po_token_data and data.get('videoId'):
+        data['serviceIntegrityDimensions'] = po_token_data
+
     url = 'https://' + host + '/youtubei/v1/' + api
     if key:
         url = url + '?key=' + key
