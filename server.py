@@ -65,14 +65,6 @@ def proxy_site(env, start_response, video=False):
         'X-YouTube-Client-Name': client_params['INNERTUBE_CONTEXT_CLIENT_NAME'],
         'X-YouTube-Client-Version': client_context['client']['clientVersion'],
     }
-    visitor_data = util.get_visitor_data()
-
-    google_domains = [ 'youtube.com', 'youtube-nocookie.com', 'youtu.be', 'googlevideo.com', 'ytimg.com', 'ggpht.com', 'googleapis.com' ]
-    for domain in google_domains:
-        if env['SERVER_NAME'].endswith(domain):
-            if visitor_data:
-                send_headers['X-Goog-Visitor-Id'] = visitor_data
-                break
 
     current_range_start = 0
     range_end = None
