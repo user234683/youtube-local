@@ -2,6 +2,8 @@ import youtube
 from youtube import yt_app
 from youtube import util, comments, local_playlist, yt_data_extract
 import settings
+if settings.use_innertube_for_captions:
+    from youtube.innertube_caption import get_caption_json_resp, webvtt_from_caption_data
 
 from flask import request
 import flask
@@ -15,7 +17,7 @@ import traceback
 import urllib
 import re
 import urllib3.exceptions
-from urllib.parse import parse_qs, urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 from types import SimpleNamespace
 from math import ceil
 
@@ -800,9 +802,28 @@ def get_watch_page(video_id=None):
 
 @yt_app.route('/api/<path:dummy>')
 def get_captions(dummy):
-    result = util.fetch_url('https://www.youtube.com' + request.full_path)
-    result = result.replace(b"align:start position:0%", b"")
-    return result
+    caption_url = 'https://www.youtube.com' + request.full_path
+    if not settings.use_innertube_for_captions:
+        result = util.fetch_url(caption_url)
+        result = result.replace(b"align:start position:0%", b"")
+        return result
+    else:
+        print("Getting caption using innertube api")
+        parsed_caption_url = urlparse(caption_url)
+        qs = parse_qs(parsed_caption_url.query)
+        video_id = qs.get('v')[0]
+        lang = qs.get('lang')[0] or 'en'
+        kind = qs.get('kind')
+        if kind is not None:
+            asr = True
+        else:
+            asr = False
+        caption_data = get_caption_json_resp(video_id, lang, asr)
+        if caption_data:
+            caption_vtt = webvtt_from_caption_data(caption_data)
+            return caption_vtt.encode('utf-8')
+        else:
+            return b''
 
 
 times_reg = re.compile(r'^\d\d:\d\d:\d\d\.\d\d\d --> \d\d:\d\d:\d\d\.\d\d\d.*$')
