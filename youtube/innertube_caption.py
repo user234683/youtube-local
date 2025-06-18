@@ -1,89 +1,24 @@
 import base64
-from youtube import util
+from youtube import util, proto
 import urllib.parse
 import json
-import blackboxprotobuf
 
 def generate_caption_params(video_id: str = '', lang: str = 'en', auto_generated: bool = False):
-    typedef_2 = {
-            '1': {
-                'name': 'kind',
-                'type': 'string',
-                },
-            '2': {
-                'name': 'language_code',
-                'type': 'string',
-                },
-            '3': {
-                'name': 'empty_string',
-                'type': 'string',
-                },
-            }
-
-    typedef = {
-            '1': {
-                'name': 'videoId',
-                'type': 'string',
-                },
-            '2': {
-                'name': 'lang_param',
-                'type': 'string',
-                },
-            '3': {
-                'name': 'varint_3',
-                'type': 'int',
-                },
-            '5': {
-                'name': 'fixed_string',
-                'type': 'string',
-                },
-            '6': {
-                'name': 'varint_6',
-                'type': 'int',
-                },
-
-            '7': {
-                'name': 'varint_7',
-                'type': 'int',
-                },
-            '8': {
-                'name': 'varint_8',
-                'type': 'int',
-                },
-            }
-
-    def encode_to_protobuf(message, typedef):
-        result = blackboxprotobuf.encode_message(message, typedef)
-        return result
-
-    language_code = lang
-    if not auto_generated:
-        kind = ""
-    else:
-        kind = "asr"
-
-    two_payload = {
-            'kind': kind,
-            'language_code': language_code,
-            'empty_string': ''
-    }
-
-    two_protobuf = encode_to_protobuf(two_payload, typedef_2)
-    base64_encoded_lang = urllib.parse.quote(base64.b64encode(two_protobuf).decode())
-    one_payload = {
-            'videoId': video_id,
-            'lang_param': base64_encoded_lang,
-            'varint_3': 1,
-            'fixed_string': 'engagement-panel-searchable-transcript-search-panel',
-            'varint_6': 0,
-            'varint_7': 0,
-            'varint_8': 0,
-            }
-
-    one_protobuf = encode_to_protobuf(one_payload, typedef)
-
-    params = base64.b64encode(one_protobuf).decode()
-    return params
+    lang_param = {1: [2, b''] if not auto_generated else [2, b'asr'], 2: [2, lang.encode() ], 3: [2, b''] }
+    lang_param_protobuf = bytes(proto.make_protobuf(lang_param), 'utf-8')
+    base64_lang_param = urllib.parse.quote(base64.b64encode(lang_param_protobuf).decode())
+    payload_param = {
+        1: [2, video_id.encode()],
+        2: [2, base64_lang_param.encode()],
+        3: [0, 1],
+        5: [2, b'engagement-panel-searchable-transcript-search-panel'],
+        6: [0, 0],
+        7: [0, 0],
+        8: [0, 0],
+        }
+    payload_protobuf = bytes(proto.make_protobuf(payload_param), 'utf-8')
+    base64_payload_protobuf = urllib.parse.quote(base64.b64encode(payload_protobuf))
+    return base64_payload_protobuf
 
 def get_caption_json_resp(video_id, lang: str = 'en', auto_generated: bool = False):
     unquoted_params = generate_caption_params(video_id, lang, auto_generated)
