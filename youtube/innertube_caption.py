@@ -69,7 +69,7 @@ def generate_caption_params(video_id: str = '', lang: str = 'en', auto_generated
     }
 
     two_protobuf = encode_to_protobuf(two_payload, typedef_2)
-    base64_encoded_lang = base64.b64encode(two_protobuf).decode()
+    base64_encoded_lang = urllib.parse.quote(base64.b64encode(two_protobuf).decode())
     one_payload = {
             'videoId': video_id,
             'lang_param': base64_encoded_lang,
@@ -99,11 +99,29 @@ def get_caption_json_resp(video_id, lang: str = 'en', auto_generated: bool = Fal
     youtube_home = 'https://www.youtube.com'
     caption_api = f"{youtube_home}/youtubei/v1/get_transcript"
     resp = util.fetch_url(caption_api, headers=header, data=json.dumps(payload), report_text=f'Fetching captions for {video_id}')
+
     if resp:
-        data = json.loads(resp)
-        return data
+        caption_data = json.loads(resp)
     else:
         return None
+    vtt_body = caption_data['actions'][0]['updateEngagementPanelAction']['content']['transcriptRenderer']['content']['transcriptSearchPanelRenderer']['body']['transcriptSegmentListRenderer'].get('initialSegments')
+    if vtt_body:
+        return caption_data
+    else:
+        print('Unable to find vtt_body, retrying request with continuation params')
+        continuation_submenu = caption_data['actions'][0]['updateEngagementPanelAction']['content']['transcriptRenderer']['content']['transcriptSearchPanelRenderer']['footer']['transcriptFooterRenderer']['languageMenu']['sortFilterSubMenuRenderer']['subMenuItems']
+        for item in continuation_submenu:
+            if lang in item['title']:
+                params_new = item['continuation']['reloadContinuationData']['continuation']
+                payload['params'] = params_new
+                resp_new = util.fetch_url(caption_api, headers=header, data=json.dumps(payload), report_text=f'Fetching captions for {video_id}')
+                caption_data_new = json.loads(resp_new.decode())
+                vtt_body_new = caption_data_new['actions'][0]['updateEngagementPanelAction']['content']['transcriptRenderer']['content']['transcriptSearchPanelRenderer']['body']['transcriptSegmentListRenderer'].get('initialSegments')
+                if vtt_body_new:
+                    print('Got vtt_body from continuation request')
+                else:
+                    print('Still not getting vtt_body with continuation.\nReturning the new_caption_data as is.')
+                return caption_data_new
 
 def convert_milliseconds_to_hhmmss_optimized(ms):
     if not isinstance(ms, int):
@@ -119,7 +137,10 @@ def convert_milliseconds_to_hhmmss_optimized(ms):
 def webvtt_from_caption_data(caption_data: dict = {}):
     if not caption_data:
         return None
-    vtt_body = caption_data['actions'][0]['updateEngagementPanelAction']['content']['transcriptRenderer']['content']['transcriptSearchPanelRenderer']['body']['transcriptSegmentListRenderer']['initialSegments']
+    vtt_body = caption_data['actions'][0]['updateEngagementPanelAction']['content']['transcriptRenderer']['content']['transcriptSearchPanelRenderer']['body']['transcriptSegmentListRenderer'].get('initialSegments')
+    if not vtt_body:
+        print('Unable to find vtt_body in the caption data')
+        return 'WEBVTT\n'
 
     vtt_content = [ 'WEBVTT\n' ]
 
