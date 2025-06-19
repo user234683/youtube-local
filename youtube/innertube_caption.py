@@ -21,8 +21,7 @@ def generate_caption_params(video_id: str = '', lang: str = 'en', auto_generated
     return base64_payload_protobuf
 
 def get_caption_json_resp(video_id, lang: str = 'en', auto_generated: bool = False):
-    unquoted_params = generate_caption_params(video_id, lang, auto_generated)
-    params = urllib.parse.quote(unquoted_params)
+    params = generate_caption_params(video_id, lang, auto_generated)
     ytcfg = util.INNERTUBE_CLIENTS['web']
     ua = util.desktop_user_agent
     visitor_data = util.get_visitor_data()
