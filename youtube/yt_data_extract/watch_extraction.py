@@ -9,6 +9,7 @@ import json
 import urllib.parse
 import traceback
 import re
+import settings
 
 # from https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/extractor/youtube.py
 _formats = {
@@ -476,7 +477,22 @@ def _extract_formats(info, player_response):
         # Example: https://www.youtube.com/watch?v=gF9kkB0UWYQ
         # Only get the original language for now so a foreign
         # translation will not be picked just because it comes first
-        if deep_get(yt_fmt, 'audioTrack', 'audioIsDefault') is False:
+        # if deep_get(yt_fmt, 'audioTrack', 'audioIsDefault') is False:
+            # continue
+        
+        # mine
+        # what if user upload audio track without using auto dubbing???
+        if settings.disable_dubbing and deep_get(yt_fmt, 'audioTrack', 'isAutoDubbed') is True:
+            continue
+  
+        allowed = [a.strip().lower() for a in settings.allowed_dubbing_languages.split(';') if a != ''] + ['undefined']
+        lng = deep_get(yt_fmt, 'audioTrack', 'displayName', default='undefined')        
+        if 'original' in lng.lower():
+            lng = 'undefined'
+        
+        if len(allowed) == 1: # in case allowed list is empty
+            pass
+        elif lng.lower().split(' ')[0] not in allowed:
             continue
 
         fmt = {}
@@ -494,6 +510,7 @@ def _extract_formats(info, player_response):
         fmt['fps'] = yt_fmt.get('fps')
         fmt['init_range'] = yt_fmt.get('initRange')
         fmt['index_range'] = yt_fmt.get('indexRange')
+        fmt['audio_track'] = lng # mine
         for key in ('init_range', 'index_range'):
             if fmt[key]:
                 fmt[key]['start'] = int(fmt[key]['start'])
