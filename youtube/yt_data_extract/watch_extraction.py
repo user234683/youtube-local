@@ -479,21 +479,27 @@ def _extract_formats(info, player_response):
         # translation will not be picked just because it comes first
         # if deep_get(yt_fmt, 'audioTrack', 'audioIsDefault') is False:
             # continue
-        
+
+        # mine
+        # if deep_get(yt_fmt, 'audioTrack', 'audioIsDefault') is True and deep_get(yt_fmt, 'audioTrack', 'isAutoDubbed') is True:
+            # continue
+
+        # mine
+        # in case no contentLength provided
+        # if itag in [18]:
+            # clen = int(str(deep_get(urllib.parse.parse_qs(urllib.parse.urlparse(yt_fmt.get('url')).query), 'clen', 0)) + '0')
+            # yt_fmt['contentLength'] = clen
+        # if itag not in [140, 134, 18]:
+            # continue
+
         # mine
         # what if user upload audio track without using auto dubbing???
-        if settings.disable_dubbing and deep_get(yt_fmt, 'audioTrack', 'isAutoDubbed') is True:
-            continue
-  
-        allowed = [a.strip().lower() for a in settings.allowed_dubbing_languages.split(';') if a != ''] + ['undefined']
-        lng = deep_get(yt_fmt, 'audioTrack', 'displayName', default='undefined')        
-        if 'original' in lng.lower():
-            lng = 'undefined'
-        
-        if len(allowed) == 1: # in case allowed list is empty
-            pass
-        elif lng.lower().split(' ')[0] not in allowed:
-            continue
+        if settings.disable_dubbing and deep_get(yt_fmt, 'audioTrack', 'isAutoDubbed') is True: continue
+        allowed = [a.strip().lower() for a in settings.allowed_dubbing_languages.split(';') if a not in ['', ' ', ',', ';', ':']] + ['undefined']
+        lng = deep_get(yt_fmt, 'audioTrack', 'displayName', default='undefined')
+        if 'original' in lng.lower(): lng = 'undefined'
+        if len(allowed) == 1: pass # in case allowed list is empty
+        elif lng.lower().split(' ')[0] not in allowed: continue
 
         fmt = {}
         fmt['itag'] = itag
@@ -538,6 +544,10 @@ def _extract_formats(info, player_response):
             fmt, 'quality',
             extract_int(yt_fmt.get('qualityLabel'), whole_word=False)
         )
+
+        # mine
+        # need clen for uni_sources
+        if itag in [18]: fmt['clen'] = urllib.parse.parse_qs(urllib.parse.urlparse(fmt['url']).query).get('clen')
 
         info['formats'].append(fmt)
 
