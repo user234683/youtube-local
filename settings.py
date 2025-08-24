@@ -224,6 +224,24 @@ Defaults to -1, which means no default value is forced and the browser will set 
         'category': 'interface',
     }),
 
+    ## mine
+    ('disable_dubbing', {
+        'label': 'Disable dubbing',
+        'type': bool,
+        'default': True,
+        'comment': '''Allows only original audio track''',
+        'category': 'interface',
+    }),
+    ## mine
+    ('allowed_dubbing_languages', {
+        'label': 'Allowed dubbing languages',
+        'type': str,
+        'default': 'English;Russian',
+        'comment': '''Allows dubbing for listed languages''',
+        'category': 'interface',
+    }),
+
+
     ('video_player', {
         'type': int,
         'default': 1,
