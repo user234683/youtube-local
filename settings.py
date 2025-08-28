@@ -86,7 +86,7 @@ For security reasons, enabling this is not recommended.''',
 
     ('use_innertube_for_captions', {
         'type': bool,
-        'default': False,
+        'default': True,
         'comment': '''Use get_transcript api to get captions / subtitles. If set to False, use caption baseUrl from player api response.''',
         'category': 'network',
     }),
