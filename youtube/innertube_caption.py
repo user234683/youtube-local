@@ -1,5 +1,6 @@
 import base64
 from youtube import util, proto
+from youtube.yt_data_extract import deep_get
 import urllib.parse
 import json
 
@@ -38,19 +39,19 @@ def get_caption_json_resp(video_id, lang: str = 'en', auto_generated: bool = Fal
         caption_data = json.loads(resp)
     else:
         return None
-    vtt_body = caption_data['actions'][0]['updateEngagementPanelAction']['content']['transcriptRenderer']['content']['transcriptSearchPanelRenderer']['body']['transcriptSegmentListRenderer'].get('initialSegments')
+    vtt_body = deep_get(caption_data, 'actions', 0, 'updateEngagementPanelAction', 'content', 'transcriptRenderer', 'content', 'transcriptSearchPanelRenderer', 'body', 'transcriptSegmentListRenderer', 'initialSegments')
     if vtt_body:
         return caption_data
     else:
         print('Unable to find vtt_body, retrying request with continuation params')
-        continuation_submenu = caption_data['actions'][0]['updateEngagementPanelAction']['content']['transcriptRenderer']['content']['transcriptSearchPanelRenderer']['footer']['transcriptFooterRenderer']['languageMenu']['sortFilterSubMenuRenderer']['subMenuItems']
+        continuation_submenu = deep_get(caption_data, 'actions', 0, 'updateEngagementPanelAction', 'content', 'transcriptRenderer', 'content', 'transcriptSearchPanelRenderer', 'footer', 'transcriptFooterRenderer', 'languageMenu', 'sortFilterSubMenuRenderer', 'subMenuItems')
         for item in continuation_submenu:
             if lang in item['title']:
-                params_new = item['continuation']['reloadContinuationData']['continuation']
+                params_new = deep_get(item, 'continuation', 'reloadContinuationData', 'continuation')
                 payload['params'] = params_new
                 resp_new = util.fetch_url(caption_api, headers=header, data=json.dumps(payload), report_text=f'Fetching captions for {video_id}')
                 caption_data_new = json.loads(resp_new.decode())
-                vtt_body_new = caption_data_new['actions'][0]['updateEngagementPanelAction']['content']['transcriptRenderer']['content']['transcriptSearchPanelRenderer']['body']['transcriptSegmentListRenderer'].get('initialSegments')
+                vtt_body_new = deep_get(caption_data_new, 'actions', 0, 'updateEngagementPanelAction', 'content', 'transcriptRenderer', 'content', 'transcriptSearchPanelRenderer', 'body', 'transcriptSegmentListRenderer', 'initialSegments')
                 if vtt_body_new:
                     print('Got vtt_body from continuation request')
                 else:
@@ -71,7 +72,7 @@ def convert_milliseconds_to_hhmmss_optimized(ms):
 def webvtt_from_caption_data(caption_data: dict = {}):
     if not caption_data:
         return None
-    vtt_body = caption_data['actions'][0]['updateEngagementPanelAction']['content']['transcriptRenderer']['content']['transcriptSearchPanelRenderer']['body']['transcriptSegmentListRenderer'].get('initialSegments')
+    vtt_body = deep_get(caption_data, 'actions', 0, 'updateEngagementPanelAction', 'content', 'transcriptRenderer', 'content', 'transcriptSearchPanelRenderer', 'body', 'transcriptSegmentListRenderer', 'initialSegments')
     if not vtt_body:
         print('Unable to find vtt_body in the caption data')
         return 'WEBVTT\n'
@@ -84,8 +85,8 @@ def webvtt_from_caption_data(caption_data: dict = {}):
             ms_to_vtt_time = convert_milliseconds_to_hhmmss_optimized
             start_time = ms_to_vtt_time(vtt_item['startMs'])
             end_time = ms_to_vtt_time(vtt_item['endMs'])
-            running_text = vtt_item['snippet']['runs'][0]['text']
-            webvtt_time_line = str.format("""{} --> {}\n{}\n""", start_time, end_time, running_text)
+            running_text = deep_get(vtt_item, 'snippet', 'runs', 0, 'text')
+            webvtt_time_line = f'{start_time} --> {end_time}\n{running_text}'
             vtt_content.append(webvtt_time_line)
 
     vtt_txt = '\n'.join(vtt_content)
