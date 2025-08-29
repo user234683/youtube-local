@@ -821,7 +821,8 @@ def get_captions(dummy):
         caption_data = get_caption_json_resp(video_id, lang, asr)
         if caption_data:
             caption_vtt = webvtt_from_caption_data(caption_data)
-            return caption_vtt.encode('utf-8')
+            return flask.Response(caption_vtt.encode('utf-8'),
+                                  mimetype = 'text/vtt')
         else:
             return b''
 
