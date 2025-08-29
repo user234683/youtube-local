@@ -86,7 +86,7 @@ def webvtt_from_caption_data(caption_data: dict = {}):
             start_time = ms_to_vtt_time(vtt_item['startMs'])
             end_time = ms_to_vtt_time(vtt_item['endMs'])
             running_text = deep_get(vtt_item, 'snippet', 'runs', 0, 'text')
-            webvtt_time_line = f'{start_time} --> {end_time}\n{running_text}'
+            webvtt_time_line = f'{start_time} --> {end_time}\n{running_text}\n'
             vtt_content.append(webvtt_time_line)
 
     vtt_txt = '\n'.join(vtt_content)
