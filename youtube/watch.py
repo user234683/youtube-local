@@ -853,70 +853,11 @@ def get_captions(dummy):
             return flask.Response(caption_vtt.encode('utf-8'),
                                   mimetype = 'text/vtt')
         else:
-            return b''
+            return flask.Response('Unable to get caption', 500, mimetype='text/plain')
 
 
 times_reg = re.compile(r'^\d\d:\d\d:\d\d\.\d\d\d --> \d\d:\d\d:\d\d\.\d\d\d.*$')
 inner_timestamp_removal_reg = re.compile(r'<[^>]+>')
 @yt_app.route('/watch/transcript/<path:caption_path>')
 def get_transcript(caption_path):
-    try:
-        captions = util.fetch_url('https://www.youtube.com/'
-            + caption_path
-            + '?' + request.environ['QUERY_STRING']).decode('utf-8')
-    except util.FetchError as e:
-        msg = ('Error retrieving captions: ' + str(e) + '\n\n'
-            + 'The caption url may have expired.')
-        print(msg)
-        return flask.Response(msg,
-            status = e.code,
-            mimetype='text/plain;charset=UTF-8')
-
-    lines = captions.splitlines()
-    segments = []
-
-    # skip captions file header
-    i = 0
-    while lines[i] != '':
-        i += 1
-
-    current_segment = None
-    while i < len(lines):
-        line = lines[i]
-        if line == '':
-            if ((current_segment is not None)
-                    and (current_segment['begin'] is not None)):
-                segments.append(current_segment)
-            current_segment = {
-                'begin': None,
-                'end': None,
-                'lines': [],
-            }
-        elif times_reg.fullmatch(line.rstrip()):
-            current_segment['begin'], current_segment['end'] = line.split(' --> ')
-        else:
-            current_segment['lines'].append(
-                inner_timestamp_removal_reg.sub('', line))
-        i += 1
-
-    # if automatic captions, but not translated
-    if request.args.get('kind') == 'asr' and not request.args.get('tlang'):
-        # Automatic captions repeat content. The new segment is displayed
-        # on the bottom row; the old one is displayed on the top row.
-        # So grab the bottom row only
-        for seg in segments:
-            seg['text'] = seg['lines'][1]
-    else:
-        for seg in segments:
-            seg['text'] = ' '.join(map(str.rstrip, seg['lines']))
-
-    result = ''
-    for seg in segments:
-        if seg['text'] != ' ':
-            result += seg['begin'] + ' ' + seg['text'] + '\r\n'
-
-    return flask.Response(result.encode('utf-8'),
-        mimetype='text/plain;charset=UTF-8')
-
-
-
+    return flask.Response('Redirecting...', status = 302, mimetype='text/plain', headers={'Location': '/https://www.youtube.com/' + caption_path + '?' + request.environ['QUERY_STRING']})
