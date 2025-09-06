@@ -2,6 +2,8 @@ import youtube
 from youtube import yt_app
 from youtube import util, comments, local_playlist, yt_data_extract
 import settings
+if settings.use_innertube_for_captions:
+    from youtube.innertube_caption import get_caption_json_resp, webvtt_from_caption_data
 
 from flask import request
 import flask
@@ -15,7 +17,7 @@ import traceback
 import urllib
 import re
 import urllib3.exceptions
-from urllib.parse import parse_qs, urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 from types import SimpleNamespace
 from math import ceil
 
@@ -494,6 +496,29 @@ def format_bytes(bytes):
     converted = float(bytes) / float(1024 ** exponent)
     return '%.2f%s' % (converted, suffix)
 
+def get_working_caption_url(video_id, lang: 'en', tlang: '', kind: ''):
+    payload = { 'videoId': video_id }
+    api_resp = util.call_youtube_api('android', 'player', payload)
+    api_json = json.loads(api_resp)
+    track_list = yt_data_extract.deep_get(api_json, 'captions', 'playerCaptionsTracklistRenderer', 'captionTracks')
+    caption_url_raw = ''
+    for track in track_list:
+        langcode = track.get('languageCode')
+        asr = track.get('kind')
+        if langcode == lang and not kind:
+            caption_url_raw = track.get('baseUrl')
+            break
+        elif kind:
+            if asr == 'asr':
+                if langcode == lang:
+                    caption_url_raw = track.get('baseUrl')
+                    break
+    if caption_url_raw:
+        caption_url = caption_url_raw.replace('fmt=srv3', 'fmt=vtt')
+        if tlang:
+            caption_url += f'&tlang={tlang}'
+        return caption_url
+
 @yt_app.route('/ytl-api/storyboard.vtt')
 def get_storyboard_vtt():
     """
@@ -800,72 +825,39 @@ def get_watch_page(video_id=None):
 
 @yt_app.route('/api/<path:dummy>')
 def get_captions(dummy):
-    result = util.fetch_url('https://www.youtube.com' + request.full_path)
-    result = result.replace(b"align:start position:0%", b"")
-    return result
+    caption_url = 'https://www.youtube.com' + request.full_path
+    parsed_caption_url = urlparse(caption_url)
+    qs = parse_qs(parsed_caption_url.query)
+    video_id = qs.get('v')[0]
+    lang = qs.get('lang')[0] or 'en'
+    kind = qs.get('kind')
+    if qs.get('tlang'):
+        tlang = qs['tlang'][0]
+    else:
+        tlang = ''
+    if not settings.use_innertube_for_captions:
+        working_ua = util.INNERTUBE_CLIENTS['android']['INNERTUBE_CONTEXT']['client']['userAgent'].replace(' gzip', '')
+        working_caption_url = get_working_caption_url(video_id, lang, tlang, kind)
+        result = util.fetch_url(working_caption_url, headers={'User-Agent': working_ua})
+        result = result.replace(b"align:start position:0%", b"")
+        return flask.Response(result, mimetype='text/vtt')
+    else:
+        print("Getting caption using innertube api")
+        if kind is not None:
+            asr = True
+        else:
+            asr = False
+        caption_data = get_caption_json_resp(video_id, lang, asr)
+        if caption_data:
+            caption_vtt = webvtt_from_caption_data(caption_data)
+            return flask.Response(caption_vtt.encode('utf-8'),
+                                  mimetype = 'text/vtt')
+        else:
+            return flask.Response('Unable to get caption', 500, mimetype='text/plain')
 
 
 times_reg = re.compile(r'^\d\d:\d\d:\d\d\.\d\d\d --> \d\d:\d\d:\d\d\.\d\d\d.*$')
 inner_timestamp_removal_reg = re.compile(r'<[^>]+>')
 @yt_app.route('/watch/transcript/<path:caption_path>')
 def get_transcript(caption_path):
-    try:
-        captions = util.fetch_url('https://www.youtube.com/'
-            + caption_path
-            + '?' + request.environ['QUERY_STRING']).decode('utf-8')
-    except util.FetchError as e:
-        msg = ('Error retrieving captions: ' + str(e) + '\n\n'
-            + 'The caption url may have expired.')
-        print(msg)
-        return flask.Response(msg,
-            status = e.code,
-            mimetype='text/plain;charset=UTF-8')
-
-    lines = captions.splitlines()
-    segments = []
-
-    # skip captions file header
-    i = 0
-    while lines[i] != '':
-        i += 1
-
-    current_segment = None
-    while i < len(lines):
-        line = lines[i]
-        if line == '':
-            if ((current_segment is not None)
-                    and (current_segment['begin'] is not None)):
-                segments.append(current_segment)
-            current_segment = {
-                'begin': None,
-                'end': None,
-                'lines': [],
-            }
-        elif times_reg.fullmatch(line.rstrip()):
-            current_segment['begin'], current_segment['end'] = line.split(' --> ')
-        else:
-            current_segment['lines'].append(
-                inner_timestamp_removal_reg.sub('', line))
-        i += 1
-
-    # if automatic captions, but not translated
-    if request.args.get('kind') == 'asr' and not request.args.get('tlang'):
-        # Automatic captions repeat content. The new segment is displayed
-        # on the bottom row; the old one is displayed on the top row.
-        # So grab the bottom row only
-        for seg in segments:
-            seg['text'] = seg['lines'][1]
-    else:
-        for seg in segments:
-            seg['text'] = ' '.join(map(str.rstrip, seg['lines']))
-
-    result = ''
-    for seg in segments:
-        if seg['text'] != ' ':
-            result += seg['begin'] + ' ' + seg['text'] + '\r\n'
-
-    return flask.Response(result.encode('utf-8'),
-        mimetype='text/plain;charset=UTF-8')
-
-
-
+    return flask.Response('Redirecting...', status = 302, mimetype='text/plain', headers={'Location': '/https://www.youtube.com/' + caption_path + '?' + request.environ['QUERY_STRING']})
