@@ -270,6 +270,14 @@ Archive: https://archive.ph/OZQbN''',
         'category': 'network',
     }),
 
+    ('hardcoded_player_version', {
+        'label': 'Hardcoded youtube base.js player version',
+        'type': str,
+        'default': '0004de42',
+        'comment': '''Hardcoded working player version instead of automatically extracted player version''',
+        'category': 'network',
+        }),
+
     ('use_visitor_data', {
         'label': 'Use visitor data',
         'type': bool,
