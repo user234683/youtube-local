@@ -878,6 +878,11 @@ def get_ytcfg(client):
 def get_player_version(video_id, headers, ytcfg: {} or None):
     player_version = None
     player_version_re = re.compile(r'player\\?/([0-9a-fA-F]{8})\\?/')
+    hardcoded_player_version = settings.hardcoded_player_version
+    if hardcoded_player_version:
+        print(f'Using hardcoded player version: {hardcoded_player_version}')
+        return hardcoded_player_version
+
     if not ytcfg:
         player_version_cache = os.path.join(settings.data_dir, 'player_version.txt')
         iframe_api = 'https://www.youtube.com/iframe_api'
