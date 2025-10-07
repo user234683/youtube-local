@@ -230,29 +230,85 @@ def extract_item_info(item, additional_info={}):
     if not item:
         return {'error': 'No item given'}
 
-    type = get(list(item.keys()), 0)
-    if not type:
+    itype = get(list(item.keys()), 0)
+    if not itype:
         return {'error': 'Could not find type'}
-    item = item[type]
+    item = item[itype]
 
     info = {'error': None}
-    if type in ('itemSectionRenderer', 'compactAutoplayRenderer'):
+    if itype in ('itemSectionRenderer', 'compactAutoplayRenderer'):
         return extract_item_info(deep_get(item, 'contents', 0), additional_info)
 
-    if type in ('movieRenderer', 'clarificationRenderer'):
+    if itype in ('movieRenderer', 'clarificationRenderer'):
         info['type'] = 'unsupported'
+        return info
+
+    # Special exception
+    if itype == 'lockupViewModel':
+        info['id'] = item.get('contentId')
+
+        lockup_type = item.get('contentType')
+        type_table = {
+            # type, playlist_type (if applicable)
+            'LOCKUP_CONTENT_TYPE_PLAYLIST': ('playlist', 'playlist'),
+            'LOCKUP_CONTENT_TYPE_PODCAST': ('playlist', 'podcast'),
+        }
+        info['type'], info['playlist_type'] = type_table.get(
+            lockup_type, ('unsupported', None)
+        )
+        primary_type = info['type']
+
+        info['thumbnail'] = normalize_url(deep_get(item,
+            'contentImage', 'collectionThumbnailViewModel', 'primaryThumbnail',
+            'thumbnailViewModel', 'image', 'sources', 0, 'url'
+        ))
+        info['title'] = deep_get(item,
+            'metadata', 'lockupMetadataViewModel', 'title', 'content'
+        )
+
+        metadata_rows = deep_get(item,
+            'metadata', 'lockupMetadataViewModel', 'metadata',
+            'contentMetadataViewModel', 'metadataRows', default={}
+        )
+        # Find the first channel and set that as the author
+        for row in metadata_rows:
+            for part in row.get('metadataParts', ()):
+                for run in deep_get(part, 'text', 'commandRuns', default=()):
+                    if deep_get(run,
+                        'onTap', 'innertubeCommand', 'commandMetadata',
+                        'webCommandMetadata', 'webPageType'
+                    ) == 'WEB_PAGE_TYPE_CHANNEL':
+                        info['author'] = deep_get(part, 'text', 'content')
+                        info['author_id'] = deep_get(run,
+                            'onTap', 'innertubeCommand', 'browseEndpoint',
+                            'browseId'
+                        )
+                        break
+                else: continue
+                break
+            else: continue
+            break
+        if primary_type == 'playlist':
+            info['playlist_type'] = 'playlist'
+            info['video_count'] = extract_int(deep_get(item,
+                'contentImage', 'collectionThumbnailViewModel',
+                'primaryThumbnail', 'thumbnailViewModel', 'overlays', 0,
+                'thumbnailOverlayBadgeViewModel', 'thumbnailBadges', 0,
+                'thumbnailBadgeViewModel', 'text'
+            ))
+        info.update(additional_info)
         return info
 
     # type looks like e.g. 'compactVideoRenderer' or 'gridVideoRenderer'
     # camelCase split, https://stackoverflow.com/a/37697078
-    type_parts = [s.lower() for s in re.sub(r'([A-Z][a-z]+)', r' \1', type).split()]
+    type_parts = [s.lower() for s in re.sub(r'([A-Z][a-z]+)', r' \1', itype).split()]
     if len(type_parts) < 2:
         info['type'] = 'unsupported'
         return
     primary_type = type_parts[-2]
     if primary_type == 'video':
         info['type'] = 'video'
-    elif type_parts[0] == 'reel': # shorts
+    elif type_parts[0] in ('reel', 'shorts'): # shorts
         info['type'] = 'video'
         primary_type = 'video'
     elif primary_type in ('playlist', 'radio', 'show'):
@@ -260,14 +316,18 @@ def extract_item_info(item, additional_info={}):
         info['playlist_type'] = primary_type
     elif primary_type == 'channel':
         info['type'] = 'channel'
-    elif type == 'videoWithContextRenderer': # stupid exception
+    elif itype == 'videoWithContextRenderer': # stupid exception
         info['type'] = 'video'
-        primary_type = 'video'
+        primary_type = 'video' 
     else:
         info['type'] = 'unsupported'
 
     # videoWithContextRenderer changes it to 'headline' just to be annoying
-    info['title'] = extract_str(multi_get(item, 'title', 'headline'))
+    # shorts uses "overlayMetadata"
+    info['title'] = extract_str(multi_deep_get(
+        item, ['title'], ['headline'],
+        ['overlayMetadata', 'primaryText', 'content']
+    ))
     if primary_type != 'channel':
         info['author'] = extract_str(multi_get(item, 'longBylineText', 'shortBylineText', 'ownerText'))
         info['author_id'] = extract_str(multi_deep_get(item,
@@ -283,8 +343,9 @@ def extract_item_info(item, additional_info={}):
     ))
     info['thumbnail'] = normalize_url(multi_deep_get(item,
         ['thumbnail', 'thumbnails', 0, 'url'],      # videos
+        ['thumbnail', 'sources', 0, 'url'], # shorts
         ['thumbnails', 0, 'thumbnails', 0, 'url'],  # playlists
-        ['thumbnailRenderer', 'showCustomThumbnailRenderer', 'thumbnail', 'thumbnails', 0, 'url'], # shows
+        ['thumbnailRenderer', 'showCustomThumbnailRenderer','thumbnail', 'thumbnails', 0, 'url'], # shows
     ))
 
     info['badges'] = []
@@ -304,7 +365,9 @@ def extract_item_info(item, additional_info={}):
         info['id'] = multi_deep_get(item,
             ['videoId'],
             ['navigationEndpoint', 'watchEndpoint', 'videoId'],
-            ['navigationEndpoint', 'reelWatchEndpoint', 'videoId'] # shorts
+            # shorts
+            ['navigationEndpoint', 'reelWatchEndpoint', 'videoId'],
+            ['onTap', 'innertubeCommand', 'reelWatchEndpoint', 'videoId'],
         )
         info['view_count'] = extract_int(item.get('viewCountText'))
 
@@ -328,12 +391,28 @@ def extract_item_info(item, additional_info={}):
                 'viewCountText' # shorts
             ))
 
+        # Have to use this for playlist videos. Lacks accessibility info
+        textual_metadata = extract_str(multi_deep_get(
+            item,
+            ['videoInfo'],
+            ['overlayMetadata', 'secondaryText', 'content'],
+        ), default='')
+        timestamp = re.search(r'(\d+ \w+ ago)', textual_metadata)
+        if timestamp:
+            conservative_update(info, 'time_published', timestamp.group(1))
+        approx_view_count = extract_approx_int(textual_metadata)
+        if approx_view_count:
+            conservative_update(info, 'approx_view_count', approx_view_count)
+
+
         # handle case where it is "No views"
         if not info['approx_view_count']:
-            if ('No views' in item.get('shortViewCountText', '')
-                    or 'no views' in accessibility_label.lower()
-                    or 'No views' in extract_str(item.get('viewCountText', '')) # shorts
-            ):
+            if any('no views' in x.lower() for x in [
+                item.get('shortViewCountText', ''),
+                accessibility_label,
+                extract_str(item.get('viewCountText', '')), # shorts
+                textual_metadata
+            ]):
                 info['view_count'] = 0
                 info['approx_view_count'] = '0'
 
@@ -369,7 +448,7 @@ def extract_item_info(item, additional_info={}):
             info['index'] = None
 
     elif primary_type in ('playlist', 'radio'):
-        info['id'] = item.get('playlistId')
+        info['id'] = multi_get(item, 'playlistId', 'contentId')
         info['video_count'] = extract_int(item.get('videoCount'))
         info['first_video_id'] = deep_get(item, 'navigationEndpoint',
                                           'watchEndpoint', 'videoId')
@@ -422,6 +501,8 @@ _item_types = {
     'videoWithContextRenderer',
     'gridVideoRenderer',
     'playlistVideoRenderer',
+    'shortsLockupViewModel',
+    'lockupViewModel',
 
     'reelItemRenderer',
 

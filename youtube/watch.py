@@ -337,7 +337,6 @@ def _add_to_error(info, key, additional_message):
 def fetch_player_response(client, video_id):
     return util.call_youtube_api(client, 'player', {
         'videoId': video_id,
-        'params': 'CgIQBg',
     })
 
 def fetch_watch_page_info(video_id, playlist_id, index):
@@ -367,7 +366,7 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
         gevent.spawn(fetch_watch_page_info, video_id, playlist_id, index),
 
 
-        gevent.spawn(fetch_player_response, 'android-test-suite', video_id)
+        gevent.spawn(fetch_player_response, 'android_vr', video_id)
     )
     gevent.joinall(tasks)
     util.check_gevent_exceptions(*tasks)
@@ -641,12 +640,6 @@ def get_watch_page(video_id=None):
         fmt['url'] = fmt['url'].replace(
             '/videoplayback',
             '/videoplayback/name/' + filename)
-
-    if settings.gather_googlevideo_domains:
-        with open(os.path.join(settings.data_dir, 'googlevideo-domains.txt'), 'a+', encoding='utf-8') as f:
-            url = info['formats'][0]['url']
-            subdomain = url[0:url.find(".googlevideo.com")]
-            f.write(subdomain + "\n")
 
 
     download_formats = []

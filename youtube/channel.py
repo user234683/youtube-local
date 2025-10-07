@@ -285,7 +285,7 @@ def get_number_of_videos_channel(channel_id):
     try:
         response = util.fetch_url(url, headers_mobile,
             debug_name='number_of_videos', report_text='Got number of videos')
-    except urllib.error.HTTPError as e:
+    except (urllib.error.HTTPError, util.FetchError) as e:
         traceback.print_exc()
         print("Couldn't retrieve number of videos")
         return 1000

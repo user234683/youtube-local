@@ -90,7 +90,7 @@ For security reasons, enabling this is not recommended.''',
         'max': 100,
         'min': -1,
         'comment': '''Sets a default volume.
-        Defaults to -1, which means no default value is forced and the browser will set the volume.''',
+Defaults to -1, which means no default value is forced and the browser will set the volume.''',
         'category': 'playback',
     }),
 
@@ -309,13 +309,6 @@ For security reasons, enabling this is not recommended.''',
         'comment': '',
     }),
 
-    ('gather_googlevideo_domains', {
-        'type': bool,
-        'default': False,
-        'comment': '''Developer use to debug 403s''',
-        'hidden': True,
-    }),
-
     ('debugging_save_responses', {
         'type': bool,
         'default': False,
@@ -325,7 +318,7 @@ For security reasons, enabling this is not recommended.''',
 
     ('settings_version', {
         'type': int,
-        'default': 5,
+        'default': 6,
         'comment': '''Do not change, remove, or comment out this value, or else your settings may be lost or corrupted''',
         'hidden': True,
     }),
@@ -397,11 +390,19 @@ def upgrade_to_5(settings_dict):
     new_settings['settings_version'] = 5
     return new_settings
 
+def upgrade_to_6(settings_dict):
+    new_settings = settings_dict.copy()
+    if 'gather_googlevideo_domains' in new_settings:
+        del new_settings['gather_googlevideo_domains']
+    new_settings['settings_version'] = 6
+    return new_settings
+
 upgrade_functions = {
     1: upgrade_to_2,
     2: upgrade_to_3,
     3: upgrade_to_4,
     4: upgrade_to_5,
+    5: upgrade_to_6,
 }
 
 def log_ignored_line(line_number, message):
@@ -461,11 +462,27 @@ else:
                 log_ignored_line(node.lineno,  target.id + " is not a valid setting")
                 continue
 
-            if type(node.value) not in attributes:
+            value = None
+            # Negative values
+            if (
+                type(node.value) is ast.UnaryOp
+                and type(node.value.op) is ast.USub
+                and type(node.value.operand) in attributes
+            ):
+                value = -node.value.operand.__getattribute__(
+                    attributes[type(node.value.operand)]
+                )
+            elif type(node.value) not in attributes:
+                print(type(node.value))
                 log_ignored_line(node.lineno, "only literals allowed for values")
                 continue
 
-            current_settings_dict[target.id] = node.value.__getattribute__(attributes[type(node.value)])
+            # Regular values
+            if not value:
+                value = node.value.__getattribute__(
+                    attributes[type(node.value)]
+                )
+            current_settings_dict[target.id] = value
 
         # upgrades
         latest_version = SETTINGS_INFO['settings_version']['default']
