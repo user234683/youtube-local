@@ -347,11 +347,6 @@ def decrypt_signatures(info, video_id):
                 file.close()
                 print('Downloaded ' + player_file)
             base_js = base_js.decode('utf-8')
-        err = yt_data_extract.extract_decryption_function(info, base_js)
-        if err:
-            return err
-        decrypt_cache[player_name] = info['decryption_function']
-        #save_decrypt_cache()
     err = yt_data_extract.decrypt_signatures(info)
     return err
 
