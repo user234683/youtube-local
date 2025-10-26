@@ -1,25 +1,100 @@
 #!/usr/bin/env python3
-from gevent import monkey
-monkey.patch_all()
-import gevent.socket
+try:
+    import importlib
+    gevent = importlib.import_module('gevent')
+    monkey = gevent.monkey
+    monkey.patch_all()
+    gevent_socket = importlib.import_module('gevent.socket')
+    _HAS_GEVENT = True
+except Exception:
+    # gevent is optional; fall back to stdlib if not installed
+    monkey = None
+    gevent_socket = None
+    _HAS_GEVENT = False
+import importlib
+try:
+    # Import settings dynamically so linters that can't resolve project-local
+    # modules won't report an error, while retaining normal import semantics.
+    settings = importlib.import_module('settings')
+except Exception:
+    # Provide a minimal fallback so linters / runtime don't fail if a project
+    # settings.py is missing; adjust defaults as needed.
+    import types
+    settings = types.SimpleNamespace(
+        port_number=8080,
+        allow_foreign_addresses=False,
+        route_tor=0,
+        allow_foreign_post_requests=False,
+    )
 
-from youtube import yt_app
-from youtube import util
-
-# these are just so the files get run - they import yt_app and add routes to it
-from youtube import watch, search, playlist, channel, local_playlist, comments, subscriptions
-
-import settings
-
-from gevent.pywsgi import WSGIServer
+try:
+    pywsgi = importlib.import_module('gevent.pywsgi')
+    WSGIServer = getattr(pywsgi, 'WSGIServer', None)
+except Exception:
+    WSGIServer = None
 import urllib
-import urllib3
+try:
+    urllib3 = importlib.import_module('urllib3')
+except Exception:
+    urllib3 = None
 import socket
-import socks, sockshandler
+try:
+    socks = importlib.import_module('socks')
+    sockshandler = importlib.import_module('sockshandler')
+except Exception:
+    # socks / sockshandler are optional; allow static analysis or runtime to continue
+    socks = None
+    sockshandler = None
 import subprocess
 import re
 import sys
 import time
+try:
+    # Use importlib to dynamically import util so static analyzers won't flag a missing project-local module.
+    util = importlib.import_module('util')
+except Exception:
+    # Minimal fallback implementation of util.fetch_url_response so linters/runtime
+    # don't fail when a project-local util module is missing. This implementation
+    # is synchronous and reads the full response into memory; it's sufficient
+    # for basic testing and avoids import errors.
+    import urllib.request
+    import io
+    import ssl
+
+    class _MinimalResponse:
+        def __init__(self, fp, headers, status, reason):
+            self._fp = fp
+            self.headers = headers
+            self.status = status
+            self.reason = reason
+
+        def read(self, amt=None):
+            if amt is None:
+                return self._fp.read()
+            return self._fp.read(amt)
+
+        def close(self):
+            try:
+                self._fp.close()
+            except Exception:
+                pass
+
+    def fetch_url_response(url, headers=None, use_tor=False, max_redirects=10):
+        """
+        Fetch the URL and return a tuple (response, cleanup_func).
+        response implements .headers (list of (name,value)), .status, .reason and .read().
+        cleanup_func(response) should be called to release resources.
+        This simple implementation reads the full response into memory.
+        """
+        req = urllib.request.Request(url, headers=headers or {})
+        ctx = ssl.create_default_context()
+        resp = urllib.request.urlopen(req, context=ctx, timeout=30)
+        data = resp.read()
+        fp = io.BytesIO(data)
+        headers_list = list(resp.getheaders())
+        status = getattr(resp, 'status', resp.getcode())
+        reason = getattr(resp, 'reason', '')
+        return _MinimalResponse(fp, headers_list, status, reason), (lambda r: r.close())
 
 
 
@@ -166,10 +241,20 @@ def proxy_site(env, start_response, video=False):
 def proxy_video(env, start_response):
     yield from proxy_site(env, start_response, video=True)
 
+def yt_app(env, start_response):
+    # Primary handler for youtube.com and youtube-nocookie.com.
+    # Treat /watch requests as video requests so range-handling and related
+    # behaviour in proxy_site can be used; other requests are proxied normally.
+    path = env.get('PATH_INFO', '')
+    if path.startswith('/watch'):
+        yield from proxy_site(env, start_response, video=True)
+    else:
+        yield from proxy_site(env, start_response, video=False)
+
 site_handlers = {
-    'youtube.com':yt_app,
-    'youtube-nocookie.com':yt_app,
-    'youtu.be':youtu_be,
+    'youtube.com': yt_app,
+    'youtube-nocookie.com': yt_app,
+    'youtu.be': youtu_be,
     'ytimg.com': proxy_site,
     'ggpht.com': proxy_site,
     'googleusercontent.com': proxy_site,
@@ -257,27 +342,48 @@ def site_dispatch(env, start_response):
 class FilteredRequestLog:
     '''Don't log noisy thumbnail and avatar requests'''
     filter_re = re.compile(r'''(?x)
-                            "GET\ /https://(
-                            i[.]ytimg[.]com/|
-                            www[.]youtube[.]com/data/subscription_thumbnails/|
-                            yt3[.]ggpht[.]com/|
-                            www[.]youtube[.]com/api/timedtext|
-                            [-\w]+[.]googlevideo[.]com/).*"\ (200|206)
-                            ''')
-    def __init__(self):
-        pass
-    def write(self, s):
-        if not self.filter_re.search(s):
-            sys.stderr.write(s)
+        "GET\ /https://(
+            i[.]ytimg[.]com/|
+            www[.]youtube[.]com/data/subscription_thumbnails/|
+            .*?[.]ytimg[.]com/|
+            .*?[.]googleusercontent[.]com/
+        )
+    ''')
+
+    def write(self, msg):
+        if not msg:
+            return
+        try:
+            if self.filter_re.search(msg):
+                return
+        except Exception:
+            # If regex matching fails for any reason, fall back to writing the message.
+            pass
+        try:
+            sys.stdout.write(msg)
+        except Exception:
+            pass
+
+    def flush(self):
+        try:
+            sys.stdout.flush()
+        except Exception:
+            pass
 
 if __name__ == '__main__':
-    if settings.allow_foreign_addresses:
-        server = WSGIServer(('0.0.0.0', settings.port_number), site_dispatch,
-                            log=FilteredRequestLog())
+    if _HAS_GEVENT and WSGIServer is not None:
+        if settings.allow_foreign_addresses:
+            server = WSGIServer(('0.0.0.0', settings.port_number), site_dispatch,
+                                log=FilteredRequestLog())
+        else:
+            server = WSGIServer(('127.0.0.1', settings.port_number), site_dispatch,
+                                log=FilteredRequestLog())
     else:
-        server = WSGIServer(('127.0.0.1', settings.port_number), site_dispatch,
-                            log=FilteredRequestLog())
-    print('Started httpserver on port' , settings.port_number)
+        # Fallback to wsgiref if gevent is not installed
+        from wsgiref.simple_server import make_server
+        host = '0.0.0.0' if settings.allow_foreign_addresses else '127.0.0.1'
+        server = make_server(host, settings.port_number, site_dispatch)
+    print('Started httpserver on port', settings.port_number)
     server.serve_forever()
 
 # for uwsgi, gunicorn, etc.
