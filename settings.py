@@ -273,7 +273,7 @@ Archive: https://archive.ph/OZQbN''',
     ('hardcoded_player_version', {
         'label': 'Hardcoded youtube base.js player version',
         'type': str,
-        'default': '0004de42',
+        'default': '',
         'comment': '''Hardcoded working player version instead of automatically extracted player version''',
         'category': 'network',
         }),
