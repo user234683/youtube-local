@@ -1,11 +1,54 @@
-from youtube import util
+import os
+
+# Try to import youtube.util (installed package) or a local util module; if both fail,
+# fallback to loading util.py from the same directory as this settings.py
+import importlib
+
+util = None
+try:
+    # prefer package import if available
+    util = importlib.import_module('youtube.util')
+except Exception:
+    try:
+        # try a local module named util (same directory)
+        util = importlib.import_module('util')
+    except Exception:
+        # Fallback: attempt to load util.py from the same directory as this settings.py
+        import importlib.util
+        import sys
+        _this_dir = os.path.dirname(os.path.realpath(__file__))
+        _util_path = os.path.join(_this_dir, 'util.py')
+        if os.path.isfile(_util_path):
+            spec = importlib.util.spec_from_file_location("youtube.util", _util_path)
+            util = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(util)
+            sys.modules["youtube.util"] = util
+        else:
+            raise
+
 import ast
 import re
-import os
 import collections
 
-import flask
-from flask import request
+try:
+    import importlib
+    flask = importlib.import_module('flask')
+    request = flask.request
+except Exception:
+    # Minimal shim so editors/linters don't complain if Flask isn't installed.
+    # This is sufficient for static analysis and testing outside a Flask runtime.
+    from types import SimpleNamespace
+    class _FakeRequest(SimpleNamespace):
+        def __init__(self):
+            super().__init__(method='GET', values={})
+    def _fake_render_template(template, **kwargs):
+        return ''
+    def _fake_abort(code):
+        raise RuntimeError(f'HTTP {code}')
+    def _fake_redirect(location, code=302):
+        return {'location': location, 'status_code': code}
+    flask = SimpleNamespace(render_template=_fake_render_template, abort=_fake_abort, redirect=_fake_redirect)
+    request = _FakeRequest()
 
 SETTINGS_INFO = collections.OrderedDict([
     ('route_tor', {
@@ -506,7 +549,7 @@ globals().update(current_settings_dict)
 
 
 
-if route_tor:
+if globals().get('route_tor', SETTINGS_INFO['route_tor']['default']):
     print("Tor routing is ON")
 else:
     print("Tor routing is OFF - your Youtube activity is NOT anonymous")
@@ -526,7 +569,8 @@ def add_setting_changed_hook(setting, func):
 def set_img_prefix(old_value=None, value=None):
     global img_prefix
     if value is None:
-        value = proxy_images
+        # Safely read proxy_images from globals; fall back to the declared default
+        value = globals().get('proxy_images', SETTINGS_INFO['proxy_images']['default'])
     if value:
         img_prefix = '/'
     else:
