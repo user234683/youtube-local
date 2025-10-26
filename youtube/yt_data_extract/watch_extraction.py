@@ -9,10 +9,13 @@ import json
 import urllib.parse
 import traceback
 import re
-import dukpy
 import os
 import settings
 from .. import util
+import subprocess
+import tempfile
+from yt_dlp_ejs.yt import solver
+import time
 
 # from https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/extractor/youtube.py
 _formats = {
@@ -878,92 +881,6 @@ def update_with_new_urls(info, player_response):
 def requires_decryption(info):
     return ('formats' in info) and info['formats'] and info['formats'][0]['s']
 
-# adapted from youtube-dl and invidious:
-# https://github.com/omarroth/invidious/blob/master/src/invidious/helpers/signatures.cr
-signature_regex = [
-r'\b(?P<var>[a-zA-Z0-9_$]+)&&\((?P=var)=(?P<sig>[a-zA-Z0-9_$]{2,})\(decodeURIComponent\((?P=var)\)\)',
-             r'(?P<sig>[a-zA-Z0-9_$]+)\s*=\s*function\(\s*(?P<arg>[a-zA-Z0-9_$]+)\s*\)\s*{\s*(?P=arg)\s*=\s*(?P=arg)\.split\(\s*""\s*\)\s*;\s*[^}]+;\s*return\s+(?P=arg)\.join\(\s*""\s*\)',
-             r'(?:\b|[^a-zA-Z0-9_$])(?P<sig>[a-zA-Z0-9_$]{2,})\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\)(?:;[a-zA-Z0-9_$]{2}\.[a-zA-Z0-9_$]{2}\(a,\d+\))?',
-             # Old patterns
-             r'\b[cs]\s*&&\s*[adf]\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(',
-             r'\b[a-zA-Z0-9]+\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(',
-             r'\bm=(?P<sig>[a-zA-Z0-9$]{2,})\(decodeURIComponent\(h\.s\)\)',
-             # Obsolete patterns
-             r'("|\')signature\1\s*,\s*(?P<sig>[a-zA-Z0-9$]+)\(',
-             r'\.sig\|\|(?P<sig>[a-zA-Z0-9$]+)\(',
-             r'yt\.akamaized\.net/\)\s*\|\|\s*.*?\s*[cs]\s*&&\s*[adf]\.set\([^,]+\s*,\s*(?:encodeURIComponent\s*\()?\s*(?P<sig>[a-zA-Z0-9$]+)\(',
-             r'\b[cs]\s*&&\s*[adf]\.set\([^,]+\s*,\s*(?P<sig>[a-zA-Z0-9$]+)\(',
-             r'\bc\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*\([^)]*\)\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(']
-
-def extract_decryption_function(info, base_js):
-    '''Insert decryption function into info. Return error string if not successful.
-    Decryption function is a list of list[2] of numbers.
-    It is advisable to cache the decryption function (uniquely identified by info['player_name']) so base.js (1 MB) doesn't need to be redownloaded each time'''
-    decrypt_function_cache = os.path.join(settings.data_dir, f'''signature_func_{info['player_version']}.js''')
-    info['decryption_function'] = None
-    if os.path.isfile(decrypt_function_cache):
-        with open(decrypt_function_cache, 'r') as file:
-            print(f'Loading decryption function from cache {os.path.basename(decrypt_function_cache)}')
-            decrypt_function_js = file.read()
-            info ['decryption_function'] = decrypt_function_js
-            return False
-
-    base_js_content = base_js
-    for n, item in enumerate(signature_regex):
-        decrypt_function_match = re.search(re.compile(item), base_js_content)
-        if decrypt_function_match:
-            print(f'Match found: {n}')
-            sig_func_name = re.escape(decrypt_function_match.group('sig'))
-            print(f'signature_function_name is {sig_func_name}')
-            break
-        else:
-            return 'Could not find decryption function in base.js'
-    sig_js_code_re = rf'({sig_func_name})' + r'''\s*=\s*(function\(\w\)\{[\S\s]*?\};)'''
-    sig_js_code_match = re.search(re.compile(sig_js_code_re), base_js_content)
-    if sig_js_code_match:
-        sig_js_code = sig_js_code_match.group(2)
-    else:
-        return f'Could not find function definition for {sig_func_name}'
-    global_var, var, _ = extract_player_js_global_var(base_js_content)
-    sig_array_name_re = r'(?P<array_name>[\w\$]{2})\[.+?\]\(\w,\d+\);'
-    sig_array_name_match = re.search(re.compile(sig_array_name_re), sig_js_code)
-    if sig_array_name_match:
-        sig_array_name = sig_array_name_match.group('array_name')
-    else:
-        return 'Could not find decryption signature array name'
-    sig_array_re = rf'var {re.escape(sig_array_name)}' + r'''\s*=[\S\s]*?\};'''
-    sig_array_match = re.search(re.compile(sig_array_re), base_js_content)
-    if sig_array_match:
-        sig_array = sig_array_match.group(0)
-    else:
-        return 'Could not find decryption signature array definition'
-    decrypt_function_js = global_var + ';\n' + sig_array + '\n' + 'var decrypt_signature = ' + sig_js_code
-    print(f'Extracted decryption function with length {len(decrypt_function_js)}')
-    # Saving decryption function cache
-    if not os.path.isfile(decrypt_function_cache):
-        with open(decrypt_function_cache, 'wb') as file:
-            file.write(decrypt_function_js.encode('utf-8'))
-            print(f'Decryption function saved as {os.path.basename(decrypt_function_cache)}')
-    info['decryption_function'] = decrypt_function_js
-    return False
-
-def decrypt_signatures(info):
-    '''Applies info['decryption_function'] to decrypt all the signatures. Return err.'''
-    if not info.get('decryption_function'):
-        return 'decryption_function not in info'
-    # Load decryption function into dukpy session
-    decrypt_session_dukpy = dukpy.JSInterpreter()
-    decrypt_session_dukpy.evaljs(info['decryption_function'])
-    for format in info['formats']:
-        if not format['s'] or not format['sp'] or not format['url']:
-            print('Warning: s, sp, or url not in format')
-            continue
-        decrypt_signature_dukpy = '''decrypt_signature(dukpy['s'])'''
-        signature = decrypt_session_dukpy.evaljs(decrypt_signature_dukpy, s=format['s'])
-        format['url'] += '&' + format['sp'] + '=' + urllib.parse.quote(signature)
-
-    return False
-
 def replace_n_signatures(info):
     innertube_client = list(util.INNERTUBE_CLIENTS.keys())
     innertube_client_id = settings.innertube_client_id
@@ -973,155 +890,95 @@ def replace_n_signatures(info):
     if not client_params.get('REQUIRE_JS_PLAYER'):
         print('n_sig decryption is not needed for innertube client:' + client)
         return False
-
-    n_sig = None
-    player_version = info.get('player_version')
-    if not player_version:
-        print('n_sig_decrypt: Unable to determine player version')
+    if info['formats'][0].get('s'):
+        print('n_sig-only decryption is not needed')
+        return False
+    else:
+        start = time.perf_counter()
+        nsig_list = []
+        # Populate nsig_list
+        for fmt in info['formats']:
+            parsed_url = urllib.parse.urlparse(fmt['url'])
+            query_list = urllib.parse.parse_qsl(parsed_url.query)
+            query_dict = {}
+            for k,v in query_list:
+                query_dict[k] = v
+            nsig = query_dict.get('n')
+            nsig_list.append(nsig)
+        # Actual decryption of nsig_list
+        try:
+            result = ejs_decrypt(info['player_version'], nsig=nsig_list)
+        except Exception as err:
+            return f'{err}'
+        for fmt in info['formats']:
+            parsed_url = urllib.parse.urlparse(fmt['url'])
+            query_list = urllib.parse.parse_qsl(parsed_url.query)
+            query_dict = {}
+            for k,v in query_list:
+                query_dict[k] = v
+            nsig = query_dict['n']
+            # Actual replacement of signature
+            query_dict['n'] = result[0]['data'].get(nsig)
+            new_query = urllib.parse.urlencode(query_dict)
+            fmt['url'] = urllib.parse.urlunparse(
+                    [parsed_url.scheme,
+                     parsed_url.hostname,
+                     parsed_url.path,
+                     '',
+                     new_query,
+                     parsed_url.fragment]
+                    )
+        end = time.perf_counter()
+        print(f"Decrypted nsig for {len(info['formats'])} formats in {end - start } s")
         return False
 
-    for fmt in info['formats']:
-        if fmt['url']:
-            media_url = fmt['url']
-            params = media_url.split('&')
-            for i, member in enumerate(params):
-                if member.startswith('n='):
-                    n_sig_index = i
-                    n_sig = member.split('=')[1]
+def decrypt_signatures(info):
+    '''Decrypt all the signatures. Return err.'''
+    player_version = info['player_version']
+    start = time.perf_counter()
+    nsig_list = []
+    sig_list = []
+    # Populate signature lists
+    for format in info['formats']:
+        if not format['s'] or not format['sp'] or not format['url']:
+            return 'Warning: s, sp, or url not in format'
+        parsed_url = urllib.parse.urlparse(format['url'])
+        query_param = urllib.parse.parse_qsl(parsed_url.query)
+        query_param_dict = {}
+        for k, v in query_param:
+            query_param_dict[k] = v
+        nsig = query_param_dict['n']
+        sig = format['s']
+        nsig_list.append(nsig)
+        sig_list.append(sig)
+    # Actual decryption of signature lists
+    try:
+        result = ejs_decrypt(player_version, nsig=nsig_list, sig=sig_list)
+    except Exception as err:
+        return f'{err}'
+    # Query transformation steps
+    for format in info['formats']:
+        parsed_url = urllib.parse.urlparse(format['url'])
+        query_param = urllib.parse.parse_qsl(parsed_url.query)
+        query_param_dict = {}
+        for k, v in query_param:
+            query_param_dict[k] = v
+        nsig = query_param_dict['n']
+        sig = format['s']
+        # Actual replacement of signature values
+        query_param_dict['n'] = result[0]['data'].get(nsig)
+        query_param_dict['sig'] = result[1]['data'].get(sig)
+        format['url'] = urllib.parse.urlunparse(
+                (parsed_url.scheme,
+                 parsed_url.hostname,
+                 parsed_url.path,
+                 '',
+                 urllib.parse.urlencode(query_param_dict),
+                 parsed_url.fragment))
+    end = time.perf_counter()
+    print(f"Decrypted signatures for {len(info['formats'])} formats in {end - start} s")
 
-            if n_sig == None:
-                error_message = 'Could not find n signature in query parameters'
-                return error_message
-            else:
-                nsig_decrypt_code_cache = os.path.join(settings.data_dir, 'nsig_func_' + info['player_version'] + '.js')
-                def _set_nsig_info():
-                    if os.path.exists(nsig_decrypt_code_cache):
-                        print('Loading saved nsig func: ' + nsig_decrypt_code_cache)
-                        with open(nsig_decrypt_code_cache, 'r') as file:
-                            js_nsig_decrypt_code = file.read()
-                            info['nsig_func'] = {
-                                    player_version: js_nsig_decrypt_code
-                                    }
-                            file.close()
-                    else:
-                        with open(info['player_name'], 'r') as file:
-                            base_js = file.read()
-                            file.close()
-
-                        js_nsig_decrypt_code = extract_nsig_func(base_js)
-                        info['nsig_func'] = {
-                                player_version: js_nsig_decrypt_code
-                                }
-
-                        with open(nsig_decrypt_code_cache, 'w') as file:
-                            file.write(js_nsig_decrypt_code)
-                            file.close()
-                            print('nsig func saved as ' + nsig_decrypt_code_cache)
-                if not info.get('nsig_func'):
-                    info['nsig_func'] = {}
-                    _set_nsig_info()
-                    js_nsig_decrypt_code = info['nsig_func'].get(player_version)
-                else:
-                    if info['nsig_func'].get(player_version):
-                        js_nsig_decrypt_code = info['nsig_func'].get(player_version)
-                    else:
-                        _set_nsig_info()
-                        js_nsig_decrypt_code = info['nsig_func'].get(player_version)
-                n_sig_result = decrypt_n_signature(n_sig=n_sig, jscode=js_nsig_decrypt_code)
-                params.pop(n_sig_index)
-                params.insert(n_sig_index, 'n=' + n_sig_result)
-                final_url = '&'.join(params)
-                fmt['url'] = final_url
     return False
-
-# nsig decryption
-# adapted from iv-org/inv_sig_helper
-NSIG_FUNCTION_ARRAYS = [ r'''null\)&&\([a-zA-Z]=(?P<nfunc>[_a-zA-Z0-9$]+)\[(?P<idx>\d+)\]\([a-zA-Z0-9]\)''',
-            r'''(?x)&&\(b="n+"\[[a-zA-Z0-9.+$]+\],c=a\.get\(b\)\)&&\(c=(?P<nfunc>[a-zA-Z0-9$]+)(?:\[(?P<idx>\d+)\])?\([a-zA-Z0-9]\)'''
-]
-
-NSIG_FUNCTION_ENDINGS = [
-    r'=\s*function([\S\s]*?\}\s*return [A-Za-z0-9\$]+\[[A-Za-z0-9\$]+\[\d+\]\]\([A-Za-z0-9\$]+\[\d+\]\)\s*\};)',
-    r'=\s*function(\(\w\)\s*\{[\S\s]*\{return.[a-zA-Z0-9_-]+_w8_.+?\}\s*return\s*\w+\.join\(""\)\};)',
-    r'=\s*function([\S\s]*?\}\s*return \w+?\.join\([^)]+\)\s*\};)',
-    r'=\s*function([\S\s]*?\}\s*?return \w+?\.join\(\"\"\)\s*\};)',
-    r'=\s*function([\S\s]*?\}\s*return [\W\w\\$]+?\.call\([\w\\$]+?,\"\"\)\s*\};)',
-]
-
-def extract_nsig_func(base_js):
-    regex = re
-    for i, member in enumerate(NSIG_FUNCTION_ARRAYS):
-        func_array_re = regex.compile(member)
-        func_array = regex.search(func_array_re, base_js)
-        if not func_array == None:
-            func_name = func_array.group(1)
-            break
-    NSIG_CONTEXT = 'var '+re.escape(func_name)+'\\s*=\\s*\\[(.+?)][;,]'
-    func_context = regex.search(regex.compile(NSIG_CONTEXT), base_js)
-    func_body_re = []
-    for i, member in enumerate(NSIG_FUNCTION_ENDINGS):
-        func_body_re_item = ''
-        func_body_re_item += re.escape(func_context.group(1))
-        func_body_re_item += member
-        func_body_re.append(func_body_re_item)
-    nsig_func_body = None
-    for i, member in enumerate(func_body_re):
-        result = regex.search(regex.compile(member), base_js)
-        if result:
-            nsig_func_body = result.group(1)
-            print('nsig_func_body length: ' + str(len(nsig_func_body)))
-            break
-    if nsig_func_body:
-        nsig_func_name = 'decrypt_nsig'
-        full_nsig_func = 'var ' + nsig_func_name + '=function' + nsig_func_body
-        return fixup_nsig_jscode(jscode=full_nsig_func, player_js=base_js)
-    else:
-        return None
-
-def extract_player_js_global_var(jscode):
-    regex = r'''(?x)
-        'use\s+strict';\s*
-        (?P<code>
-            var\s+(?P<name>[a-zA-Z0-9_\$]+)\s*=\s*
-            (?P<value>
-                (?:"[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*')
-                \.split\((?:"[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*')\)
-                |\[(?:(?:"[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*')\s*,?\s*)*\]
-                |"[^"]*"\.split\("[^"]*"\)
-            )
-        )[;,]'''
-    regex_search = re.search(re.compile(regex), jscode)
-    code, name, value = regex_search.group('code', 'name', 'value')
-    return code, name, value
-
-def fixup_nsig_jscode(jscode, player_js):
-    param_re = re.compile(r'function\s+[a-zA-Z0-9_\$]+\s*\(([a-zA-Z0-9_\$]+)\)')
-    param_search = re.search(param_re, jscode)
-    if param_search:
-        param_name = param_search.group(1)
-    global_var, varname, _ = extract_player_js_global_var(player_js)
-    escaped_varname = re.escape(varname)
-    if global_var:
-        print(f'Prepending n function code with global array variable {escaped_varname}')
-        result = global_var + '; ' + jscode
-        fixup_re = re.compile(rf''';\s*if\s*\(\s*typeof\s+[a-zA-Z0-9_\$]+\s*===?\s*(?:"undefined"|'undefined'|{escaped_varname}\[\d+\])\s*\)\s*return\s+\w+;''')
-    else:
-        print('No global array variable found in player JS')
-        result = jscode
-        fixup_re = re.compile(r';\s*if\s*\(\s*typeof\s+[a-zA-Z0-9_\$]+\s*===?\s*"undefined"\s*\)\s*return\s+\w+;')
-    if fixup_re.search(result):
-        result = re.sub(fixup_re, ';', result)
-    else:
-        print('nsig_func returned with no fixup')
-    return result
-
-def decrypt_n_signature(n_sig, jscode):
-    dukpy_session = dukpy.JSInterpreter()
-    # Loading the function into dukpy session
-    dukpy_session.evaljs(jscode)
-    #n_sig_result = dukpy_session.evaljs('decrypt_nsig("' + n_sig + '")')
-    n_sig_result = dukpy_session.evaljs("decrypt_nsig(dukpy['n'])", n=n_sig)
-    return n_sig_result
 
 def append_po_token(info):
     if not settings.use_po_token:
@@ -1137,3 +994,66 @@ def append_po_token(info):
                 for fmt in info['formats']:
                     fmt['url'] += f'&pot={po_token}'
                 return False
+
+def get_js_runtime():
+    supported_runtimes = [ 'deno', 'bun', 'node' ]
+    for js_runtime in supported_runtimes:
+        try:
+            result = subprocess.run([js_runtime, '--version'], capture_output=True)
+            result.check_returncode()
+            print(f'Using runtime: {js_runtime} {result.stdout.decode()}')
+            return js_runtime
+        except Exception as err:
+            pass
+    return None
+
+js_runtime = get_js_runtime()
+
+def ejs_decrypt(player_version, nsig, sig=[]):
+    player_cache = os.path.join(settings.data_dir, f'iframe_api_base_{player_version}.js')
+    processed_cache = os.path.join(settings.data_dir, f'processed_{player_version}.js')
+    code_fd, code_tempfile = tempfile.mkstemp(prefix='yt-ejs-', suffix='.js', text=True)
+    if not os.path.isfile(processed_cache):
+        with open(player_cache, 'r') as file:
+            player = file.read()
+            has_preprocessed = False
+    else:
+        with open(processed_cache, 'r') as file:
+            preprocessed_player = file.read()
+            has_preprocessed = True
+    payload = {}
+    if has_preprocessed:
+        payload['type'] = 'preprocessed'
+        payload['preprocessed_player'] = preprocessed_player
+    else:
+        payload['type'] = 'player'
+        payload['player'] = player
+        payload['output_preprocessed'] = True
+    payload['requests'] = [
+    {'type': 'n', 'challenges': nsig},
+    ]
+    if sig:
+        payload['requests'].append(
+    {'type': 'sig', 'challenges': sig}
+    )
+
+    jscode = f'''{solver.lib()}
+    Object.assign(globalThis, lib);
+    {solver.core()}
+    var result = jsc({json.dumps(payload)});
+    console.log(JSON.stringify(result));
+    '''
+    with open(code_tempfile, 'w') as file:
+        file.write(jscode)
+    if not js_runtime:
+        raise NameError("No supported js_runtime is found!\nSupported runtimes: deno, bun, node.")
+    result = subprocess.run([js_runtime, code_tempfile], capture_output=True)
+    result.check_returncode()
+    result_json = json.loads(result.stdout.decode())
+    if not has_preprocessed:
+        with open(processed_cache, 'w') as file:
+            file.write(result_json['preprocessed_player'])
+        result_json.pop('preprocessed_player')
+    actual_result = result_json['responses']
+    os.remove(code_tempfile)
+    return actual_result
