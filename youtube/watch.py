@@ -460,7 +460,7 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     # n_sig decryption
     nsig_decryption_error = decrypt_n_signatures(info, video_id)
     if nsig_decryption_error:
-        decryption_error += 'Error decrypting n signatures: ' + nsig_decryption_error
+        decryption_error = 'Error decrypting n signatures: ' + nsig_decryption_error
         info['playability_error'] = decryption_error
     # append po_token
     po_token_append_error = append_po_token(info)
