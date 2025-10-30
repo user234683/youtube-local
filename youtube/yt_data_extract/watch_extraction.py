@@ -9,6 +9,13 @@ import json
 import urllib.parse
 import traceback
 import re
+import os
+import settings
+from .. import util
+import subprocess
+import tempfile
+from yt_dlp_ejs.yt import solver
+import time
 
 # from https://github.com/ytdl-org/youtube-dl/blob/master/youtube_dl/extractor/youtube.py
 _formats = {
@@ -685,11 +692,29 @@ def extract_watch_info(polymer_json):
     info['age_restricted'] = (info['playability_status'] == 'LOGIN_REQUIRED' and info['playability_error'] and ' age' in info['playability_error'])
 
     # base_js (for decryption of signatures)
+    video_id = deep_get(top_level, 'playerResponse', 'videoDetails', default={}).get('videoId')
     info['base_js'] = deep_get(top_level, 'player', 'assets', 'js')
+    #player_version = util.get_player_version(video_id, util.client_xhr_headers)
+    if settings.hardcoded_player_version:
+        player_version = settings.hardcoded_player_version
+    else:
+        player_version_re = re.compile(r'player\\?/([0-9a-fA-F]{8})\\?/')
+        player_version = re.search(player_version_re, info['base_js']).group(1)
+    info['player_version'] = player_version
+    print('yt_data_extract: player_version is ' + player_version)
+    try:
+        if not os.path.exists(settings.data_dir):
+            os.makedirs(settings.data_dir)
+        base_js_file = settings.data_dir + '/iframe_api_base_' + player_version + '.js'
+        player_url = 'https://www.youtube.com/s/player/' + player_version + '/player_ias.vflset/en_US/base.js'
+    except:
+        print('Unable to set base_js properties')
+    info['base_js'] = player_url
     if info['base_js']:
         info['base_js'] = normalize_url(info['base_js'])
         # must uniquely identify url
-        info['player_name'] = urllib.parse.urlparse(info['base_js']).path
+        #info['player_name'] = urllib.parse.urlparse(info['base_js']).path
+        info['player_name'] = base_js_file
     else:
         info['player_name'] = None
 
@@ -856,93 +881,179 @@ def update_with_new_urls(info, player_response):
 def requires_decryption(info):
     return ('formats' in info) and info['formats'] and info['formats'][0]['s']
 
-# adapted from youtube-dl and invidious:
-# https://github.com/omarroth/invidious/blob/master/src/invidious/helpers/signatures.cr
-decrypt_function_re = re.compile(r'function\(a\)\{(a=a\.split\(""\)[^\}{]+)return a\.join\(""\)\}')
-# gives us e.g. rt, .xK, 5 from rt.xK(a,5) or rt, ["xK"], 5 from rt["xK"](a,5)
-# (var, operation, argument)
-var_op_arg_re = re.compile(r'(\w+)(\.\w+|\["[^"]+"\])\(a,(\d+)\)')
-def extract_decryption_function(info, base_js):
-    '''Insert decryption function into info. Return error string if not successful.
-    Decryption function is a list of list[2] of numbers.
-    It is advisable to cache the decryption function (uniquely identified by info['player_name']) so base.js (1 MB) doesn't need to be redownloaded each time'''
-    info['decryption_function'] = None
-    decrypt_function_match = decrypt_function_re.search(base_js)
-    if decrypt_function_match is None:
-        return 'Could not find decryption function in base.js'
+def replace_n_signatures(info):
+    innertube_client = list(util.INNERTUBE_CLIENTS.keys())
+    innertube_client_id = settings.innertube_client_id
+    client = innertube_client[innertube_client_id]
+    client_params = util.INNERTUBE_CLIENTS[client]
 
-    function_body = decrypt_function_match.group(1).split(';')[1:-1]
-    if not function_body:
-        return 'Empty decryption function body'
-
-    var_with_operation_match = var_op_arg_re.fullmatch(function_body[0])
-    if var_with_operation_match is None:
-        return 'Could not find var_name'
-
-    var_name = var_with_operation_match.group(1)
-    var_body_match = re.search(r'var ' + re.escape(var_name) + r'=\{(.*?)\};', base_js, flags=re.DOTALL)
-    if var_body_match is None:
-        return 'Could not find var_body'
-
-    operations = var_body_match.group(1).replace('\n', '').split('},')
-    if not operations:
-        return 'Did not find any definitions in var_body'
-    operations[-1] = operations[-1][:-1]    # remove the trailing '}' since we split by '},' on the others
-    operation_definitions = {}
-    for op in operations:
-        colon_index = op.find(':')
-        opening_brace_index = op.find('{')
-
-        if colon_index == -1 or opening_brace_index == -1:
-            return 'Could not parse operation'
-        op_name = op[:colon_index]
-        op_body = op[opening_brace_index+1:]
-        if op_body == 'a.reverse()':
-            operation_definitions[op_name] = 0
-        elif op_body == 'a.splice(0,b)':
-            operation_definitions[op_name] = 1
-        elif op_body.startswith('var c=a[0]'):
-            operation_definitions[op_name] = 2
-        else:
-            return 'Unknown op_body: ' + op_body
-
-    decryption_function = []
-    for op_with_arg in function_body:
-        match = var_op_arg_re.fullmatch(op_with_arg)
-        if match is None:
-            return 'Could not parse operation with arg'
-        op_name = match.group(2).strip('[].')
-        if op_name not in operation_definitions:
-            return 'Unknown op_name: ' + str(op_name)
-        op_argument = match.group(3)
-        decryption_function.append([operation_definitions[op_name], int(op_argument)])
-
-    info['decryption_function'] = decryption_function
-    return False
-
-def _operation_2(a, b):
-    c = a[0]
-    a[0] = a[b % len(a)]
-    a[b % len(a)] = c
+    if not client_params.get('REQUIRE_JS_PLAYER'):
+        print('n_sig decryption is not needed for innertube client:' + client)
+        return False
+    if info['formats'][0].get('s'):
+        print('n_sig-only decryption is not needed')
+        return False
+    else:
+        start = time.perf_counter()
+        nsig_list = []
+        # Populate nsig_list
+        for fmt in info['formats']:
+            parsed_url = urllib.parse.urlparse(fmt['url'])
+            query_list = urllib.parse.parse_qsl(parsed_url.query)
+            query_dict = {}
+            for k,v in query_list:
+                query_dict[k] = v
+            nsig = query_dict.get('n')
+            nsig_list.append(nsig)
+        # Actual decryption of nsig_list
+        try:
+            result = ejs_decrypt(info['player_version'], nsig=nsig_list)
+        except Exception as err:
+            return f'{err}'
+        for fmt in info['formats']:
+            parsed_url = urllib.parse.urlparse(fmt['url'])
+            query_list = urllib.parse.parse_qsl(parsed_url.query)
+            query_dict = {}
+            for k,v in query_list:
+                query_dict[k] = v
+            nsig = query_dict['n']
+            # Actual replacement of signature
+            query_dict['n'] = result[0]['data'].get(nsig)
+            new_query = urllib.parse.urlencode(query_dict)
+            fmt['url'] = urllib.parse.urlunparse(
+                    [parsed_url.scheme,
+                     parsed_url.hostname,
+                     parsed_url.path,
+                     '',
+                     new_query,
+                     parsed_url.fragment]
+                    )
+        end = time.perf_counter()
+        print(f"Decrypted nsig for {len(info['formats'])} formats in {end - start:.2f} s")
+        return False
 
 def decrypt_signatures(info):
-    '''Applies info['decryption_function'] to decrypt all the signatures. Return err.'''
-    if not info.get('decryption_function'):
-        return 'decryption_function not in info'
+    '''Decrypt all the signatures. Return err.'''
+    player_version = info['player_version']
+    start = time.perf_counter()
+    nsig_list = []
+    sig_list = []
+    # Populate signature lists
     for format in info['formats']:
         if not format['s'] or not format['sp'] or not format['url']:
-            print('Warning: s, sp, or url not in format')
-            continue
+            return 'Warning: s, sp, or url not in format'
+        parsed_url = urllib.parse.urlparse(format['url'])
+        query_param = urllib.parse.parse_qsl(parsed_url.query)
+        query_param_dict = {}
+        for k, v in query_param:
+            query_param_dict[k] = v
+        nsig = query_param_dict['n']
+        sig = format['s']
+        nsig_list.append(nsig)
+        sig_list.append(sig)
+    # Actual decryption of signature lists
+    try:
+        result = ejs_decrypt(player_version, nsig=nsig_list, sig=sig_list)
+    except Exception as err:
+        return f'{err}'
+    # Query transformation steps
+    for format in info['formats']:
+        parsed_url = urllib.parse.urlparse(format['url'])
+        query_param = urllib.parse.parse_qsl(parsed_url.query)
+        query_param_dict = {}
+        for k, v in query_param:
+            query_param_dict[k] = v
+        nsig = query_param_dict['n']
+        sig = format['s']
+        # Actual replacement of signature values
+        query_param_dict['n'] = result[0]['data'].get(nsig)
+        query_param_dict['sig'] = result[1]['data'].get(sig)
+        format['url'] = urllib.parse.urlunparse(
+                (parsed_url.scheme,
+                 parsed_url.hostname,
+                 parsed_url.path,
+                 '',
+                 urllib.parse.urlencode(query_param_dict),
+                 parsed_url.fragment))
+    end = time.perf_counter()
+    print(f"Decrypted signatures for {len(info['formats'])} formats in {end - start:.2f} s")
 
-        a = list(format['s'])
-        for op, argument in info['decryption_function']:
-            if op == 0:
-                a.reverse()
-            elif op == 1:
-                a = a[argument:]
-            else:
-                _operation_2(a, argument)
-
-        signature = ''.join(a)
-        format['url'] += '&' + format['sp'] + '=' + signature
     return False
+
+def append_po_token(info):
+    if not settings.use_po_token:
+        return False
+    else:
+        po_token_cache = os.path.join(settings.data_dir, 'po_token_cache.txt')
+        if os.path.exists(po_token_cache):
+            with open(po_token_cache, 'r') as file:
+                po_token_dict = json.loads(file.read())
+            info['poToken'] = po_token_dict.get('poToken')
+            po_token = info['poToken']
+            if po_token:
+                for fmt in info['formats']:
+                    fmt['url'] += f'&pot={po_token}'
+                return False
+
+def get_js_runtime():
+    supported_runtimes = [ 'deno', 'bun', 'node' ]
+    for js_runtime in supported_runtimes:
+        try:
+            result = subprocess.run([js_runtime, '--version'], capture_output=True)
+            result.check_returncode()
+            print(f'Using runtime: {js_runtime} {result.stdout.decode()}')
+            return js_runtime
+        except Exception as err:
+            pass
+    return None
+
+js_runtime = get_js_runtime()
+
+def ejs_decrypt(player_version, nsig, sig=[]):
+    if not js_runtime:
+        raise NameError("No supported js_runtime is found!\nSupported runtimes: deno, bun, node.")
+    player_cache = os.path.join(settings.data_dir, f'iframe_api_base_{player_version}.js')
+    processed_cache = os.path.join(settings.data_dir, f'processed_{player_version}.js')
+    code_fd, code_tempfile = tempfile.mkstemp(prefix='yt-ejs-', suffix='.js', text=True)
+    if not os.path.isfile(processed_cache):
+        with open(player_cache, 'r') as file:
+            player = file.read()
+            has_preprocessed = False
+    else:
+        with open(processed_cache, 'r') as file:
+            preprocessed_player = file.read()
+            has_preprocessed = True
+    payload = {}
+    if has_preprocessed:
+        payload['type'] = 'preprocessed'
+        payload['preprocessed_player'] = preprocessed_player
+    else:
+        payload['type'] = 'player'
+        payload['player'] = player
+        payload['output_preprocessed'] = True
+    payload['requests'] = [
+    {'type': 'n', 'challenges': nsig},
+    ]
+    if sig:
+        payload['requests'].append(
+    {'type': 'sig', 'challenges': sig}
+    )
+
+    jscode = f'''{solver.lib()}
+    Object.assign(globalThis, lib);
+    {solver.core()}
+    var result = jsc({json.dumps(payload)});
+    console.log(JSON.stringify(result));
+    '''
+    with open(code_tempfile, 'w') as file:
+        file.write(jscode)
+    result = subprocess.run([js_runtime, code_tempfile], capture_output=True)
+    result.check_returncode()
+    result_json = json.loads(result.stdout.decode())
+    if not has_preprocessed:
+        with open(processed_cache, 'w') as file:
+            file.write(result_json['preprocessed_player'])
+        result_json.pop('preprocessed_player')
+    actual_result = result_json['responses']
+    os.remove(code_tempfile)
+    return actual_result
