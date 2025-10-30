@@ -929,7 +929,7 @@ def replace_n_signatures(info):
                      parsed_url.fragment]
                     )
         end = time.perf_counter()
-        print(f"Decrypted nsig for {len(info['formats'])} formats in {end - start } s")
+        print(f"Decrypted nsig for {len(info['formats'])} formats in {end - start:.2f} s")
         return False
 
 def decrypt_signatures(info):
@@ -976,7 +976,7 @@ def decrypt_signatures(info):
                  urllib.parse.urlencode(query_param_dict),
                  parsed_url.fragment))
     end = time.perf_counter()
-    print(f"Decrypted signatures for {len(info['formats'])} formats in {end - start} s")
+    print(f"Decrypted signatures for {len(info['formats'])} formats in {end - start:.2f} s")
 
     return False
 
@@ -1010,6 +1010,8 @@ def get_js_runtime():
 js_runtime = get_js_runtime()
 
 def ejs_decrypt(player_version, nsig, sig=[]):
+    if not js_runtime:
+        raise NameError("No supported js_runtime is found!\nSupported runtimes: deno, bun, node.")
     player_cache = os.path.join(settings.data_dir, f'iframe_api_base_{player_version}.js')
     processed_cache = os.path.join(settings.data_dir, f'processed_{player_version}.js')
     code_fd, code_tempfile = tempfile.mkstemp(prefix='yt-ejs-', suffix='.js', text=True)
@@ -1045,8 +1047,6 @@ def ejs_decrypt(player_version, nsig, sig=[]):
     '''
     with open(code_tempfile, 'w') as file:
         file.write(jscode)
-    if not js_runtime:
-        raise NameError("No supported js_runtime is found!\nSupported runtimes: deno, bun, node.")
     result = subprocess.run([js_runtime, code_tempfile], capture_output=True)
     result.check_returncode()
     result_json = json.loads(result.stdout.decode())
