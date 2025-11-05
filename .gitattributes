@@ -30,3 +30,17 @@
 # with the python modules ``pickle``, ``dbm.*``,
 # ``shelve``, ``marshal``, ``anydbm``, & ``bsddb``
 # (among others).
+
+# Linguist Files
+# ===============
+*.md language-linguist=Markdown
+*.txt language-linguist=Text
+*.ini linguist-detectable=true
+*.bat linguist-detectable=true
+*.py language-linguist=Python
+*.xml language-linguist=XML
+*.html language-linguist=HTML
+*.css language-linguist=CSS
+*.ico language-linguist=Image
+*.js language-linguist=JavaScript
+*.webm language-linguist=AudioVisual
