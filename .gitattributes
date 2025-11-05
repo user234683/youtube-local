@@ -30,3 +30,19 @@
 # with the python modules ``pickle``, ``dbm.*``,
 # ``shelve``, ``marshal``, ``anydbm``, & ``bsddb``
 # (among others).
+
+# Linguist Detection
+# ==================
+*.md language-linguist=Markdown
+*.gitattributes language-linguist= Git Attributes
+*.gitignore language-linguist= Git Ignore
+*.bat linguist-detectable=True
+*.py language-linguist=Python
+*.txt language-linguist=Text
+*.xml language-linguist=XML
+*.html language-linguist=HTML
+*.css language-linguist=CSS
+*.webm language-linguist=AudioVisual
+*.svg language-linguist=Image
+*.js language-linguist=JavaScript
+*.ini linguist-detectable=True
