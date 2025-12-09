@@ -311,7 +311,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
         cleanup_func(response)  # release_connection for urllib3
         content = decode_content(
             content,
-            response.getheader('Content-Encoding', default='identity'))
+            response.headers.get('Content-Encoding', default='identity'))
 
         if (settings.debugging_save_responses
                 and debug_name is not None
@@ -324,8 +324,8 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
                 f.write(content)
 
         if response.status == 429 or (
-            response.status == 302 and (response.getheader('Location') == url
-                or response.getheader('Location').startswith(
+            response.status == 302 and (response.headers.get('Location') == url
+                or response.headers.get('Location').startswith(
                        'https://www.google.com/sorry/index'
                    )
             )
@@ -337,7 +337,7 @@ def fetch_url(url, headers=(), timeout=15, report_text=None, data=None,
             ip = ip.group(1).decode('ascii') if ip else None
             if not ip:
                 ip = re.search(r'IP=((?:\d+\.)+\d+)',
-                               response.getheader('Set-Cookie') or '')
+                               response.headers.get('Set-Cookie') or '')
                 ip = ip.group(1) if ip else None
 
             # don't get new identity if we're not using Tor
