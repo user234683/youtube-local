@@ -409,7 +409,6 @@ mobile_xhr_headers = (
 
 
 
-
 class RateLimitedQueue(gevent.queue.Queue):
     ''' Does initial_burst (def. 30) at first, then alternates between waiting waiting_period (def. 5) seconds and doing subsequent_bursts (def. 10) queries. After 5 seconds with nothing left in the queue, resets rate limiting. '''
 
@@ -707,14 +706,16 @@ INNERTUBE_CLIENTS = {
 
     'ios': {
         'INNERTUBE_API_KEY': 'AIzaSyB-63vPrdThhKuerbB2N_l7Kwwcxj6yUAc',
+        'INNERTUBE_HOST': 'youtubei.googleapis.com',
         'INNERTUBE_CONTEXT': {
             'client': {
-                'hl': 'en',
-                'gl': 'US',
                 'clientName': 'IOS',
-                'clientVersion': '19.09.3',
-                'deviceModel': 'iPhone14,3',
-                'userAgent': 'com.google.ios.youtube/19.09.3 (iPhone14,3; U; CPU iOS 15_6 like Mac OS X)'
+                'clientVersion': '19.45.4',
+                'deviceMake': 'Apple',
+                'deviceModel': 'iPhone16,2',
+                'userAgent': 'com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1_0 like Mac OS X;)',
+                'osName': 'iPhone',
+                'osVersion': '18.1.0.22B83',
             }
         },
         'INNERTUBE_CONTEXT_CLIENT_NAME': 5,
@@ -735,7 +736,7 @@ INNERTUBE_CLIENTS = {
             },
             # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
             'thirdParty': {
-                'embedUrl': 'https://google.com',  # Can be any valid URL
+                'embedUrl': 'https://www.google.com',  # Can be any valid URL
             }
 
         },
@@ -748,11 +749,50 @@ INNERTUBE_CLIENTS = {
         'INNERTUBE_CONTEXT': {
             'client': {
                 'clientName': 'WEB',
-                'clientVersion': '2.20220801.00.00',
+                'clientVersion': '2.20241126.01.00',
                 'userAgent': desktop_user_agent,
             }
         },
-        'INNERTUBE_CONTEXT_CLIENT_NAME': 1
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 1,
+        'REQUIRE_JS_PLAYER': True,
+    },
+
+    'web_creator': {
+        'INNERTUBE_API_KEY': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'WEB_CREATOR',
+                'clientVersion': '1.20241203.01.00',
+                'userAgent': desktop_user_agent,
+            },
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 62,
+        'REQUIRE_JS_PLAYER': True,
+    },
+
+    # mweb has 'ultralow' formats
+    # See: https://github.com/yt-dlp/yt-dlp/pull/557
+    'mweb': {
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'MWEB',
+                'clientVersion': '2.20241202.07.00',
+                'userAgent': mobile_user_agent,
+            },
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 2,
+        'REQUIRE_JS_PLAYER': True,
+    },
+    'tv': {
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'TVHTML5',
+                'clientVersion': '7.20250126.17.00',
+                'userAgent': 'Mozilla/5.0 (PlayStation; PlayStation 4/10.50) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15,gzip(gfe)'
+            },
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 7,
+        'REQUIRE_JS_PLAYER': True,
     },
     'android_vr': {
         'INNERTUBE_API_KEY': 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w',
@@ -773,22 +813,135 @@ INNERTUBE_CLIENTS = {
     },
 }
 
+innertube_client = list(INNERTUBE_CLIENTS.keys())
+innertube_client_id = settings.innertube_client_id
+client = innertube_client[innertube_client_id]
+client_xhr_headers = (
+    ('Accept', '*/*'),
+    ('Accept-Language', 'en-US,en;q=0.5'),
+    ('X-YouTube-Api-Format-Version', '1'),
+    ('X-YouTube-Client-Name', INNERTUBE_CLIENTS[client]['INNERTUBE_CONTEXT_CLIENT_NAME']),
+    ('X-YouTube-Client-Version', INNERTUBE_CLIENTS[client]['INNERTUBE_CONTEXT']['client']['clientVersion']),
+    )
+
+def get_ytcfg(client):
+    if not settings.use_ytcfg:
+        print('Not using ytcfg for innertube api')
+        return None
+    allowed_clients = [ 'web', 'mweb', 'tv' ]
+    if client not in allowed_clients:
+        print(f'Not using ytcfg with client: {client}')
+        return None
+    yt_endpoint = {
+            'web': 'https://www.youtube.com',
+            'mweb': 'https://m.youtube.com',
+            'tv': 'https://www.youtube.com/tv'
+            }
+    user_agent = INNERTUBE_CLIENTS[client]['INNERTUBE_CONTEXT']['client']['userAgent'].replace(',gzip(gfe)','')
+    ytcfg_file = os.path.join(settings.data_dir,f'ytcfg_{client}.json')
+    if not os.path.isdir(settings.data_dir):
+        os.makedirs(settings.data_dir)
+    if not os.path.exists(ytcfg_file):
+        endpoint_response = fetch_url(yt_endpoint.get(client), headers={'User-Agent': user_agent}, report_text='Downloading yt_endpoint to get ytcfg', debug_name=f'yt_endpoint_{client}')
+        ytcfg_re = re.compile(r'ytcfg\.set\((\{.+?\})\)')
+        ytcfg_search = re.search(ytcfg_re, endpoint_response.decode())
+        if ytcfg_search:
+            print('ytcfg found')
+            ytcfg_str = ytcfg_search.group(1)
+            ytcfg = json.loads(ytcfg_str)
+            forbidden_item = [ 'remoteHost', 'configInfo', 'rolloutToken', 'deviceExperimentId' ]
+            for item in forbidden_item:
+                if ytcfg['INNERTUBE_CONTEXT']['client'].get(item):
+                    print(f'Removing {item} from ytcfg')
+                    ytcfg['INNERTUBE_CONTEXT']['client'].pop(item)
+            if ytcfg['INNERTUBE_CONTEXT'].get('clickTracking'):
+                print('Removing clickTracking from ytcfg')
+                ytcfg['INNERTUBE_CONTEXT'].pop('clickTracking')
+            ytcfg_str = json.dumps(ytcfg)
+            with open(ytcfg_file, 'x') as file:
+                print(f'Saving ytcfg file as {ytcfg_file}: ' + str(len(ytcfg_str)))
+                file.write(ytcfg_str)
+                return ytcfg
+        else:
+            print('unable to find ytcfg')
+            return None
+    else:
+        with open(ytcfg_file, 'r') as file:
+            ytcfg = json.load(file)
+            ytcfg_file_age = time.time() - os.path.getmtime(ytcfg_file)
+            if ytcfg_file_age > 86400:
+                print(f'{ytcfg_file} is more than 24h old. Will get a new one on the next video load.')
+                file.close()
+                os.remove(ytcfg_file)
+            return ytcfg
+
+def get_player_version(video_id, headers, ytcfg: {} or None):
+    player_version = None
+    player_version_re = re.compile(r'player\\?/([0-9a-fA-F]{8})\\?/')
+    hardcoded_player_version = settings.hardcoded_player_version
+    if hardcoded_player_version:
+        print(f'Using hardcoded player version: {hardcoded_player_version}')
+        return hardcoded_player_version
+
+    if not ytcfg:
+        player_version_cache = os.path.join(settings.data_dir, 'player_version.txt')
+        iframe_api = 'https://www.youtube.com/iframe_api'
+        iframe_dump = 'iframe_dump_'+video_id+'.js'
+        if not os.path.isfile(player_version_cache):
+            print('Querying yt iframe api to get player version')
+            iframe_response = fetch_url(iframe_api + '?videoId=' + video_id, headers=headers, report_text='Downloading iframe_api js', debug_name=iframe_dump)
+            player_version_search = re.search(player_version_re, iframe_response.decode("utf-8"))
+
+            if player_version_search:
+                player_version = player_version_search.group(1)
+            with open(player_version_cache, 'w') as file:
+                print('Saving extracted player_version from iframe_api')
+                file.write(player_version)
+        else:
+            file_age = time.time() - os.path.getmtime(player_version_cache)
+            max_age = 6*3600
+            player_version = ''
+            with open(player_version_cache, 'r') as file:
+                print('Getting player_version from cache.')
+                player_version = file.read()
+            if file_age > max_age:
+                print('Player_version cache is more than 6 hours, deleting file.')
+                os.remove(player_version_cache)
+
+    else:
+        print('Getting player version from ytcfg')
+        ytcfg_str = json.dumps(ytcfg)
+        player_version_search = re.search(player_version_re, ytcfg_str)
+        if player_version_search:
+            player_version = player_version_search.group(1)
+    if player_version is not None:
+        return player_version
+
 def get_visitor_data():
     visitor_data = None
+    if not settings.use_po_token:
+        if not settings.use_visitor_data:
+            return None
+    ytcfg = get_ytcfg(client)
+    po_token_cache = os.path.join(settings.data_dir, 'po_token_cache.txt')
     visitor_data_cache = os.path.join(settings.data_dir, 'visitorData.txt')
-    if not os.path.exists(settings.data_dir):
-        os.makedirs(settings.data_dir)
+    if settings.use_po_token:
+        if os.path.isfile(po_token_cache):
+            with open(po_token_cache, 'r') as file:
+                po_token_dict = json.load(file)
+                visitor_data = po_token_dict.get('visitorData')
+            return visitor_data
     if os.path.isfile(visitor_data_cache):
         with open(visitor_data_cache, 'r') as file:
-            print('Getting visitor_data from cache')
             visitor_data = file.read()
         max_age = 12*3600
         file_age = time.time() - os.path.getmtime(visitor_data_cache)
         if file_age > max_age:
             print('visitor_data cache is too old. Removing file...')
-            os.remove(visitor_data_cache)
         return visitor_data
-
+    if ytcfg:
+        visitor_data = ytcfg['INNERTUBE_CONTEXT']['client'].get('visitorData')
+        return visitor_data
     print('Fetching youtube homepage to get visitor_data')
     yt_homepage = 'https://www.youtube.com'
     yt_resp = fetch_url(yt_homepage, headers={'User-Agent': mobile_user_agent}, report_text='Getting youtube homepage')
@@ -796,7 +949,7 @@ def get_visitor_data():
     visitor_data_match = re.search(visitor_data_re, yt_resp.decode())
     if visitor_data_match:
         visitor_data = visitor_data_match.group(1)
-        print(f'Got visitor_data: {len(visitor_data)}')
+        print(f'Got visitor_data: {visitor_data}')
         with open(visitor_data_cache, 'w') as file:
             print('Saving visitor_data cache...')
             file.write(visitor_data)
@@ -805,23 +958,127 @@ def get_visitor_data():
         print('Unable to get visitor_data value')
     return visitor_data
 
+def get_po_token():
+    if not settings.use_po_token:
+        return None
+    po_token_cache = os.path.join(settings.data_dir, 'po_token_cache.txt')
+    if os.path.isfile(po_token_cache):
+        with open(po_token_cache, 'r') as file:
+            print('Extracting po_token from po_token_cache')
+            po_token_dict = json.load(file)
+            po_token = po_token_dict.get('poToken')
+            return po_token
+    else:
+        print('po_token_cache.txt is not found.')
+        return None
+
+def extract_signature_timestamp(base_js):
+    sts_re = re.compile(r'(?:signatureTimestamp|sts)\s*:\s*(?P<sts>[0-9]{5})')
+    signature_timestamp_search = sts_re.search(base_js)
+    if not signature_timestamp_search == None:
+        signature_timestamp = signature_timestamp_search.group(1)
+    else:
+        signature_timestamp = None
+    return signature_timestamp
+
 def call_youtube_api(client, api, data):
     client_params = INNERTUBE_CLIENTS[client]
     context = client_params['INNERTUBE_CONTEXT']
-    key = client_params['INNERTUBE_API_KEY']
+    key = client_params.get('INNERTUBE_API_KEY') or None
     host = client_params.get('INNERTUBE_HOST') or 'www.youtube.com'
     user_agent = context['client'].get('userAgent') or mobile_user_agent
+    visitor_data_file = os.path.join(settings.data_dir, 'visitorData.txt')
+    ytcfg = get_ytcfg(client)
+    visitor_data_header = None
     visitor_data = get_visitor_data()
-
-    url = 'https://' + host + '/youtubei/v1/' + api + '?key=' + key
     if visitor_data:
-        context['client'].update({'visitorData': visitor_data})
+        visitor_data_header = ( 'X-Goog-Visitor-Id', visitor_data )
+    po_token = get_po_token()
+    po_token_data = { 'poToken': po_token }
+    if ytcfg:
+        ytcfg_context = ytcfg.get('INNERTUBE_CONTEXT')
+        print('Got client context from ytcfg')
+        key = ytcfg.get('INNERTUBE_API_KEY')
+        if ytcfg_context:
+            # Needed to set correct client version obtained from ytcfg
+            context = ytcfg_context
+        if settings.use_po_token:
+            # Needed to use correct visitorData from po_token_cache.txt
+            context['client']['visitorData'] = visitor_data
+    headers = (('Content-Type', 'application/json'),
+               ('User-Agent', user_agent),
+               ('X-Goog-Api-Format-Version', '1'),
+               ('X-YouTube-Client-Name',
+                client_params['INNERTUBE_CONTEXT_CLIENT_NAME']),
+               ('X-YouTube-Client-Version',
+                context['client'].get('clientVersion')))
+    # Only send visitor_data_header if not using ytcfg
+    if not ytcfg:
+        if visitor_data_header:
+            headers = ( *headers, visitor_data_header )
     data['context'] = context
+    require_js_player = client_params.get('REQUIRE_JS_PLAYER')
+    if require_js_player and data.get('videoId'):
+        print('js player is required for this client: ' + str(client))
+        player_version = get_player_version(data['videoId'], headers=headers, ytcfg=ytcfg)
+        player_url = 'https://www.youtube.com/s/player/' + player_version + '/player_ias.vflset/en_US/base.js'
+        print("Player version: " + player_version)
+        player_file = os.path.join(settings.data_dir,'iframe_api_base_'+ player_version + '.js')
+        if os.path.exists(player_file):
+            try:
+                with open(player_file, 'rb') as file:
+                    base_js = file.read()
+                    file.close()
+            except:
+                print('Unable to access ' + player_file)
+        else:
+            base_js = fetch_url(player_url, headers=headers, report_text='Fetching player url (base.js) version ' + player_version, debug_name='iframe_api_base_' + player_version + '.js')
+            try:
+                print("Saving " + player_file)
+                with open(player_file, 'wb') as file:
+                    file.write(base_js)
+                    file.close()
+            except OSError:
+                print('An OS error prevents accessing ' + player_file)
+
+        signature_timestamp = None
+        signature_timestamp_cache = os.path.join(settings.data_dir,'sts_' + player_version + '.txt')
+        if require_js_player:
+            if os.path.exists(signature_timestamp_cache):
+                try:
+                    with open(signature_timestamp_cache, 'r') as file:
+                        signature_timestamp = file.read()
+                        file.close()
+                except OSError:
+                    print('An OS error prevents extracting signature timestamp from cache')
+            else:
+                signature_timestamp = extract_signature_timestamp(base_js.decode("utf-8"))
+                try:
+                    if not os.path.exists(settings.data_dir):
+                        os.makedirs(settings.data_dir)
+                    with open(signature_timestamp_cache, 'w') as file:
+                        file.write(signature_timestamp)
+                        file.close()
+                except OSError:
+                    print('An OS error prevents saving signature timestamp')
+
+            if signature_timestamp:
+                print('Signature timestamp: ' + signature_timestamp)
+                data['playbackContext'] = {
+                        'contentPlaybackContext': {
+                          'html5Preference': 'HTML5_PREF_WANTS',
+                          'signatureTimestamp': signature_timestamp,
+                        }
+                    }
+
+    if po_token_data and data.get('videoId'):
+        data['serviceIntegrityDimensions'] = po_token_data
+
+    url = 'https://' + host + '/youtubei/v1/' + api
+    if key:
+        url = url + '?key=' + key
 
     data = json.dumps(data)
-    headers = (('Content-Type', 'application/json'),('User-Agent', user_agent))
-    if visitor_data:
-        headers = ( *headers, ('X-Goog-Visitor-Id', visitor_data ))
     response = fetch_url(
         url, data=data, headers=headers,
         debug_name='youtubei_' + api + '_' + client,
