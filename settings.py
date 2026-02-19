@@ -84,6 +84,13 @@ For security reasons, enabling this is not recommended.''',
         'category': 'playback',
     }),
 
+    ('use_innertube_for_captions', {
+        'type': bool,
+        'default': False,
+        'comment': '''Use get_transcript api to get captions / subtitles. If set to False, use caption baseUrl from player api response. Note: get_transcript may require PO tokens and return 400 errors; the player API approach is more reliable.''',
+        'category': 'network',
+    }),
+
     ('default_volume', {
         'type': int,
         'default': -1,

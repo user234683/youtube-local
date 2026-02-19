@@ -1,6 +1,7 @@
 import youtube
 from youtube import yt_app
 from youtube import util, comments, local_playlist, yt_data_extract
+from youtube.innertube_caption import get_caption_json_resp, webvtt_from_caption_data
 import settings
 
 from flask import request
@@ -15,7 +16,7 @@ import traceback
 import urllib
 import re
 import urllib3.exceptions
-from urllib.parse import parse_qs, urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 from types import SimpleNamespace
 from math import ceil
 
@@ -494,6 +495,32 @@ def format_bytes(bytes):
     converted = float(bytes) / float(1024 ** exponent)
     return '%.2f%s' % (converted, suffix)
 
+def get_working_caption_url(video_id, lang='en', tlang='', kind=''):
+    payload = { 'videoId': video_id }
+    api_resp = util.call_youtube_api('android', 'player', payload)
+    api_json = json.loads(api_resp)
+    track_list = yt_data_extract.deep_get(api_json, 'captions', 'playerCaptionsTracklistRenderer', 'captionTracks')
+    if not track_list:
+        print(f"No caption tracks found for video {video_id}")
+        return None
+    caption_url_raw = ''
+    for track in track_list:
+        langcode = track.get('languageCode')
+        asr = track.get('kind')
+        if langcode == lang and not kind:
+            caption_url_raw = track.get('baseUrl')
+            break
+        elif kind:
+            if asr == 'asr':
+                if langcode == lang:
+                    caption_url_raw = track.get('baseUrl')
+                    break
+    if caption_url_raw:
+        caption_url = caption_url_raw.replace('fmt=srv3', 'fmt=vtt')
+        if tlang:
+            caption_url += f'&tlang={tlang}'
+        return caption_url
+
 @yt_app.route('/ytl-api/storyboard.vtt')
 def get_storyboard_vtt():
     """
@@ -800,9 +827,45 @@ def get_watch_page(video_id=None):
 
 @yt_app.route('/api/<path:dummy>')
 def get_captions(dummy):
-    result = util.fetch_url('https://www.youtube.com' + request.full_path)
-    result = result.replace(b"align:start position:0%", b"")
-    return result
+    caption_url = 'https://www.youtube.com' + request.full_path
+    parsed_caption_url = urlparse(caption_url)
+    qs = parse_qs(parsed_caption_url.query)
+    video_id = qs.get('v')[0]
+    lang = qs.get('lang')[0] or 'en'
+    kind = qs.get('kind')
+    if qs.get('tlang'):
+        tlang = qs['tlang'][0]
+    else:
+        tlang = ''
+    if settings.use_innertube_for_captions:
+        print("Getting caption using innertube api")
+        if kind is not None:
+            asr = True
+        else:
+            asr = False
+        try:
+            caption_data = get_caption_json_resp(video_id, lang, asr)
+        except Exception as e:
+            print(f"Innertube get_transcript failed: {e}")
+            print("Falling back to player API caption URL")
+            caption_data = None
+        if caption_data:
+            caption_vtt = webvtt_from_caption_data(caption_data)
+            return flask.Response(caption_vtt.encode('utf-8'),
+                                  mimetype = 'text/vtt')
+        else:
+            print("Innertube caption failed, falling back to player API")
+            # Fall through to player API approach below
+
+    # Use player API to get caption baseUrl (more reliable)
+    working_ua = util.INNERTUBE_CLIENTS['android']['INNERTUBE_CONTEXT']['client']['userAgent'].replace(' gzip', '')
+    working_caption_url = get_working_caption_url(video_id, lang, tlang, kind)
+    if working_caption_url:
+        result = util.fetch_url(working_caption_url, headers={'User-Agent': working_ua})
+        result = result.replace(b"align:start position:0%", b"")
+        return flask.Response(result, mimetype='text/vtt')
+    else:
+        return flask.Response('Unable to get caption', 500, mimetype='text/plain')
 
 
 times_reg = re.compile(r'^\d\d:\d\d:\d\d\.\d\d\d --> \d\d:\d\d:\d\d\.\d\d\d.*$')
