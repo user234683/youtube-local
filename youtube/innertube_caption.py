@@ -1,6 +1,6 @@
 import base64
 from youtube import util, proto
-from youtube.yt_data_extract import deep_get
+from youtube.yt_data_extract import deep_get, multi_deep_get
 import urllib.parse
 import json
 import traceback
@@ -27,7 +27,7 @@ def get_caption_json_resp(video_id, lang: str = 'en', auto_generated: bool = Fal
     params = generate_caption_params(video_id, lang, auto_generated)
     payload = {'params': params}
     try:
-        resp = util.call_youtube_api('web', 'get_transcript', payload)
+        resp = util.call_youtube_api('android', 'get_transcript', payload)
     except Exception as e:
         print(f'Error fetching captions via innertube: {e}')
         traceback.print_exc()
@@ -37,7 +37,7 @@ def get_caption_json_resp(video_id, lang: str = 'en', auto_generated: bool = Fal
         caption_data = json.loads(resp)
     else:
         return None
-    vtt_body = deep_get(caption_data, 'actions', 0, 'updateEngagementPanelAction', 'content', 'transcriptRenderer', 'content', 'transcriptSearchPanelRenderer', 'body', 'transcriptSegmentListRenderer', 'initialSegments')
+    vtt_body = multi_deep_get(caption_data, ['actions', 0, 'updateEngagementPanelAction', 'content', 'transcriptRenderer', 'content', 'transcriptSearchPanelRenderer', 'body', 'transcriptSegmentListRenderer', 'initialSegments'], ['actions', 0, 'elementsCommand', 'transformEntityCommand', 'arguments', 'transformTranscriptSegmentListArguments', 'overwrite', 'initialSegments'], default=None)
     if vtt_body:
         return caption_data
     else:
@@ -51,12 +51,12 @@ def get_caption_json_resp(video_id, lang: str = 'en', auto_generated: bool = Fal
                 params_new = deep_get(item, 'continuation', 'reloadContinuationData', 'continuation')
                 retry_payload = {'params': params_new}
                 try:
-                    resp_new = util.call_youtube_api('web', 'get_transcript', retry_payload)
+                    resp_new = util.call_youtube_api('android', 'get_transcript', retry_payload)
                 except Exception as e:
                     print(f'Error fetching captions continuation: {e}')
                     return None
                 caption_data_new = json.loads(resp_new)
-                vtt_body_new = deep_get(caption_data_new, 'actions', 0, 'updateEngagementPanelAction', 'content', 'transcriptRenderer', 'content', 'transcriptSearchPanelRenderer', 'body', 'transcriptSegmentListRenderer', 'initialSegments')
+                vtt_body_new = multi_deep_get(caption_data_new, ['actions', 0, 'updateEngagementPanelAction', 'content', 'transcriptRenderer', 'content', 'transcriptSearchPanelRenderer', 'body', 'transcriptSegmentListRenderer', 'initialSegments'], ['actions', 0, 'elementsCommand', 'transformEntityCommand', 'arguments', 'transformTranscriptSegmentListArguments', 'overwrite', 'initialSegments'], default=None)
                 if vtt_body_new:
                     print('Got vtt_body from continuation request')
                 else:
@@ -77,7 +77,7 @@ def convert_milliseconds_to_hhmmss_optimized(ms):
 def webvtt_from_caption_data(caption_data: dict = {}):
     if not caption_data:
         return None
-    vtt_body = deep_get(caption_data, 'actions', 0, 'updateEngagementPanelAction', 'content', 'transcriptRenderer', 'content', 'transcriptSearchPanelRenderer', 'body', 'transcriptSegmentListRenderer', 'initialSegments')
+    vtt_body = multi_deep_get(caption_data, ['actions', 0, 'updateEngagementPanelAction', 'content', 'transcriptRenderer', 'content', 'transcriptSearchPanelRenderer', 'body', 'transcriptSegmentListRenderer', 'initialSegments'], ['actions', 0, 'elementsCommand', 'transformEntityCommand', 'arguments', 'transformTranscriptSegmentListArguments', 'overwrite', 'initialSegments'], default=None)
     if not vtt_body:
         print('Unable to find vtt_body in the caption data')
         return 'WEBVTT\n'
@@ -90,7 +90,7 @@ def webvtt_from_caption_data(caption_data: dict = {}):
             ms_to_vtt_time = convert_milliseconds_to_hhmmss_optimized
             start_time = ms_to_vtt_time(vtt_item['startMs'])
             end_time = ms_to_vtt_time(vtt_item['endMs'])
-            running_text = deep_get(vtt_item, 'snippet', 'runs', 0, 'text')
+            running_text = multi_deep_get(vtt_item, ['snippet', 'runs', 0, 'text'], ['snippet', 'elementsAttributedString', 'content'], default=None)
             webvtt_time_line = f'{start_time} --> {end_time}\n{running_text}\n'
             vtt_content.append(webvtt_time_line)
 
