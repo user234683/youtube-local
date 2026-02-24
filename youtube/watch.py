@@ -497,7 +497,11 @@ def format_bytes(bytes):
 
 def get_working_caption_url(video_id, lang='en', tlang='', kind=''):
     payload = { 'videoId': video_id }
-    api_resp = util.call_youtube_api('android', 'player', payload)
+    try:
+        api_resp = util.call_youtube_api('android_vr', 'player', payload)
+    except Exception as e:
+        print(f"Error fetching player API for captions: {e}")
+        return None
     api_json = json.loads(api_resp)
     track_list = yt_data_extract.deep_get(api_json, 'captions', 'playerCaptionsTracklistRenderer', 'captionTracks')
     if not track_list:
@@ -858,7 +862,7 @@ def get_captions(dummy):
             # Fall through to player API approach below
 
     # Use player API to get caption baseUrl (more reliable)
-    working_ua = util.INNERTUBE_CLIENTS['android']['INNERTUBE_CONTEXT']['client']['userAgent'].replace(' gzip', '')
+    working_ua = util.INNERTUBE_CLIENTS['android_vr']['INNERTUBE_CONTEXT']['client']['userAgent'].replace(' gzip', '')
     working_caption_url = get_working_caption_url(video_id, lang, tlang, kind)
     if working_caption_url:
         result = util.fetch_url(working_caption_url, headers={'User-Agent': working_ua})
