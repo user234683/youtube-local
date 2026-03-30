@@ -664,12 +664,12 @@ INNERTUBE_CLIENTS = {
                 'hl': 'en',
                 'gl': 'US',
                 'clientName': 'ANDROID',
-                'clientVersion': '19.09.36',
+                'clientVersion': '20.10.38',
                 'osName': 'Android',
                 'osVersion': '12',
                 'androidSdkVersion': 31,
                 'platform': 'MOBILE',
-                'userAgent': 'com.google.android.youtube/19.09.36 (Linux; U; Android 12; US) gzip'
+                'userAgent': 'com.google.android.youtube/20.10.38 (Linux; U; Android 12; US) gzip'
             },
             # https://github.com/yt-dlp/yt-dlp/pull/575#issuecomment-887739287
             #'thirdParty': {
