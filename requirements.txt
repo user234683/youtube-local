@@ -6,3 +6,4 @@ urllib3>=2.0.0
 defusedxml>=0.5.0
 cachetools>=4.0.0
 stem>=1.8.0
+yt-dlp-ejs>=0.2.0
