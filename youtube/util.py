@@ -18,6 +18,7 @@ import collections
 import stem
 import stem.control
 import traceback
+import subprocess
 
 # The trouble with the requests library: It ships its own certificate bundle via certifi
 #  instead of using the system certificate store, meaning self-signed certificates
@@ -958,18 +959,49 @@ def get_visitor_data():
         print('Unable to get visitor_data value')
     return visitor_data
 
-def get_po_token():
+def get_js_runtime():
+    supported_runtimes = [ 'deno', 'bun', 'node' ]
+    for js_runtime in supported_runtimes:
+        try:
+            result = subprocess.run([js_runtime, '--version'], capture_output=True)
+            result.check_returncode()
+            print(f'Using runtime: {js_runtime} {result.stdout.decode()}')
+            return js_runtime
+        except Exception as err:
+            pass
+    return None
+
+js_runtime = get_js_runtime()
+
+def get_po_token(identifier: str = ''):
     if not settings.use_po_token:
         return None
-    po_token_cache = os.path.join(settings.data_dir, 'po_token_cache.txt')
-    if os.path.isfile(po_token_cache):
-        with open(po_token_cache, 'r') as file:
-            print('Extracting po_token from po_token_cache')
-            po_token_dict = json.load(file)
-            po_token = po_token_dict.get('poToken')
-            return po_token
+    if not identifier:
+        return None
+    print(f'Generating po_token for {identifier}')
+    start_time = time.perf_counter()
+    context = get_ytcfg(client)
+    if context:
+        client_context = context['INNERTUBE_CONTEXT']
     else:
-        print('po_token_cache.txt is not found.')
+        client_context = INNERTUBE_CLIENTS[client]['INNERTUBE_CONTEXT']
+    try:
+        http_resp = fetch_url('http://localhost:4416/ping')
+        ping_result = json.loads(http_resp.decode())
+        print(f"Using bgutil server {ping_result['version']}")
+        payload = {
+                'content_binding': identifier,
+                'bypass_cache': True,
+                'innertube_context': client_context,
+                }
+        result = fetch_url('http://localhost:4416/get_pot', report_text=f'Getting po_token for {identifier} via bgutil server', headers={'Content-Type': 'application/json'}, data=json.dumps(payload))
+        result_json = json.loads(result.decode())
+        po_token = result_json['poToken']
+        end_time = time.perf_counter()
+        print(f'Got po_token for {identifier} via bgutil server in { end_time - start_time:.2f} s')
+        return po_token
+    except Exception as err:
+        print('Unable to generate po_token. Make sure that bgutil server is running on localhost:4416. Refer to https://github.com/Brainicism/bgutil-ytdlp-pot-provider for more detils.')
         return None
 
 def extract_signature_timestamp(base_js):
