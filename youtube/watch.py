@@ -323,8 +323,6 @@ def decrypt_signatures(info, video_id):
         print('Using cached decryption function for: ' + player_name)
         info['decryption_function'] = decrypt_cache[player_name]
     else:
-        #base_js = util.fetch_url(info['base_js'], debug_name='base.js', report_text='Fetched player ' + player_name)
-        #player_version = util.get_player_version(video_id, headers=util.client_xhr_headers)
         player_version = info['player_version']
         player_file = settings.data_dir + '/iframe_api_base_' + player_version + '.js'
         if not os.path.exists(settings.data_dir):
