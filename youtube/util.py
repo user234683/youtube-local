@@ -993,8 +993,6 @@ def call_youtube_api(client, api, data):
     visitor_data = get_visitor_data()
     if visitor_data:
         visitor_data_header = ( 'X-Goog-Visitor-Id', visitor_data )
-    po_token = get_po_token()
-    po_token_data = { 'poToken': po_token }
     if ytcfg:
         ytcfg_context = ytcfg.get('INNERTUBE_CONTEXT')
         print('Got client context from ytcfg')
@@ -1070,9 +1068,6 @@ def call_youtube_api(client, api, data):
                           'signatureTimestamp': signature_timestamp,
                         }
                     }
-
-    if po_token_data and data.get('videoId'):
-        data['serviceIntegrityDimensions'] = po_token_data
 
     url = 'https://' + host + '/youtubei/v1/' + api
     if key:
