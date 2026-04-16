@@ -982,32 +982,15 @@ def decrypt_signatures(info):
 
 def append_po_token(info):
     if not settings.use_po_token:
+        print('Not using po_token')
         return False
-    else:
-        po_token_cache = os.path.join(settings.data_dir, 'po_token_cache.txt')
-        if os.path.exists(po_token_cache):
-            with open(po_token_cache, 'r') as file:
-                po_token_dict = json.loads(file.read())
-            info['poToken'] = po_token_dict.get('poToken')
-            po_token = info['poToken']
-            if po_token:
-                for fmt in info['formats']:
-                    fmt['url'] += f'&pot={po_token}'
-                return False
+    if info.get('po_token'):
+        po_token = info['po_token']
+        for fmt in info['formats']:
+            fmt['url'] += f'&pot={po_token}'
+        return False
 
-def get_js_runtime():
-    supported_runtimes = [ 'deno', 'bun', 'node' ]
-    for js_runtime in supported_runtimes:
-        try:
-            result = subprocess.run([js_runtime, '--version'], capture_output=True)
-            result.check_returncode()
-            print(f'Using runtime: {js_runtime} {result.stdout.decode()}')
-            return js_runtime
-        except Exception as err:
-            pass
-    return None
-
-js_runtime = get_js_runtime()
+js_runtime = util.js_runtime
 
 def ejs_decrypt(player_version, nsig, sig=[]):
     if not js_runtime:
