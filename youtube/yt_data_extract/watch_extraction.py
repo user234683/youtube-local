@@ -656,6 +656,7 @@ def extract_watch_info(polymer_json):
             base_url = urllib.parse.urlunparse(url_parts._replace(
                 query=urllib.parse.urlencode(qs, doseq=True)))
             info['_captions_base_url'] = base_url
+
     for caption_track in deep_get(captions_info, 'playerCaptionsTracklistRenderer', 'captionTracks', default=()):
         lang_code = caption_track.get('languageCode')
         if not lang_code:
@@ -694,14 +695,14 @@ def extract_watch_info(polymer_json):
     # base_js (for decryption of signatures)
     video_id = deep_get(top_level, 'playerResponse', 'videoDetails', default={}).get('videoId')
     info['base_js'] = deep_get(top_level, 'player', 'assets', 'js')
-    #player_version = util.get_player_version(video_id, util.client_xhr_headers)
-    if settings.hardcoded_player_version:
-        player_version = settings.hardcoded_player_version
-    else:
-        player_version_re = re.compile(r'player\\?/([0-9a-fA-F]{8})\\?/')
-        player_version = re.search(player_version_re, info['base_js']).group(1)
-    info['player_version'] = player_version
-    print('yt_data_extract: player_version is ' + player_version)
+    if not info.get('player_version'):
+        if settings.hardcoded_player_version:
+            player_version = settings.hardcoded_player_version
+        else:
+            player_version_re = re.compile(r'player\\?/([0-9a-fA-F]{8})\\?/')
+            player_version = re.search(player_version_re, info['base_js']).group(1)
+        info['player_version'] = player_version
+    print('yt_data_extract: player_version is ' + info['player_version'])
     try:
         if not os.path.exists(settings.data_dir):
             os.makedirs(settings.data_dir)
