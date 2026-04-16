@@ -352,7 +352,21 @@ def decrypt_n_signatures(info, video_id):
     err = yt_data_extract.replace_n_signatures(info)
     return err
 
+def get_player_version(info):
+    js_required = util.INNERTUBE_CLIENTS[util.client].get('REQUIRE_JS_PLAYER')
+    if not js_required:
+        return False
+    ytcfg = util.get_ytcfg(util.client)
+    player_version = util.get_player_version(info['id'], {}, ytcfg)
+    if player_version is not None:
+        info['player_version'] = player_version
+        return False
+    else:
+        err = "Unable to determine player version"
+        return err
+
 def append_po_token(info):
+    info['po_token'] = util.get_po_token(info['id'])
     err = yt_data_extract.append_po_token(info)
     return err
 
@@ -436,6 +450,9 @@ def extract_info(video_id, use_invidious, playlist_id=None, index=None):
     info, player_response = tasks[0].value, tasks[1].value
 
     yt_data_extract.update_with_new_urls(info, player_response)
+    player_version_err = get_player_version(info)
+    if player_version_err:
+        info['playability_error'] = player_version_err
 
     # Age restricted video, retry
     if not settings.allow_age_restricted_content:
