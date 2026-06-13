@@ -211,7 +211,7 @@ def decode_content(content, encoding_header):
             content = gzip.decompress(content)
     return content
 
-def fetch_url_response(url, headers=(), timeout=15, data=None,
+def fetch_url_response(url, headers=(), timeout=30, data=None,
                        cookiejar_send=None, cookiejar_receive=None,
                        use_tor=True, max_redirects=None):
     '''
