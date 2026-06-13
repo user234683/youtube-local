@@ -437,12 +437,17 @@ else:
     else:
         # parse settings in a safe way, without exec
         current_settings_dict = {}
-        attributes = {
-            ast.Constant: 'value',
-            ast.NameConstant: 'value',
-            ast.Num: 'n',
-            ast.Str: 's',
-        }
+        try: # Old python versions
+            attributes = {
+                ast.Constant: 'value',
+                ast.NameConstant: 'value',
+                ast.Num: 'n',
+                ast.Str: 's',
+            }
+        except Exception: # Python >= 3.14
+            attributes = {
+                ast.Constant: 'value',
+            }
         module_node = ast.parse(settings_text)
         for node in module_node.body:
             if type(node) != ast.Assign:
