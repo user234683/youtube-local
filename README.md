@@ -187,7 +187,7 @@ Permission is hereby granted to the youtube-dl project at [https://github.com/yt
 - [Yotter](https://github.com/ytorg/Yotter) Similar to this project and to invidious. Also supports Twitter
 - [FreeTube](https://github.com/FreeTubeApp/FreeTube) (Similar to this project, but is an electron app outside the browser)
 - [yt-local](https://git.sr.ht/~heckyel/yt-local) Fork of this project with a different page design
-- [NewPipe](https://newpipe.schabi.org/) (app for android)
+- [NewPipe](https://newpipe.net/) (app for android)
 - [mps-youtube](https://github.com/mps-youtube/mps-youtube) (terminal-only program)
 - [youtube-viewer](https://github.com/trizen/youtube-viewer)
 - [smtube](https://www.smtube.org/)
