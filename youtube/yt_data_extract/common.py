@@ -252,16 +252,14 @@ def extract_item_info(item, additional_info={}):
             # type, playlist_type (if applicable)
             'LOCKUP_CONTENT_TYPE_PLAYLIST': ('playlist', 'playlist'),
             'LOCKUP_CONTENT_TYPE_PODCAST': ('playlist', 'podcast'),
+            'LOCKUP_CONTENT_TYPE_VIDEO': ('video', None),
+            'LOCKUP_CONTENT_TYPE_CHANNEL': ('channel', None),
         }
         info['type'], info['playlist_type'] = type_table.get(
             lockup_type, ('unsupported', None)
         )
         primary_type = info['type']
 
-        info['thumbnail'] = normalize_url(deep_get(item,
-            'contentImage', 'collectionThumbnailViewModel', 'primaryThumbnail',
-            'thumbnailViewModel', 'image', 'sources', 0, 'url'
-        ))
         info['title'] = deep_get(item,
             'metadata', 'lockupMetadataViewModel', 'title', 'content'
         )
@@ -270,32 +268,67 @@ def extract_item_info(item, additional_info={}):
             'metadata', 'lockupMetadataViewModel', 'metadata',
             'contentMetadataViewModel', 'metadataRows', default={}
         )
-        # Find the first channel and set that as the author
+        # Extract from metadata rows
+        info['author'] = None
+        info['author_id'] = None
+        info['time_published'] = None
+        info['approx_view_count'] = None
+        info['view_count'] = None
         for row in metadata_rows:
             for part in row.get('metadataParts', ()):
+                # Find the first channel and set that as the author
                 for run in deep_get(part, 'text', 'commandRuns', default=()):
                     if deep_get(run,
                         'onTap', 'innertubeCommand', 'commandMetadata',
                         'webCommandMetadata', 'webPageType'
-                    ) == 'WEB_PAGE_TYPE_CHANNEL':
+                    ) == 'WEB_PAGE_TYPE_CHANNEL' and not info['author']:
                         info['author'] = deep_get(part, 'text', 'content')
                         info['author_id'] = deep_get(run,
                             'onTap', 'innertubeCommand', 'browseEndpoint',
                             'browseId'
                         )
-                        break
-                else: continue
-                break
-            else: continue
-            break
-        if primary_type == 'playlist':
+                text = deep_get(part, 'text', 'content')
+                if text:
+                    # Extract views
+                    if 'view' in text.lower():
+                        info['approx_view_count'] = extract_approx_int(text)
+                    # Extract video count (for playlists)
+                    elif 'video' in text.lower():
+                        info['video_count'] = extract_int(text)
+                    # Extract time_published
+                    timestamp = re.search(r'(\d+ \w+ ago)', text.lower())
+                    if timestamp:
+                        info['time_published'] = timestamp.group(1)
+        # Extract thumbnail and metadata embedded in the thumbnail
+        thumbnail_view_model = multi_deep_get(item,
+            ['contentImage', 'collectionThumbnailViewModel',
+             'primaryThumbnail', 'thumbnailViewModel'],
+            ['contentImage', 'thumbnailViewModel'], {}
+        )
+        info['thumbnail'] = normalize_url(deep_get(thumbnail_view_model,
+            'image', 'sources' ,0, 'url'
+        ))
+        # Video duration
+        if primary_type == 'video':
+            info['duration'] = deep_get(thumbnail_view_model,
+                'overlays', 0, 'thumbnailBottomOverlayViewModel',
+                'badges', 0, 'thumbnailBadgeViewModel', 'text'
+            )
+        # Playlist video count
+        elif primary_type == 'playlist':
             info['playlist_type'] = 'playlist'
-            info['video_count'] = extract_int(deep_get(item,
-                'contentImage', 'collectionThumbnailViewModel',
-                'primaryThumbnail', 'thumbnailViewModel', 'overlays', 0,
-                'thumbnailOverlayBadgeViewModel', 'thumbnailBadges', 0,
-                'thumbnailBadgeViewModel', 'text'
-            ))
+            liberal_update(info, 'video_count', extract_int(deep_get(
+                thumbnail_view_model,
+                'overlays', 0, 'thumbnailOverlayBadgeViewModel',
+                'thumbnailBadges', 0, 'thumbnailBadgeViewModel', 'text'
+            )))
+
+        # If it's a video in a playlist, extract its index
+        if primary_type == 'video':
+            info['index'] = deep_get(item,
+                'rendererContext', 'commandContext', 'onTap',
+                'innertubeCommand', 'watchEndpoint', 'index'
+            )
         info.update(additional_info)
         return info
 
@@ -372,10 +405,10 @@ def extract_item_info(item, additional_info={}):
         info['view_count'] = extract_int(item.get('viewCountText'))
 
         # dig into accessibility data to get view_count for videos marked as recommended, and to get time_published
-        accessibility_label = multi_deep_get(item,
+        accessibility_label = extract_str(multi_deep_get(item,
             ['title', 'accessibility', 'accessibilityData', 'label'],
             ['headline', 'accessibility', 'accessibilityData', 'label'],
-            default='')
+            default=''))
         timestamp = re.search(r'(\d+ \w+ ago)', accessibility_label)
         if timestamp:
             conservative_update(info, 'time_published', timestamp.group(1))
@@ -408,7 +441,7 @@ def extract_item_info(item, additional_info={}):
         # handle case where it is "No views"
         if not info['approx_view_count']:
             if any('no views' in x.lower() for x in [
-                item.get('shortViewCountText', ''),
+                extract_str(item.get('shortViewCountText', '')),
                 accessibility_label,
                 extract_str(item.get('viewCountText', '')), # shorts
                 textual_metadata
@@ -481,13 +514,20 @@ def extract_response(polymer_json):
     # /youtubei/v1/browse endpoint returns response directly
     if isinstance(polymer_json, dict) and 'responseContext' in polymer_json:
         # this is the response
-        return polymer_json, None
-
-    response = multi_deep_get(polymer_json, [1, 'response'], ['response'])
+        response = polymer_json
+    else:
+        response = multi_deep_get(polymer_json, [1, 'response'], ['response'])
     if response is None:
         return None, 'Failed to extract response'
     else:
-        return response, None
+        error = None
+        for alert in response.get('alerts', ()):
+            if deep_get(alert, 'alertRenderer', 'type') == 'ERROR':
+                error = extract_str(deep_get(alert,
+                    'alertRenderer', 'text',
+                    default = 'Unknown error alert in response'
+                ))
+        return response, error
 
 
 _item_types = {

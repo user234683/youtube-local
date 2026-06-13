@@ -23,53 +23,66 @@ def playlist_ctoken(playlist_id, offset, include_shorts=True):
     continuation_info = proto.string( 3, proto.percent_b64encode(offset) )
 
     playlist_id = proto.string(2, 'VL' + playlist_id )
-    pointless_nest = proto.string(80226972, playlist_id + continuation_info)
+    pointless_nest = proto.string(80226972,
+        playlist_id + continuation_info + proto.string(35, playlist_id)
+    )
 
     return base64.urlsafe_b64encode(pointless_nest).decode('ascii')
 
 
-def playlist_first_page(playlist_id, report_text="Retrieved playlist",
-                        use_mobile=False):
-    if use_mobile:
-        url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&pbj=1'
-        content = util.fetch_url(
-            url, util.mobile_xhr_headers,
-            report_text=report_text, debug_name='playlist_first_page'
-        )
-        content = json.loads(content.decode('utf-8'))
-    else:
-        url = 'https://www.youtube.com/playlist?list=' + playlist_id + '&pbj=1'
-        content = util.fetch_url(
-            url, util.desktop_xhr_headers,
-            report_text=report_text, debug_name='playlist_first_page'
-        )
-        content = json.loads(content.decode('utf-8'))
+def playlist_first_page(playlist_id, report_text='Retrieved playlist'):
+    # Use innertube API (pbj=1 no longer works for many playlists)
+    key = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
+    url = 'https://www.youtube.com/youtubei/v1/browse?key=' + key
 
-    return content
+    data = {
+        'context': {
+            'client': {
+                'hl': 'en',
+                'gl': 'US',
+                'clientName': 'WEB',
+                'clientVersion': '2.20240327.00.00',
+            },
+        },
+        'browseId': 'VL' + playlist_id,
+    }
 
-
-def get_videos(playlist_id, page, include_shorts=True, use_mobile=False,
-               report_text='Retrieved playlist'):
-    # mobile requests return 20 videos per page
-    if use_mobile:
-        page_size = 20
-        headers = util.mobile_xhr_headers
-    # desktop requests return 100 videos per page
-    else:
-        page_size = 100
-        headers = util.desktop_xhr_headers
-
-    url = "https://m.youtube.com/playlist?ctoken="
-    url += playlist_ctoken(playlist_id, (int(page)-1)*page_size,
-                           include_shorts=include_shorts)
-    url += "&pbj=1"
+    content_type_header = (('Content-Type', 'application/json'),)
     content = util.fetch_url(
-        url, headers, report_text=report_text,
-        debug_name='playlist_videos'
+        url, util.desktop_xhr_headers + content_type_header,
+        data=json.dumps(data),
+        report_text=report_text, debug_name='playlist_first_page'
     )
+    return json.loads(content.decode('utf-8'))
 
-    info = json.loads(content.decode('utf-8'))
-    return info
+
+def get_videos(playlist_id, page, include_shorts=True, page_size=100,
+               report_text='Retrieved playlist'):
+    key = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
+    url = 'https://www.youtube.com/youtubei/v1/browse?key=' + key
+
+    ctoken = playlist_ctoken(playlist_id, (int(page)-1)*page_size,
+                             include_shorts=include_shorts)
+
+    data = {
+        'context': {
+            'client': {
+                'hl': 'en',
+                'gl': 'US',
+                'clientName': 'WEB',
+                'clientVersion': '2.20240327.00.00',
+            },
+        },
+        'continuation': ctoken,
+    }
+
+    content_type_header = (('Content-Type', 'application/json'),)
+    content = util.fetch_url(
+        url, util.desktop_xhr_headers + content_type_header,
+        data=json.dumps(data),
+        report_text=report_text, debug_name='playlist_videos'
+    )
+    return json.loads(content.decode('utf-8'))
 
 
 @yt_app.route('/playlist')
@@ -87,7 +100,7 @@ def get_playlist_page():
         tasks = (
             gevent.spawn(
                 playlist_first_page, playlist_id,
-                report_text="Retrieved playlist info", use_mobile=True
+                report_text='Retrieved playlist info'
             ),
             gevent.spawn(get_videos, playlist_id, page)
         )
@@ -103,15 +116,17 @@ def get_playlist_page():
         info['metadata'] = yt_data_extract.extract_playlist_metadata(first_page_json)
 
     util.prefix_urls(info['metadata'])
-    for item in info.get('items', ()):
+    for item in info['items']:
+        if item['error']:
+            continue
         util.prefix_urls(item)
         util.add_extra_html_info(item)
-        if 'id' in item:
+        if item['id']:
             item['thumbnail'] = settings.img_prefix + 'https://i.ytimg.com/vi/' + item['id'] + '/default.jpg'
-
-        item['url'] += '&list=' + playlist_id
-        if item['index']:
-            item['url'] += '&index=' + str(item['index'])
+        if item['url']:
+            item['url'] += '&list=' + playlist_id
+            if item['index']:
+                item['url'] += '&index=' + str(item['index'])
 
     video_count = yt_data_extract.deep_get(info, 'metadata', 'video_count')
     if video_count is None:

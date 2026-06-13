@@ -277,27 +277,20 @@ number_of_videos_cache = cachetools.TTLCache(128, 30*60)
 def get_number_of_videos_channel(channel_id):
     if channel_id is None:
         return 1000
-
-    # Uploads playlist
-    playlist_id = 'UU' + channel_id[2:]
-    url = 'https://m.youtube.com/playlist?list=' + playlist_id + '&pbj=1'
-
+    number_of_videos = None
     try:
-        response = util.fetch_url(url, headers_mobile,
-            debug_name='number_of_videos', report_text='Got number of videos')
+        pl_json = playlist.playlist_first_page(
+            'UU' + channel_id[2:],    # Uploads playlist
+            report_text='Requested number of videos'
+        )
+        pl_info = yt_data_extract.extract_playlist_info(pl_json)
+        number_of_videos = yt_data_extract.num_videos_from_uploads_playlist_info(pl_info)
     except (urllib.error.HTTPError, util.FetchError) as e:
         traceback.print_exc()
-        print("Couldn't retrieve number of videos")
+    if number_of_videos is None:
         return 1000
+    return number_of_videos
 
-    response = response.decode('utf-8')
-
-    # match = re.search(r'"numVideosText":\s*{\s*"runs":\s*\[{"text":\s*"([\d,]*) videos"', response)
-    match = re.search(r'"numVideosText".*?([,\d]+)', response)
-    if match:
-        return int(match.group(1).replace(',',''))
-    else:
-        return 0
 def set_cached_number_of_videos(channel_id, num_videos):
     @cachetools.cached(number_of_videos_cache)
     def dummy_func_using_same_cache(channel_id):
@@ -439,7 +432,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
             # recalled later
             pl_json = tasks[0].value
             pl_info = yt_data_extract.extract_playlist_info(pl_json)
-            number_of_videos = pl_info['metadata']['video_count']
+            number_of_videos = yt_data_extract.num_videos_from_uploads_playlist_info(pl_info)
             if number_of_videos is None:
                 number_of_videos = 1000
             else:
@@ -460,7 +453,7 @@ def get_channel_page_general_url(base_url, tab, request, channel_id=None):
         info = pl_info
         info['channel_id'] = channel_id
         info['current_tab'] = 'videos'
-        if info['items']:   # Success
+        if not info['error'] and info['items']:   # Success
             page_size = 100
             try_channel_api = False
         else:   # Try the first-page method next

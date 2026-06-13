@@ -273,12 +273,23 @@ def extract_playlist_info(polymer_json):
         return {'error': err}
     info = {'error': None}
     video_list, _ = extract_items(response)
-
     info['items'] = [extract_item_info(renderer) for renderer in video_list]
 
     info['metadata'] = extract_playlist_metadata(polymer_json)
 
     return info
+
+def num_videos_from_uploads_playlist_info(pl_info):
+    number_of_videos = None
+    if pl_info['error'] and 'playlist does not exist' in pl_info['error']:
+        return 0
+    number_of_videos = deep_get(pl_info, 'metadata', 'video_count')
+    if number_of_videos is None:
+        print("Couldn't retrieve number of videos")
+        if pl_info['error']:
+            print(pl_info['error'])
+
+    return number_of_videos
 
 def _ctoken_metadata(ctoken):
     result = dict()

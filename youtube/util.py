@@ -570,15 +570,13 @@ def prefix_urls(item):
 
 def add_extra_html_info(item):
     if item['type'] == 'video':
-        item['url'] = (URL_ORIGIN + '/watch?v=' + item['id']) if item.get('id') else None
-
+        item['url'] = concat_or_none(URL_ORIGIN, '/watch?v=', item['id'])
         video_info = {}
         for key in ('id', 'title', 'author', 'duration', 'author_id'):
             try:
                 video_info[key] = item[key]
             except KeyError:
                 video_info[key] = None
-
         item['video_info'] = json.dumps(video_info)
 
     elif item['type'] == 'playlist' and item['playlist_type'] == 'radio':
@@ -591,9 +589,13 @@ def add_extra_html_info(item):
         item['url'] = concat_or_none(URL_ORIGIN, '/playlist?list=', item['id'])
     elif item['type'] == 'channel':
         item['url'] = concat_or_none(URL_ORIGIN, "/channel/", item['id'])
+    else:
+        item['url'] = None
 
-    if item.get('author_id') and 'author_url' not in item:
-        item['author_url'] = URL_ORIGIN + '/channel/' + item['author_id']
+    if 'author_url' not in item:
+        item['author_url'] = concat_or_none(
+            URL_ORIGIN, '/channel/', item.get('author_id')
+        )
 
 
 def check_gevent_exceptions(*tasks):
