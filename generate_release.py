@@ -141,7 +141,7 @@ check(os.system(r'7z -y x -opython ' + python_dist_name))
 log('Executing get-pip.py')
 wine_run(['./python/python.exe', '-I', 'get-pip.py'])
 
-'''
+r'''
 # Explanation of .pth, ._pth, and isolated mode
 
 ## Isolated mode
@@ -191,7 +191,7 @@ with open(r'./python/path_fixes.pth', 'w', encoding='utf-8') as f:
     f.write("import sys; sys.path.insert(0, '')\n")
 
 
-'''# python3x._pth file tells the python executable where to look for files
+r'''# python3x._pth file tells the python executable where to look for files
 #  Need to add the directory where packages are installed,
 # and the parent directory (which is where the youtube-local files are)
 major_release = latest_version.split('.')[1]
@@ -203,7 +203,10 @@ log('Inserting Microsoft C Runtime')
 check_subp(subprocess.run([r'7z', '-y', 'e', '-opython', visual_c_name, visual_c_path_to_dlls]))
 
 log('Installing dependencies')
-wine_run(['./python/python.exe', '-I', '-m', 'pip', 'install', '--no-compile', '-r', './requirements.txt'])
+# Pip's isolated build environment can't import setuptools.build_meta while
+# building stem. Disabling build-isolation allows it to access the
+# setuptools that was installed by get-pip into the embedded directory
+wine_run(['./python/python.exe', '-I', '-m', 'pip', 'install', '--no-compile', '--no-build-isolation', '-r', './requirements.txt'])
 
 log('Uninstalling unnecessary gevent stuff')
 wine_run(['./python/python.exe', '-I', '-m', 'pip', 'uninstall', '--yes', 'cffi', 'pycparser'])
@@ -224,7 +227,7 @@ for root, dirs, files in os.walk(r'./python'):
             shutil.rmtree(os.path.join(root, dir))
 
 
-'''log('Removing get-pip.py and zipped distribution')
+r'''log('Removing get-pip.py and zipped distribution')
 os.remove(r'.\get-pip.py')
 os.remove(r'.\latest-dist.zip')'''
 
