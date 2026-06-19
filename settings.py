@@ -419,6 +419,24 @@ else:
     print("Running in non-portable mode")
     settings_dir = os.path.expanduser(os.path.normpath("~/.youtube-local"))
     data_dir = os.path.expanduser(os.path.normpath("~/.youtube-local/data"))
+
+    # if OS is macOS or Linux, use XDG base directory
+    if os.name == "posix":
+        # if ~/.youtube-local directory exists, use that
+        if not os.path.exists(settings_dir):
+            # store settings to $XDG_CONFIG_HOME and data to $XDG_DATA_HOME directory
+            if os.getenv("XDG_CONFIG_HOME") is not None:
+                settings_dir = os.path.join(os.getenv("XDG_CONFIG_HOME"),
+                                            "youtube-local")
+            else:
+                settings_dir = os.path.expanduser(os.path.normpath("~/.config/youtube-local"))
+
+            if os.getenv("XDG_DATA_HOME") is not None:
+                data_dir = os.path.join(os.getenv("XDG_DATA_HOME"),
+                                        "youtube-local")
+            else:
+                data_dir = os.path.expanduser(os.path.normpath("~/.local/share/youtube-local"))
+
     if not os.path.exists(settings_dir):
         os.makedirs(settings_dir)
 
