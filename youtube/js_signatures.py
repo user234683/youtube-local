@@ -56,11 +56,12 @@ def get_player_info(video_id):
     return player_version, sts
 
 def extract_signatures(json_resp):
-    formats = list(json_resp.get('streamingData', {}).get('formats', [])+json_resp.get('streamingData', {}).get('adaptiveFormats', []))
+    all_formats = list(json_resp.get('streamingData', {}).get('formats', [])+json_resp.get('streamingData', {}).get('adaptiveFormats', []))
     nsig_list = []
     sig_list = []
     sp = ''
-    for item in formats:
+    formats = []
+    for item in all_formats:
         if item.get('signatureCipher'):
             parsed_signature_cipher = urllib.parse.parse_qs(item['signatureCipher'])
             url = parsed_signature_cipher.get('url')[0]
@@ -72,8 +73,12 @@ def extract_signatures(json_resp):
                 sp = parsed_signature_cipher.get('sp')[0]
             if s not in sig_list:
                 sig_list.append(s)
+            formats.append(item)
         elif item.get('url'):
             url = item['url']
+            formats.append(item)
+        if not formats:
+            print('Error: no formats available to decrypt. YT requires SABR playback for this js client, which is not currently supported.')
         parsed_url = urllib.parse.urlparse(url)
         parsed_url_qs = urllib.parse.parse_qs(parsed_url.query)
         nsig = parsed_url_qs.get('n')[0]
