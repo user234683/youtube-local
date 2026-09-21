@@ -1,6 +1,6 @@
 import youtube
 from youtube import yt_app
-from youtube import util, comments, local_playlist, yt_data_extract
+from youtube import util, comments, local_playlist, yt_data_extract, js_signatures
 import settings
 
 from flask import request
@@ -334,10 +334,19 @@ def _add_to_error(info, key, additional_message):
     else:
         info[key] = additional_message
 
-def fetch_player_response(client, video_id):
-    return util.call_youtube_api(client, 'player', {
-        'videoId': video_id,
-    })
+def fetch_player_response(client, video_id, sts=None):
+    if not util.INNERTUBE_CLIENTS[client]['REQUIRE_JS_PLAYER']:
+        payload = { 'videoId': video_id, }
+    else:
+        payload = { 'videoId': video_id,
+                   'playbackContext': {
+                       'contentPlaybackContext': {
+                           'signatureTimestamp': sts,
+                           },
+                },
+           }
+
+    return util.call_youtube_api(client, 'player', payload)
 
 def fetch_watch_page_info(video_id, playlist_id, index):
     # bpctr=9999999999 will bypass are-you-sure dialogs for controversial
@@ -361,16 +370,29 @@ def fetch_watch_page_info(video_id, playlist_id, index):
     return yt_data_extract.extract_watch_info_from_html(watch_page)
 
 def extract_info(video_id, use_invidious, playlist_id=None, index=None):
+    player_clients = ('visionos', 'mweb')
+    client = player_clients[settings.player_client]
+    js_client = util.INNERTUBE_CLIENTS[client]['REQUIRE_JS_PLAYER']
+    if js_client and js_signatures.js_decryption_possible:
+        # Get player version and signatureTimestamp for js_client to be usable
+        player_version, sts = js_signatures.get_player_info(video_id)
+    else:
+        # Fall back to non js client
+        client = player_clients[0]
+        player_version, sts = None, None
     tasks = (
         # Get video metadata from here
         gevent.spawn(fetch_watch_page_info, video_id, playlist_id, index),
 
 
-        gevent.spawn(fetch_player_response, 'visionos', video_id)
+        gevent.spawn(fetch_player_response, client, video_id, sts)
     )
     gevent.joinall(tasks)
     util.check_gevent_exceptions(*tasks)
     info, player_response = tasks[0].value, tasks[1].value
+    if js_client and js_signatures.js_decryption_possible:
+        decrypted_response = js_signatures.decrypt_signatures(client, player_version, json.loads(player_response))
+        player_response = json.dumps(decrypted_response)
 
     yt_data_extract.update_with_new_urls(info, player_response)
 

@@ -789,6 +789,19 @@ INNERTUBE_CLIENTS = {
         'INNERTUBE_CONTEXT_CLIENT_NAME': 101,
         'REQUIRE_JS_PLAYER': False,
     },
+    'mweb': {
+        'INNERTUBE_API_KEY': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
+        'INNERTUBE_CONTEXT': {
+            'client': {
+                'clientName': 'MWEB',
+                'clientVersion': '2.20260708.05.00',
+                # mweb previously did not require PO Token with this UA
+                'userAgent': 'Mozilla/5.0 (iPad; CPU OS 16_7_10 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1,gzip(gfe)',
+            },
+        },
+        'INNERTUBE_CONTEXT_CLIENT_NAME': 2,
+        'REQUIRE_JS_PLAYER': True,
+    },
 }
 
 def get_visitor_data():

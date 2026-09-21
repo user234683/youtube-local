@@ -458,6 +458,10 @@ werkzeug==3.1.8 \
     --hash=sha256:63a77fb8892bf28ebc3178683445222aa500e48ebad5ec77b0ad80f8726b1f50 \
     --hash=sha256:9bad61a4268dac112f1c5cd4630a56ede601b6ed420300677a869083d70a4c44
     # via flask
+yt-dlp-ejs==0.8.0 \
+    --hash=sha256:79300e5fca7f937a1eeede11f0456862c1b41107ce1d726871e0207424f4bdb4 \
+    --hash=sha256:d5fa1639f63b5c4af8d932495f60689d5370f1a095782c944f7f62a303eb104e
+    # via youtube-local (pyproject.toml)
 zope-event==6.2 \
     --hash=sha256:5e755153ac4faf64c10a4b6dd3307680166a3edf65b38df22df592610f8fa874 \
     --hash=sha256:b97d5d6327067ee6b9dfcbdf606ade9ade70991e19c162e808ea39e5fcf0f8d3

@@ -84,6 +84,20 @@ For security reasons, enabling this is not recommended.''',
         'category': 'playback',
     }),
 
+    ('player_client', {
+        'type': int,
+        'default': 0,
+        'comment': '''Player client to use
+visionos: no js runtime is needed nor pot provider server
+mweb: js runtime is required and pot provider has to be available on http://localhost:4416''',
+        'label': 'Player client to use',
+        'options': [
+            (0, 'visionos'),
+            (1, 'mweb'),
+            ],
+        'category': 'network',
+    }),
+
     ('default_volume', {
         'type': int,
         'default': -1,
