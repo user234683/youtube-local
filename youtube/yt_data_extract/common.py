@@ -296,7 +296,7 @@ def extract_item_info(item, additional_info={}):
                     elif 'video' in text.lower():
                         info['video_count'] = extract_int(text)
                     # Extract time_published
-                    timestamp = re.search(r'(\d+ \w+ ago)', text.lower())
+                    timestamp = re.search(r'(\d+ ?\w+ ago)', text.lower())
                     if timestamp:
                         info['time_published'] = timestamp.group(1)
         # Extract thumbnail and metadata embedded in the thumbnail
@@ -389,7 +389,8 @@ def extract_item_info(item, additional_info={}):
 
     if primary_type in ('video', 'playlist'):
         info['time_published'] = None
-        timestamp = re.search(r'(\d+ \w+ ago)',
+        # YouTube uses both '2 months ago' and abbreviated '2mo ago'.
+        timestamp = re.search(r'(\d+ ?\w+ ago)',
             extract_str(item.get('publishedTimeText'), default=''))
         if timestamp:
             info['time_published'] = timestamp.group(1)
@@ -409,7 +410,7 @@ def extract_item_info(item, additional_info={}):
             ['title', 'accessibility', 'accessibilityData', 'label'],
             ['headline', 'accessibility', 'accessibilityData', 'label'],
             default=''))
-        timestamp = re.search(r'(\d+ \w+ ago)', accessibility_label)
+        timestamp = re.search(r'(\d+ ?\w+ ago)', accessibility_label)
         if timestamp:
             conservative_update(info, 'time_published', timestamp.group(1))
         view_count = re.search(r'(\d+) views', accessibility_label.replace(',', ''))
@@ -430,7 +431,7 @@ def extract_item_info(item, additional_info={}):
             ['videoInfo'],
             ['overlayMetadata', 'secondaryText', 'content'],
         ), default='')
-        timestamp = re.search(r'(\d+ \w+ ago)', textual_metadata)
+        timestamp = re.search(r'(\d+ ?\w+ ago)', textual_metadata)
         if timestamp:
             conservative_update(info, 'time_published', timestamp.group(1))
         approx_view_count = extract_approx_int(textual_metadata)
